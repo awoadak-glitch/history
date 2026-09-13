@@ -99,6 +99,7 @@ public final class Ui {
                 case "series":c.drawRoundRect(3,6,21,20,3,3,p);c.drawLine(8,2,12,6,p);c.drawLine(16,2,12,6,p);c.drawLine(7,16,17,16,p);break;
                 case "movies":c.drawRoundRect(3,7,21,21,2,2,p);c.drawLine(3,11,21,11,p);c.drawLine(3,6,20,2,p);c.drawLine(7,5,10,9,p);c.drawLine(14,3,17,7,p);break;
                 case "channels":c.drawCircle(12,12,2,p);c.drawArc(6,6,18,18,-55,110,false,p);c.drawArc(6,6,18,18,125,110,false,p);c.drawArc(2,2,22,22,-55,110,false,p);c.drawArc(2,2,22,22,125,110,false,p);break;
+                case "hitv":c.drawRoundRect(3,5,21,19,3,3,p);path.moveTo(10,9);path.lineTo(16,12);path.lineTo(10,15);path.close();p.setStyle(Paint.Style.FILL);c.drawPath(path,p);p.setStyle(Paint.Style.STROKE);c.drawLine(8,2,12,5,p);c.drawLine(16,2,12,5,p);break;
                 case "download":c.drawLine(12,3,12,16,p);path.moveTo(7,11);path.lineTo(12,16);path.lineTo(17,11);c.drawPath(path,p);c.drawLine(5,21,19,21,p);break;
                 default:p.setStyle(Paint.Style.FILL);path.moveTo(7,4);path.lineTo(21,12);path.lineTo(7,20);path.close();c.drawPath(path,p);
             } c.restore();
