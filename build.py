@@ -53,12 +53,26 @@ def main():
     p.add_argument('--apktool',required=True,type=pathlib.Path)
     p.add_argument('--compiler',required=True,type=pathlib.Path,help='jadx 1.5.2 all jar containing D8 and apksig')
     p.add_argument('--android-jar',required=True,type=pathlib.Path)
+    p.add_argument('--drama',type=pathlib.Path,help='Original Drama World V4.2f APK; needed for content API configuration')
+    p.add_argument('--api-base',default='https://dwapp.arabypros.com/api/')
     p.add_argument('--keystore',type=pathlib.Path)
     p.add_argument('--alias',default='awr')
     p.add_argument('--compile-only',action='store_true')
     args=p.parse_args()
     if sha(args.anime)!=EXPECTED: raise SystemExit('Wrong Anime Witcher original: refusing to patch a different APK')
     build=ROOT/'build';build.mkdir(exist_ok=True)
+    if (ROOT/'native/src/awr/witcher/Api.java').exists():
+        if not args.drama:raise SystemExit('--drama is required for content integration')
+        if sha(args.drama)!='aac0affa8fe94bde5f47d6f0aad0d163b7d884df24111ca6168d70647999a690':
+            raise SystemExit('Wrong original Drama World APK')
+        suffixes=set()
+        with zipfile.ZipFile(args.drama) as z:
+            for n in z.namelist():
+                if re.fullmatch(r'classes\d*\.dex',n):
+                    suffixes.update(re.findall(rb'first/([A-F0-9]{20,40}/[a-f0-9-]{36}/)',z.read(n)))
+        if len(suffixes)!=1:raise SystemExit('Cannot unambiguously extract the original API route suffix')
+        generated=build/'generated/awr/witcher';generated.mkdir(parents=True,exist_ok=True)
+        (generated/'ApiConfig.java').write_text('package awr.witcher; final class ApiConfig { static final String BASE='+json.dumps(args.api_base.rstrip('/')+'/')+'; static final String SUFFIX='+json.dumps(next(iter(suffixes)).decode())+'; }\n')
     classes=build/'classes';dex=build/'dex'
     for d in [classes,dex]:
         if d.exists():shutil.rmtree(d)
