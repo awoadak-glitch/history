@@ -1,6 +1,6 @@
 JUnit version 4.13.2
-....
-Time: 8.445
+......
+Time: 10.811
 
-OK (4 tests)
+OK (6 tests)
 
