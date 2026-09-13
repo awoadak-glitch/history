@@ -4,7 +4,6 @@ import android.app.*;
 import android.content.*;
 import android.net.Uri;
 import android.os.*;
-import android.widget.Toast;
 import org.json.*;
 import java.net.*;
 import java.util.*;
@@ -24,12 +23,22 @@ public final class Media {
         catch(Exception e){alert(activity,"تعذر قراءة رابط هذا السيرفر.");return;}
         Map<String,String> headers=headers(source,url);String type=source.optString("type").toLowerCase(Locale.ROOT);
         String path=Uri.parse(url).getPath();String lower=(path==null?"":path).toLowerCase(Locale.ROOT);
-        boolean direct=!needsExtraction(url,type,download,source.optBoolean("_channel"));
-        if(!direct){
-            extract(activity,url,headers,title,download);return;
-        }
+        boolean direct=!needsExtractionForSource(source,url,type,download);
+        if(!direct){extract(activity,url,headers,title,download);return;}
         boolean hls=lower.endsWith(".m3u8")||type.equals("m3u8");
         if(hls)qualities(activity,url,headers,title,download);else launch(activity,url,headers,title,download,lower.endsWith(".mpd")||type.equals("mpd"));
+    }
+    static boolean needsExtractionForSource(JSONObject source,String url,String type,boolean download){
+        boolean channel=source.optBoolean("_channel");
+        if(channel)return needsExtraction(url,type,download,true);
+        if(download&&source.has("external")){
+            // Exact Drama download rule: non-external sources are already direct. For external
+            // sources, only mp4 skips the extractor; m3u8/mkv/mov/webm go through Q0/S0.
+            if(!source.optBoolean("external"))return false;
+            return !"mp4".equals(type);
+        }
+        if(!download&&source.has("external")&&!source.optBoolean("external"))return false;
+        return needsExtraction(url,type,download,false);
     }
     static boolean needsExtraction(String url,String type,boolean download,boolean channel){
         String path=Uri.parse(url).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);
@@ -58,16 +67,16 @@ public final class Media {
     }
     private static void extract(Activity a,String url,Map<String,String> headers,String title,boolean download){
         cancelPending(a);
-        ProgressDialog wait=new ProgressDialog(a);wait.setMessage("جاري تجهيز رابط السيرفر…");wait.setCancelable(true);wait.show();
+        ProgressDialog wait=new ProgressDialog(a);wait.setMessage(download?"جاري تجهيز رابط التنزيل…":"جاري تجهيز رابط السيرفر…");wait.setCancelable(true);wait.show();
         Handler timer=new Handler(Looper.getMainLooper());java.util.concurrent.atomic.AtomicBoolean finished=new java.util.concurrent.atomic.AtomicBoolean();
         Runnable timeout=()->{if(finished.compareAndSet(false,true)){PENDING.remove(a);wait.dismiss();alert(a,"انتهت مهلة تجهيز الرابط. جرّب سيرفراً آخر.");}};
         PENDING.put(a,()->{finished.set(true);timer.removeCallbacks(timeout);wait.dismiss();});
         timer.postDelayed(timeout,65000);wait.setOnCancelListener(d->cancelPending(a));
         boolean supported=Legacy.resolve(a,url,new Legacy.Callback(){
-            public void failed(){a.runOnUiThread(()->{if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();alert(a,"تعذر تجهيز رابط هذا السيرفر. جرّب سيرفراً آخر.");});}
+            public void failed(){a.runOnUiThread(()->{if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();alert(a,"هذا السيرفر غير متاح حالياً. جرّب سيرفراً آخر.");});}
             public void done(List<Legacy.Stream> streams){a.runOnUiThread(()->{
                 if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();if(a.isFinishing()||a.isDestroyed())return;
-                String[] names=new String[streams.size()];for(int i=0;i<names.length;i++)names[i]=streams.get(i).quality==null?"جودة "+(i+1):streams.get(i).quality;
+                String[] names=new String[streams.size()];for(int i=0;i<names.length;i++)names[i]=streams.get(i).quality==null||streams.get(i).quality.trim().isEmpty()?"جودة "+(i+1):streams.get(i).quality;
                 android.content.DialogInterface.OnClickListener select=(d,i)->{Legacy.Stream s=streams.get(i);Map<String,String> h=new TreeMap<>(String.CASE_INSENSITIVE_ORDER);h.putAll(headers);if(s.cookie!=null&&!s.cookie.isEmpty()&&validHeader("Cookie",s.cookie))h.put("Cookie",s.cookie);String path=Uri.parse(s.url).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);boolean hls=lower.endsWith(".m3u8");if(hls)qualities(a,s.url,h,title,download);else launch(a,s.url,h,title,download,lower.endsWith(".mpd"));};
                 if(streams.size()==1)select.onClick(null,0);else new AlertDialog.Builder(a).setTitle("اختيار الجودة").setItems(names,select).show();
             });}
@@ -81,13 +90,13 @@ public final class Media {
     }
     private static void launch(Activity a,String url,Map<String,String> h,String title,boolean download,boolean segmented){
         if(a.isFinishing()||a.isDestroyed())return;
-        if(download){download(a,url,h,title,segmented);return;}
+        if(download){DownloadFlow.open(a,url,h,title,segmented);return;}
         try{a.startActivity(mxIntent(url,h,title));}
         catch(ActivityNotFoundException e){new AlertDialog.Builder(a).setMessage("ثبّت MX Player لفتح هذا الفيديو.").setNegativeButton("إلغاء",null).setPositiveButton("فتح صفحة MX Player",(d,w)->{try{a.startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("market://details?id="+MX)));}catch(ActivityNotFoundException ignored){a.startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://play.google.com/store/apps/details?id="+MX)));}}).show();}
         catch(Exception e){alert(a,"تعذر فتح الفيديو في MX Player.");}
     }
     private static void qualities(Activity a,String url,Map<String,String> h,String title,boolean download){
-        cancelPending(a);ProgressDialog wait=new ProgressDialog(a);wait.setMessage("جاري تجهيز الجودات…");wait.setCancelable(true);wait.show();final boolean[] canceled={false};PENDING.put(a,()->{canceled[0]=true;wait.dismiss();});wait.setOnCancelListener(d->cancelPending(a));
+        cancelPending(a);ProgressDialog wait=new ProgressDialog(a);wait.setMessage(download?"جاري تجهيز الجودات للتنزيل…":"جاري تجهيز الجودات…");wait.setCancelable(true);wait.show();final boolean[] canceled={false};PENDING.put(a,()->{canceled[0]=true;wait.dismiss();});wait.setOnCancelListener(d->cancelPending(a));
         Api.IO.execute(()->{
             ArrayList<String> names=new ArrayList<>(),urls=new ArrayList<>();names.add("تلقائي");urls.add(url);
             try{
@@ -101,27 +110,9 @@ public final class Media {
                     String label="جودة "+names.size();Matcher resolution=Pattern.compile("RESOLUTION=\\d+x(\\d+)").matcher(descriptor);if(resolution.find())label=resolution.group(1)+"p";
                     String resolved=new URL(new URL(response.url),lines[j].trim()).toString();StreamCodec.validate(resolved);names.add(label);urls.add(resolved);
                 }
-            }catch(Exception ignored){/* Original master remains playable; MX can choose adaptively. */}
+            }catch(Exception ignored){/* Original master remains usable; downloader/player can choose adaptively. */}
             a.runOnUiThread(()->{if(canceled[0]||a.isFinishing()||a.isDestroyed())return;PENDING.remove(a);wait.dismiss();if(urls.size()==1){launch(a,url,h,title,download,true);return;}new AlertDialog.Builder(a).setTitle("اختيار الجودة").setItems(names.toArray(new String[0]),(d,i)->launch(a,urls.get(i),h,title,download,true)).show();});
         });
-    }
-    private static void download(Activity a,String url,Map<String,String> h,String title,boolean segmented){
-        if(segmented){
-            for(String packageName:new String[]{"idm.internet.download.manager.plus","idm.internet.download.manager","com.dv.adm"}){
-                Intent intent=new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(url),"video/*").setPackage(packageName).putExtra("title",title);
-                ArrayList<String> flat=new ArrayList<>();for(Map.Entry<String,String> e:h.entrySet()){flat.add(e.getKey());flat.add(e.getValue());}intent.putExtra("headers",flat.toArray(new String[0]));intent.putExtra("Cookie",h.get("Cookie"));intent.putExtra("Referer",h.get("Referer"));
-                try{a.startActivity(intent);return;}catch(ActivityNotFoundException ignored){}
-            }
-            alert(a,"هذا الرابط بث متجزئ. ثبّت 1DM أو ADM لتنزيله كاملاً.");return;
-        }
-        if(Build.VERSION.SDK_INT<=28&&Build.VERSION.SDK_INT>=23&&a.checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)!=android.content.pm.PackageManager.PERMISSION_GRANTED){a.requestPermissions(new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},831);Toast.makeText(a,"بعد منح الإذن، اضغط سيرفر التنزيل مجدداً.",Toast.LENGTH_LONG).show();return;}
-        try{
-            String path=Uri.parse(url).getLastPathSegment();String ext=path!=null&&path.toLowerCase(Locale.ROOT).endsWith(".mkv")?".mkv":".mp4";
-            String safe=title.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]","_");if(safe.length()>110)safe=safe.substring(0,110);if(safe.isEmpty())safe="video";
-            DownloadManager.Request request=new DownloadManager.Request(Uri.parse(url)).setTitle(title).setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED).setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS,safe+"-"+System.currentTimeMillis()+ext);
-            for(Map.Entry<String,String> entry:h.entrySet())request.addRequestHeader(entry.getKey(),entry.getValue());
-            ((DownloadManager)a.getSystemService(Context.DOWNLOAD_SERVICE)).enqueue(request);Toast.makeText(a,"بدأ التنزيل",Toast.LENGTH_SHORT).show();
-        }catch(Exception e){alert(a,"تعذر بدء التنزيل. تحقق من الإذن والمساحة المتاحة.");}
     }
     private static void alert(Activity a,String message){if(!a.isFinishing()&&!a.isDestroyed())new AlertDialog.Builder(a).setMessage(message).setPositiveButton("حسناً",null).show();}
 }
