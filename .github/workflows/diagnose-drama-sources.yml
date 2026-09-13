@@ -1,0 +1,27 @@
+name: Diagnose Drama episode sources
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tooling/probe_episode_sources.py'
+      - '.github/workflows/diagnose-drama-sources.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe public episode sources
+        run: python3 tooling/probe_episode_sources.py
+      - name: Upload sanitized diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: episode14-source-diagnostic
+          path: diagnostics/episode14-source-probe.json
+          if-no-files-found: error
+          retention-days: 3
