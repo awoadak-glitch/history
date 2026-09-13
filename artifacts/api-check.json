@@ -1,0 +1,49 @@
+{
+  "date": "2026-09-13",
+  "checks": [
+    {
+      "route": "serie/by/filtres/0/created/0/",
+      "status": 200,
+      "type": "list",
+      "items": 30,
+      "fields": []
+    },
+    {
+      "route": "movie/by/filtres/0/created/0/",
+      "status": 200,
+      "type": "list",
+      "items": 30,
+      "fields": []
+    },
+    {
+      "route": "search/test/0/",
+      "status": 200,
+      "type": "dict",
+      "items": 2,
+      "fields": [
+        "channels",
+        "posters"
+      ]
+    },
+    {
+      "route": "genre/all/",
+      "status": 200,
+      "type": "list",
+      "items": 49,
+      "fields": []
+    },
+    {
+      "route": "first/",
+      "status": 200,
+      "type": "dict",
+      "items": 4,
+      "fields": [
+        "channels",
+        "slides",
+        "genres",
+        "actors"
+      ]
+    }
+  ],
+  "note": "Normal content GET requests only; no protected config validation"
+}

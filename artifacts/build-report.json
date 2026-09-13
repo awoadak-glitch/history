@@ -7,7 +7,7 @@
     "res/layout/activity_home.xml",
     "classes23.dex"
   ],
-  "patch_sha256": "2cae1129544b5e2c770ae15c5a323f955336863ce8f68f1cbf69e8217de86758",
+  "patch_sha256": "5692f2819bb113f6cdac2cf0fb636367991cb5b2456b1269e3f2faa22938eafd",
   "runtime_tested": false,
   "signing_verified": false
 }
