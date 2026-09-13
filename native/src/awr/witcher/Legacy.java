@@ -5,6 +5,7 @@ import android.content.Context;
 import android.net.Uri;
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.concurrent.atomic.*;
 
 /** Invokes original extractor bytecode without booting Drama's application or config validator. */
 public final class Legacy {
@@ -25,26 +26,38 @@ public final class Legacy {
     }
 
     /**
-     * The original Q0/S0 extractor is authoritative whenever we can identify the provider.
-     * Generic HTML parsing is only a compatibility fallback if that original extractor fails or
-     * the provider is not in the static table. This prevents a shallow <source> match from stealing
-     * a request that needs the original provider-specific cookie/quality logic.
+     * The supplied Drama APK uses original Q0/S0 extractors, but several of them depend on
+     * dynamic server configuration that is not present in the host app. Do not let such an
+     * extractor block a provider page that can be resolved directly. Run both paths together and
+     * accept the first valid result. This keeps original quality/cookie output when it works, while
+     * avoiding the all-servers-unavailable regression caused by waiting on Q0/S0 exclusively.
      */
     public static boolean resolve(Activity activity,String url,Map<String,String> headers,Callback callback){
-        final String clean=StreamCodec.sourceUrl(url);
-        if(provider(clean)!=null){
-            activity.runOnUiThread(()->invokeOriginal(activity,clean,new Callback(){
-                public void done(List<Stream> streams,boolean showQualities){callback.done(streams,showQualities);}
-                public void failed(){resolvePage(activity,clean,headers,callback);}
-            }));
-        }else resolvePage(activity,clean,headers,callback);
+        final String clean=StreamCodec.sourceUrl(url);final boolean hasOriginal=provider(clean)!=null;
+        final int attempts=hasOriginal?2:1;AtomicInteger failed=new AtomicInteger();AtomicBoolean delivered=new AtomicBoolean();
+        Callback guarded=new Callback(){
+            public void done(List<Stream> streams,boolean showQualities){
+                if(streams==null||streams.isEmpty()){failed();return;}
+                if(delivered.compareAndSet(false,true))callback.done(streams,showQualities);
+            }
+            public void failed(){if(failed.incrementAndGet()>=attempts&&delivered.compareAndSet(false,true))callback.failed();}
+        };
+        resolvePage(activity,clean,headers,guarded);
+        if(hasOriginal)activity.runOnUiThread(()->invokeOriginal(activity,clean,guarded));
         return true;
     }
 
     private static void resolvePage(Activity activity,String clean,Map<String,String> headers,Callback callback){
         Api.IO.execute(()->{
             try{
-                Api.Response response=Api.readResponse(clean,headers,2*1024*1024);
+                Api.Response response=Api.readResponse(clean,headers,2*1024*1024);String body=response.text.trim();
+                if(body.startsWith("\ufeff"))body=body.substring(1).trim();
+                // Some quick-play endpoints redirect to or directly return an HLS master without
+                // a .m3u8 pathname. Treat the successful response URL itself as the final stream.
+                if(body.startsWith("#EXTM3U")){
+                    ArrayList<Stream> one=new ArrayList<>();one.add(new Stream(response.url,"تلقائي",null));
+                    activity.runOnUiThread(()->callback.done(one,false));return;
+                }
                 PageStreams.Result parsed=PageStreams.parse(response.text,response.url);
                 if(!parsed.streams.isEmpty()){activity.runOnUiThread(()->callback.done(parsed.streams,parsed.choice));return;}
             }catch(Exception ignored){}
