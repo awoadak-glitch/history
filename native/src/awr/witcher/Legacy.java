@@ -23,18 +23,35 @@ public final class Legacy {
         for(String[] p:Providers.TABLE){String key=p[0].toLowerCase(Locale.ROOT);if(p[0].equals(exact)||(key.length()>=4&&normalized.contains(key)))return p;}
         return null;
     }
+
+    /**
+     * The original Q0/S0 extractor is authoritative whenever we can identify the provider.
+     * Generic HTML parsing is only a compatibility fallback if that original extractor fails or
+     * the provider is not in the static table. This prevents a shallow <source> match from stealing
+     * a request that needs the original provider-specific cookie/quality logic.
+     */
     public static boolean resolve(Activity activity,String url,Map<String,String> headers,Callback callback){
         final String clean=StreamCodec.sourceUrl(url);
+        if(provider(clean)!=null){
+            activity.runOnUiThread(()->invokeOriginal(activity,clean,new Callback(){
+                public void done(List<Stream> streams,boolean showQualities){callback.done(streams,showQualities);}
+                public void failed(){resolvePage(activity,clean,headers,callback);}
+            }));
+        }else resolvePage(activity,clean,headers,callback);
+        return true;
+    }
+
+    private static void resolvePage(Activity activity,String clean,Map<String,String> headers,Callback callback){
         Api.IO.execute(()->{
             try{
                 Api.Response response=Api.readResponse(clean,headers,2*1024*1024);
                 PageStreams.Result parsed=PageStreams.parse(response.text,response.url);
-                if(!parsed.streams.isEmpty()){callback.done(parsed.streams,parsed.choice);return;}
+                if(!parsed.streams.isEmpty()){activity.runOnUiThread(()->callback.done(parsed.streams,parsed.choice));return;}
             }catch(Exception ignored){}
-            activity.runOnUiThread(()->{if(!activity.isFinishing()&&!activity.isDestroyed())invokeOriginal(activity,clean,callback);});
+            activity.runOnUiThread(callback::failed);
         });
-        return true;
     }
+
     private static void invokeOriginal(Activity activity,String url,Callback callback){
         String[] p=provider(url);if(p==null){callback.failed();return;}
         try{
