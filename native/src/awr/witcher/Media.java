@@ -22,8 +22,8 @@ public final class Media {
         try{url=StreamCodec.sourceUrl(StreamCodec.unwrap(source.optString("url"),source.optBoolean("is_encoded")));}
         catch(Exception e){alert(activity,"تعذر فك رابط هذا السيرفر.");return;}
         Map<String,String> headers=headers(source,url);String type=source.optString("type").toLowerCase(Locale.ROOT);
-        boolean declaredHls="m3u8".equals(type),declaredDash="mpd".equals(type);
-        if(needsExtractionForSource(source,url,type,download)){extract(activity,url,headers,title,download,"webm".equals(type),declaredHls||declaredDash);return;}
+        boolean declaredHls="m3u8".equals(type),declaredDash="mpd".equals(type),dynamicEmbed="embed".equals(type);
+        if(needsExtractionForSource(source,url,type,download)){extract(activity,url,headers,title,download,"webm".equals(type),declaredHls||declaredDash,dynamicEmbed);return;}
         String path=Uri.parse(url).getPath();String lower=(path==null?"":path).toLowerCase(Locale.ROOT);
         launch(activity,url,headers,title,download,declaredHls||declaredDash||lower.endsWith(".m3u8")||lower.endsWith(".mpd"));
     }
@@ -60,25 +60,27 @@ public final class Media {
         try{if(url.contains("=http"))url=url.substring(url.lastIndexOf('=')+1);String host=Uri.parse(url).getHost();return host==null?"":"https://"+host+"/";}catch(Exception e){return "";}
     }
 
-    private static void extract(Activity a,String url,Map<String,String> headers,String title,boolean download,boolean requestedQualities,boolean forceSegmented){
+    private static void extract(Activity a,String url,Map<String,String> headers,String title,boolean download,boolean requestedQualities,boolean forceSegmented,boolean dynamicEmbed){
         cancelPending(a);
         ProgressDialog wait=new ProgressDialog(a);wait.setMessage(download?"يرجى الإنتظار..يتم تجهيز التحميل":"جاري تجهيز رابط السيرفر…");wait.setCancelable(true);wait.show();
         Handler timer=new Handler(Looper.getMainLooper());java.util.concurrent.atomic.AtomicBoolean finished=new java.util.concurrent.atomic.AtomicBoolean();
         Runnable timeout=()->{if(finished.compareAndSet(false,true)){PENDING.remove(a);wait.dismiss();alert(a,"انتهت مهلة تجهيز الرابط. جرّب سيرفراً آخر.");}};
         PENDING.put(a,()->{finished.set(true);timer.removeCallbacks(timeout);wait.dismiss();});
         timer.postDelayed(timeout,65000);wait.setOnCancelListener(d->cancelPending(a));
-        boolean supported=Legacy.resolve(a,url,headers,new Legacy.Callback(){
+        boolean supported=Legacy.resolve(a,url,headers,dynamicEmbed,new Legacy.Callback(){
             public void failed(){a.runOnUiThread(()->{if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();alert(a,"هذا السيرفر غير متاح حالياً. جرّب سيرفراً آخر.");});}
             public void done(List<Legacy.Stream> streams,boolean showQualities){a.runOnUiThread(()->{
                 if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();if(a.isFinishing()||a.isDestroyed())return;
                 ArrayList<Legacy.Stream> valid=new ArrayList<>();ArrayList<String> labels=new ArrayList<>();
                 for(Legacy.Stream stream:streams){
-                    try{String finalUrl=StreamCodec.forExternalPlayer(stream.url);valid.add(new Legacy.Stream(finalUrl,stream.quality,stream.cookie));String q=stream.quality==null?"":stream.quality.trim();labels.add(q.isEmpty()?"جودة "+valid.size():q);}catch(Exception ignored){}
+                    try{String finalUrl=StreamCodec.forExternalPlayer(stream.url);valid.add(new Legacy.Stream(finalUrl,stream.quality,stream.cookie,stream.referer,stream.userAgent));String q=stream.quality==null?"":stream.quality.trim();labels.add(q.isEmpty()?"جودة "+valid.size():q);}catch(Exception ignored){}
                 }
                 if(valid.isEmpty()){alert(a,"تعذر تجهيز رابط صالح من هذا السيرفر.");return;}
                 android.content.DialogInterface.OnClickListener select=(d,i)->{
                     Legacy.Stream s=valid.get(i);Map<String,String> h=new TreeMap<>(String.CASE_INSENSITIVE_ORDER);h.putAll(headers);
                     if(s.cookie!=null&&!s.cookie.isEmpty()&&validHeader("Cookie",s.cookie))h.put("Cookie",s.cookie);
+                    if(s.referer!=null&&!s.referer.isEmpty()&&validHeader("Referer",s.referer)){h.put("Referer",s.referer);try{URL u=new URL(s.referer);h.put("Origin",u.getProtocol()+"://"+u.getAuthority());}catch(Exception ignored){}}
+                    if(s.userAgent!=null&&!s.userAgent.isEmpty()&&validHeader("User-Agent",s.userAgent))h.put("User-Agent",s.userAgent);
                     final String finalUrl;try{finalUrl=StreamCodec.forExternalPlayer(s.url);}catch(Exception e){alert(a,"تعذر فك الرابط المختار.");return;}
                     String path=Uri.parse(finalUrl).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);
                     launch(a,finalUrl,h,title,download,forceSegmented||lower.endsWith(".m3u8")||lower.endsWith(".mpd"));
