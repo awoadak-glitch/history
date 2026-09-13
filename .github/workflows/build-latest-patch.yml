@@ -1,6 +1,8 @@
 name: Build latest Anime Witcher patch
 
 on:
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
