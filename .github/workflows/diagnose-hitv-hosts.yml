@@ -1,0 +1,27 @@
+name: Diagnose HiTV API hosts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tooling/probe_hitv_hosts.mjs'
+      - '.github/workflows/diagnose-hitv-hosts.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe current HiTV API hosts
+        run: node tooling/probe_hitv_hosts.mjs
+      - name: Upload sanitized diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: hitv-host-diagnostic
+          path: diagnostics/hitv-host-probe.json
+          if-no-files-found: error
+          retention-days: 3
