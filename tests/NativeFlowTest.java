@@ -46,7 +46,7 @@ public class NativeFlowTest {
     @After public void close(){if(controller!=null)controller.pause().stop().destroy();}
 
     @Test public void channelsDetailsServersAndMxHandoff()throws Exception{
-        start();click("قناة الاختبار");waitFor("مشاهدة");click("مشاهدة");waitFor("السيرفر الأول");click("السيرفر الأول");
+        start();click("قناة الاختبار");waitFor("مشاهدة");click("مشاهدة");waitFor("تشغيل سيرفر مباشر");click("تشغيل سيرفر مباشر");
         Intent intent=shadowOf(activity).getNextStartedActivity();assertNotNull(intent);assertEquals("com.mxtech.videoplayer.ad",intent.getPackage());
         assertEquals("https://media.example.org/video.mp4?token=abc",intent.getDataString());assertFalse(intent.hasExtra("is_encoded"));assertFalse(intent.hasExtra("url"));
         List<String> headers=Arrays.asList(intent.getStringArrayExtra("headers"));assertTrue(headers.contains("Cookie"));assertTrue(headers.contains("session=fixture"));assertTrue(headers.contains("https://origin.example.org/"));
@@ -64,7 +64,7 @@ public class NativeFlowTest {
         String raw="[{\"id\":12,\"kind\":\"play\"},{\"id\":3,\"kind\":\"both\"},{\"id\":7,\"kind\":\"download\"}]";
         JSONArray decoded=(JSONArray)Api.decode("fixture-prefix:"+Base64.encodeToString(raw.getBytes("UTF-8"),Base64.NO_WRAP));
         assertEquals(12,decoded.getJSONObject(0).getInt("id"));assertEquals(3,decoded.getJSONObject(1).getInt("id"));assertEquals(7,decoded.getJSONObject(2).getInt("id"));
-        assertFalse(Api.publicAccess("2"));assertFalse(Api.publicAccess("3"));assertTrue(Api.publicAccess("1"));
+        assertTrue(Api.publicAccess("2"));assertTrue(Api.publicAccess("3"));assertTrue(Api.publicAccess("1"));
     }
     @Test public void seriesHomeUsesActualServerSections()throws Exception{
         start();cache("first/","{\"slides\":[],\"genres\":[{\"title\":\"آخر الحلقات المضافة\",\"posters\":[{\"id\":51,\"title\":\"مسلسل الاختبار\",\"type\":\"serie\"}]},{\"title\":\"آخر الأفلام المضافة\",\"posters\":[{\"id\":61,\"title\":\"فيلم الاختبار\",\"type\":\"movie\"}]}]}");
@@ -92,6 +92,45 @@ public class NativeFlowTest {
         assertFalse(Media.needsExtraction("https://cdn.example.org/master.M3U8?token=abc","m3u8",false,false));
         assertFalse(Media.needsExtraction("https://cdn.example.org/live?id=42","m3u8",false,true));
     }
+    @Test public void relayUrlIsUnwrappedWithoutLosingSignedQuery()throws Exception{
+        String target="https://cdn.example.org/master.m3u8?token=a%2Bb&expires=123";
+        assertEquals(target,StreamCodec.sourceUrl("https://dwapp.qzz.io/url.php?url="+android.net.Uri.encode(target)));
+        JSONObject source=new JSONObject("{\"external\":false}");
+        for(String type:new String[]{"webm","mov","m3u8"})assertTrue(Media.needsExtractionForSource(source,"https://host.example.org/embed/42",type,false));
+        assertTrue(Media.needsExtractionForSource(source,"https://host.example.org/embed/42","mkv",true));
+    }
+    @Test public void publicPlayerDeclarationsAreDecodedWithoutRunningJavascript(){
+        String packed="eval(function(p,a,c,k,e,d){return p}('0:[{1:\"2://3/4.5\",6:\"7\"}]',8,8,'sources|file|https|cdn.example.org|movie|mp4|label|720p'.split('|'),0,{}))";
+        PageStreams.Result r=PageStreams.parse(packed,"https://provider.example.org/embed");
+        assertEquals(1,r.streams.size());assertEquals("https://cdn.example.org/movie.mp4",r.streams.get(0).url);assertEquals("720p",r.streams.get(0).quality);
+        String inertia="<div data-page=\"{&quot;component&quot;:&quot;Video/Embed&quot;,&quot;props&quot;:{&quot;mime&quot;:&quot;video/mp4&quot;,&quot;url&quot;:&quot;https://cdn.example.org/original.mp4?a=1&amp;b=2&quot;}}\"></div>";
+        assertEquals("https://cdn.example.org/original.mp4?a=1&b=2",PageStreams.parse(inertia,"https://provider.example.org/embed").streams.get(0).url);
+    }
+    private android.app.AlertDialog waitForDialog(String title)throws Exception{
+        for(int i=0;i<400;i++){shadowOf(Looper.getMainLooper()).idle();android.app.AlertDialog d=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();if(d!=null&&d.isShowing()&&title.equals(shadowOf(d).getTitle().toString()))return d;Thread.sleep(5);}throw new AssertionError("Missing dialog "+title);
+    }
+    @Test public void internalMultiQualityPageWaitsForSelectionBeforeMxAndTdm()throws Exception{
+        start();com.sun.net.httpserver.HttpServer server=com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1",0),0);
+        server.createContext("/player",exchange->{byte[] bytes="<video><source src='https://cdn.example.org/720.mp4?token=one' size='720'><source src='https://cdn.example.org/1080.mp4?token=two' size='1080'></video>".getBytes("UTF-8");exchange.sendResponseHeaders(200,bytes.length);exchange.getResponseBody().write(bytes);exchange.close();});server.start();
+        try{
+            JSONObject source=new JSONObject();source.put("url","http://127.0.0.1:"+server.getAddress().getPort()+"/player");source.put("type","webm");source.put("external",false);source.put("premium",3);
+            Media.open(activity,source,"الحلقة 14",false);android.app.AlertDialog d=waitForDialog("إختر جودة التشغيل!");assertNull(shadowOf(activity).getNextStartedActivity());
+            assertEquals("720p",d.getListView().getAdapter().getItem(0));assertEquals("1080p",d.getListView().getAdapter().getItem(1));d.getListView().performItemClick(null,1,1);
+            Intent mx=shadowOf(activity).getNextStartedActivity();assertEquals(Media.MX,mx.getPackage());assertEquals("https://cdn.example.org/1080.mp4?token=two",mx.getDataString());
+            Media.open(activity,source,"الحلقة 14",true);d=waitForDialog("اختر جودة التنزيل");assertNull(shadowOf(activity).getNextStartedActivity());d.getListView().performItemClick(null,0,0);
+            d=waitForDialog("خيارات التنزيل!");d.getListView().performItemClick(null,0,0);Intent tdm=shadowOf(activity).getNextStartedActivity();assertEquals("com.tdm.manager",tdm.getPackage());assertEquals("https://cdn.example.org/720.mp4?token=one",tdm.getDataString());
+        }finally{server.stop(0);}
+    }
+    @Test public void htmlDisguisedAsHlsNeverLaunchesMx()throws Exception{
+        start();com.sun.net.httpserver.HttpServer server=com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1",0),0);
+        java.util.concurrent.CountDownLatch sent=new java.util.concurrent.CountDownLatch(1);
+        server.createContext("/bad.m3u8",e->{byte[] b="<html>Unavailable</html>".getBytes("UTF-8");e.sendResponseHeaders(200,b.length);e.getResponseBody().write(b);e.close();sent.countDown();});server.start();
+        try{
+            JSONObject source=new JSONObject();source.put("url","http://127.0.0.1:"+server.getAddress().getPort()+"/bad.m3u8");source.put("type","m3u8");Media.open(activity,source,"test",false);
+            assertTrue(sent.await(3,java.util.concurrent.TimeUnit.SECONDS));for(int i=0;i<50;i++){shadowOf(Looper.getMainLooper()).idle();Thread.sleep(5);}
+            assertNull(shadowOf(activity).getNextStartedActivity());assertEquals("لم يُرجع السيرفر رابط بث صالحاً. جرّب سيرفراً آخر.",shadowOf(org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()).getMessage().toString());
+        }finally{server.stop(0);}
+    }
     @Test public void catalogKeepsLoadedPagesAfterDetailsAndRecreation()throws Exception{
         start();String second=CHANNEL.replace("701","702").replace("قناة الاختبار","قناة الصفحة الثانية");
         cache(Api.list(3,0,"created",1),"["+second+"]");cache(Api.detail(true,702),second);
@@ -117,16 +156,16 @@ public class NativeFlowTest {
         assertNotNull(dialog);dialog.getListView().performItemClick(null,1,1);waitFor("قناة اليمن");
     }
     @Test public void seriesSeasonsEpisodeServersAndCastAreConnected()throws Exception{
-        start();String series="{\"id\":51,\"title\":\"مسلسل الاختبار\",\"type\":\"serie\",\"playas\":\"1\",\"downloadas\":\"1\"}";
+        start();String series="{\"id\":51,\"title\":\"مسلسل الاختبار\",\"type\":\"serie\",\"playas\":\"1\",\"downloadas\":\"3\"}";
         cache("first/","{\"slides\":[],\"genres\":[{\"title\":\"جديد المسلسلات\",\"posters\":["+series+"]}]}");
         cache(Api.detail(false,51),series);cache("role/by/poster/51/","[{\"id\":81,\"name\":\"الممثل الأول\",\"role\":\"الدور الأول\"}]");cache("movie/by/actor/81/","["+series+"]");
         cache("season/by/serie/51/","[{\"title\":\"الموسم الأول\",\"episodes\":[{\"id\":901,\"title\":\"الحلقة الأولى\",\"playas\":\"1\"}]}]");
         cache(Api.sources(true,901),"[{\"title\":\"مشاهدة الحلقة\",\"kind\":\"play\",\"type\":\"mp4\",\"url\":\"https://media.example.org/episode.mp4\"},{\"title\":\"تنزيل فقط\",\"kind\":\"download\",\"type\":\"mp4\",\"url\":\"https://media.example.org/download.mp4\"}]");
         click("المسلسلات");waitFor("جديد المسلسلات");click("مسلسل الاختبار");waitFor("الممثل الأول");
         click("الممثل الأول");waitFor("مسلسل الاختبار");activity.onBackPressed();waitFor("عرض الحلقات");
-        click("عرض الحلقات");waitFor("الحلقة الأولى");click("الحلقة الأولى");waitFor("مشاهدة الحلقة");assertNull(text(activity.getWindow().getDecorView(),"تنزيل فقط"));
-        click("سيرفرات التنزيل");waitFor("تنزيل فقط");assertNull(text(activity.getWindow().getDecorView(),"مشاهدة الحلقة"));
-        click("سيرفرات المشاهدة");waitFor("مشاهدة الحلقة");click("مشاهدة الحلقة");Intent intent=shadowOf(activity).getNextStartedActivity();
+        click("عرض الحلقات");waitFor("الحلقة الأولى");click("الحلقة الأولى");waitFor("تشغيل سيرفر مباشر");assertNull(text(activity.getWindow().getDecorView(),"سيرفر تحميل مباشر"));
+        click("سيرفرات التنزيل");waitFor("سيرفر تحميل مباشر");assertNull(text(activity.getWindow().getDecorView(),"تشغيل سيرفر مباشر"));
+        click("سيرفرات المشاهدة");waitFor("تشغيل سيرفر مباشر");click("تشغيل سيرفر مباشر");Intent intent=shadowOf(activity).getNextStartedActivity();
         assertNotNull(intent);assertEquals(Media.MX,intent.getPackage());assertEquals("https://media.example.org/episode.mp4",intent.getDataString());
     }
     @Test public void redirectedPlaylistKeepsEffectiveBaseURL()throws Exception{
@@ -139,7 +178,7 @@ public class NativeFlowTest {
         }finally{server.stop(0);}
     }
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE) public void renderNativeScreensForReview()throws Exception{
-        start();render("channels");click("قناة الاختبار");waitFor("مشاهدة");click("مشاهدة");waitFor("السيرفر الأول");render("servers");
+        start();render("channels");click("قناة الاختبار");waitFor("مشاهدة");click("مشاهدة");waitFor("تشغيل سيرفر مباشر");render("servers");
     }
     private void render(String name)throws Exception{
         View view=activity.findViewById(android.R.id.content);int width=1080,height=2340;

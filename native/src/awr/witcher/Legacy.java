@@ -12,7 +12,7 @@ public final class Legacy {
         public final String url,quality,cookie;
         Stream(String u,String q,String c){url=u;quality=q;cookie=c;}
     }
-    public interface Callback {void done(List<Stream> streams);void failed();}
+    public interface Callback {void done(List<Stream> streams,boolean showQualities);void failed();}
     private Legacy(){}
     private static String[] provider(String url){
         String host=Uri.parse(url).getHost();if(host==null)return null;host=host.toLowerCase(Locale.ROOT);
@@ -23,8 +23,20 @@ public final class Legacy {
         for(String[] p:Providers.TABLE){String key=p[0].toLowerCase(Locale.ROOT);if(p[0].equals(exact)||(key.length()>=4&&normalized.contains(key)))return p;}
         return null;
     }
-    public static boolean resolve(Activity activity,String url,Callback callback){
-        String[] p=provider(url);if(p==null)return false;
+    public static boolean resolve(Activity activity,String url,Map<String,String> headers,Callback callback){
+        final String clean=StreamCodec.sourceUrl(url);
+        Api.IO.execute(()->{
+            try{
+                Api.Response response=Api.readResponse(clean,headers,2*1024*1024);
+                PageStreams.Result parsed=PageStreams.parse(response.text,response.url);
+                if(!parsed.streams.isEmpty()){callback.done(parsed.streams,parsed.choice);return;}
+            }catch(Exception ignored){}
+            activity.runOnUiThread(()->{if(!activity.isFinishing()&&!activity.isDestroyed())invokeOriginal(activity,clean,callback);});
+        });
+        return true;
+    }
+    private static void invokeOriginal(Activity activity,String url,Callback callback){
+        String[] p=provider(url);if(p==null){callback.failed();return;}
         try{
             ClassLoader loader=Legacy.class.getClassLoader();
             Class.forName("awr.legacy.a1.a",true,loader).getMethod("c",Context.class).invoke(null,activity.getApplicationContext());
@@ -39,7 +51,7 @@ public final class Legacy {
                         String quality=(String)item.getClass().getMethod("d").invoke(item),cookie=(String)item.getClass().getMethod("c").invoke(item);
                         streams.add(new Stream(resolved,quality,cookie));
                     }}catch(Exception e){callback.failed();return null;}
-                    if(streams.isEmpty())callback.failed();else callback.done(streams);
+                    if(streams.isEmpty())callback.failed();else callback.done(streams,args.length>1&&Boolean.TRUE.equals(args[1]));
                 }
                 return null;
             });
@@ -47,6 +59,5 @@ public final class Legacy {
             if(p[3].equals("1"))extractor.getMethod(p[2],String.class,listener,Context.class).invoke(null,url,bridge,activity);
             else extractor.getMethod(p[2],String.class,listener).invoke(null,url,bridge);
         }catch(ReflectiveOperationException|LinkageError|RuntimeException error){callback.failed();}
-        return true;
     }
 }

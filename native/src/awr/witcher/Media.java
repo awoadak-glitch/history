@@ -21,11 +21,11 @@ public final class Media {
     public static void open(Activity activity,JSONObject source,String title,boolean download){
         if(!Api.publicAccess(source.optString("premium"))){alert(activity,"هذا المصدر يحتاج إلى حساب أو اشتراك.");return;}
         final String url;
-        try{url=StreamCodec.unwrap(source.optString("url"),source.optBoolean("is_encoded"));}
+        try{url=StreamCodec.sourceUrl(StreamCodec.unwrap(source.optString("url"),source.optBoolean("is_encoded")));}
         catch(Exception e){alert(activity,"تعذر فك رابط هذا السيرفر.");return;}
         Map<String,String> headers=headers(source,url);String type=source.optString("type").toLowerCase(Locale.ROOT);
         String path=Uri.parse(url).getPath();String lower=(path==null?"":path).toLowerCase(Locale.ROOT);
-        if(needsExtractionForSource(source,url,type,download)){extract(activity,url,headers,title,download);return;}
+        if(needsExtractionForSource(source,url,type,download)){extract(activity,url,headers,title,download,"webm".equals(type));return;}
         boolean hls=lower.endsWith(".m3u8");
         if(hls)qualities(activity,url,headers,title,download);else launch(activity,url,headers,title,download,lower.endsWith(".mpd")||type.equals("mpd"));
     }
@@ -73,16 +73,16 @@ public final class Media {
         try{if(url.contains("=http"))url=url.substring(url.lastIndexOf('=')+1);String host=Uri.parse(url).getHost();return host==null?"":"https://"+host+"/";}catch(Exception e){return "";}
     }
 
-    private static void extract(Activity a,String url,Map<String,String> headers,String title,boolean download){
+    private static void extract(Activity a,String url,Map<String,String> headers,String title,boolean download,boolean requestedQualities){
         cancelPending(a);
         ProgressDialog wait=new ProgressDialog(a);wait.setMessage(download?"جاري تجهيز رابط التنزيل…":"جاري تجهيز رابط السيرفر…");wait.setCancelable(true);wait.show();
         Handler timer=new Handler(Looper.getMainLooper());java.util.concurrent.atomic.AtomicBoolean finished=new java.util.concurrent.atomic.AtomicBoolean();
         Runnable timeout=()->{if(finished.compareAndSet(false,true)){PENDING.remove(a);wait.dismiss();alert(a,"انتهت مهلة تجهيز الرابط. جرّب سيرفراً آخر.");}};
         PENDING.put(a,()->{finished.set(true);timer.removeCallbacks(timeout);wait.dismiss();});
         timer.postDelayed(timeout,65000);wait.setOnCancelListener(d->cancelPending(a));
-        boolean supported=Legacy.resolve(a,url,new Legacy.Callback(){
+        boolean supported=Legacy.resolve(a,url,headers,new Legacy.Callback(){
             public void failed(){a.runOnUiThread(()->{if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();alert(a,"هذا السيرفر غير متاح حالياً. جرّب سيرفراً آخر.");});}
-            public void done(List<Legacy.Stream> streams){a.runOnUiThread(()->{
+            public void done(List<Legacy.Stream> streams,boolean showQualities){a.runOnUiThread(()->{
                 if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();if(a.isFinishing()||a.isDestroyed())return;
                 ArrayList<Legacy.Stream> valid=new ArrayList<>();ArrayList<String> labels=new ArrayList<>();
                 for(Legacy.Stream stream:streams){
@@ -100,7 +100,7 @@ public final class Media {
                     String path=Uri.parse(finalUrl).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);
                     if(lower.endsWith(".m3u8"))qualities(a,finalUrl,h,title,download);else launch(a,finalUrl,h,title,download,lower.endsWith(".mpd"));
                 };
-                if(valid.size()==1)select.onClick(null,0);
+                if(valid.size()==1&&!showQualities&&!requestedQualities)select.onClick(null,0);
                 else new AlertDialog.Builder(a).setTitle(download?"اختر جودة التنزيل":"إختر جودة التشغيل!").setItems(labels.toArray(new String[0]),select).show();
             });}
         });
@@ -133,8 +133,10 @@ public final class Media {
         cancelPending(a);ProgressDialog wait=new ProgressDialog(a);wait.setMessage(download?"جاري تجهيز الجودات للتنزيل…":"جاري تجهيز الجودات…");wait.setCancelable(true);wait.show();final boolean[] canceled={false};PENDING.put(a,()->{canceled[0]=true;wait.dismiss();});wait.setOnCancelListener(d->cancelPending(a));
         Api.IO.execute(()->{
             ArrayList<String> names=new ArrayList<>(),urls=new ArrayList<>();names.add("تلقائي");urls.add(clean);
+            boolean valid=false;
             try{
-                Api.Response response=Api.readResponse(clean,h,1024*1024);String[] lines=response.text.split("\\r?\\n");
+                Api.Response response=Api.readResponse(clean,h,1024*1024);String body=response.text.trim();if(body.startsWith("\ufeff"))body=body.substring(1).trim();
+                if(!body.startsWith("#EXTM3U"))throw new java.io.IOException("Not a playlist");valid=true;String[] lines=body.split("\\r?\\n");
                 for(int i=0;i<lines.length-1;i++)if(lines[i].startsWith("#EXT-X-STREAM-INF:")){
                     String descriptor=lines[i];
                     if(descriptor.contains("AUDIO="))continue;
@@ -143,8 +145,9 @@ public final class Media {
                     String label="جودة "+names.size();Matcher resolution=Pattern.compile("RESOLUTION=\\d+x(\\d+)").matcher(descriptor);if(resolution.find())label=resolution.group(1)+"p";
                     String resolved=new URL(new URL(response.url),lines[j].trim()).toString();resolved=StreamCodec.forExternalPlayer(resolved);names.add(label);urls.add(resolved);
                 }
-            }catch(Exception ignored){/* Keep the final master URI; MX can still select adaptively. */}
-            a.runOnUiThread(()->{if(canceled[0]||a.isFinishing()||a.isDestroyed())return;PENDING.remove(a);wait.dismiss();if(urls.size()==1){launch(a,clean,h,title,download,true);return;}new AlertDialog.Builder(a).setTitle(download?"اختر جودة التنزيل":"إختر جودة التشغيل!").setItems(names.toArray(new String[0]),(d,i)->launch(a,urls.get(i),h,title,download,true)).show();});
+            }catch(Exception ignored){}
+            final boolean playable=valid;
+            a.runOnUiThread(()->{if(canceled[0]||a.isFinishing()||a.isDestroyed())return;PENDING.remove(a);wait.dismiss();if(!playable){alert(a,"لم يُرجع السيرفر رابط بث صالحاً. جرّب سيرفراً آخر.");return;}if(urls.size()==1){launch(a,clean,h,title,download,true);return;}new AlertDialog.Builder(a).setTitle(download?"اختر جودة التنزيل":"إختر جودة التشغيل!").setItems(names.toArray(new String[0]),(d,i)->launch(a,urls.get(i),h,title,download,true)).show();});
         });
     }
     private static void alert(Activity a,String message){if(!a.isFinishing()&&!a.isDestroyed())new AlertDialog.Builder(a).setMessage(message).setPositiveButton("حسناً",null).show();}

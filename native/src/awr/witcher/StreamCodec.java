@@ -22,6 +22,17 @@ public final class StreamCodec {
         if(clean.startsWith("https://")||clean.startsWith("http://")){validate(clean);return clean;}
         return decodeEnvelope(clean);
     }
+    /** Unwrap only the documented Drama relay's URL parameter, retaining signed queries. */
+    public static String sourceUrl(String value){
+        String current=forExternalPlayer(value);
+        for(int i=0;i<6;i++){
+            android.net.Uri uri=android.net.Uri.parse(current);String host=uri.getHost();
+            if(!("dwapp.qzz.io".equalsIgnoreCase(host)||"dw.uns.bio".equalsIgnoreCase(host)))break;
+            String nested=uri.getQueryParameter("url");if(nested==null||nested.equals(current))break;
+            try{current=forExternalPlayer(nested);}catch(IllegalArgumentException e){break;}
+        }
+        return current;
+    }
 
     private static String decodeEnvelope(String value){
         if(value.length()<=17)throw new IllegalArgumentException("Incomplete DW envelope");
