@@ -8,7 +8,7 @@ import org.json.*;
 import java.net.*;
 import java.util.*;
 
-/** Resolve/decode inside the app; MX always receives the final clean media URI plus headers. */
+/** Resolve/decode inside the app; normal media goes to MX, while Drama `embed` mirrors its WebView. */
 public final class Media {
     public static final String MX="com.mxtech.videoplayer.ad";
     private static final String UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36";
@@ -22,8 +22,12 @@ public final class Media {
         try{url=StreamCodec.sourceUrl(StreamCodec.unwrap(source.optString("url"),source.optBoolean("is_encoded")));}
         catch(Exception e){alert(activity,"تعذر فك رابط هذا السيرفر.");return;}
         Map<String,String> headers=headers(source,url);String type=source.optString("type").toLowerCase(Locale.ROOT);
-        boolean declaredHls="m3u8".equals(type),declaredDash="mpd".equals(type),dynamicEmbed="embed".equals(type);
-        if(needsExtractionForSource(source,url,type,download)){extract(activity,url,headers,title,download,"webm".equals(type),declaredHls||declaredDash,dynamicEmbed);return;}
+        // Verified from the supplied Drama World V4.2f DEX: EpisodesActivity.W1 sends type=embed
+        // to EmbedActivity with extras url + size. EmbedActivity loads that URL in a JS WebView and
+        // uses size as Referer. It never sends an embed page through Q0/S0 or DW Player.
+        if("embed".equals(type)&&!download){EmbedPlayer.open(activity,url,source.optString("size"),headers);return;}
+        boolean declaredHls="m3u8".equals(type),declaredDash="mpd".equals(type);
+        if(needsExtractionForSource(source,url,type,download)){extract(activity,url,headers,title,download,"webm".equals(type),declaredHls||declaredDash);return;}
         String path=Uri.parse(url).getPath();String lower=(path==null?"":path).toLowerCase(Locale.ROOT);
         launch(activity,url,headers,title,download,declaredHls||declaredDash||lower.endsWith(".m3u8")||lower.endsWith(".mpd"));
     }
@@ -38,7 +42,7 @@ public final class Media {
         String normalized=type==null?"":type.toLowerCase(Locale.ROOT);
         if(channel)return !(normalized.equals("m3u8")||normalized.equals("mp4")||normalized.equals("mkv")||normalized.equals("mpd"));
         if(download)return !normalized.equals("mp4");
-        if(normalized.equals("mov")||normalized.equals("webm")||normalized.equals("embed"))return true;
+        if(normalized.equals("mov")||normalized.equals("webm"))return true;
         if(normalized.equals("m3u8")){String path=Uri.parse(url).getPath();return path==null||!path.toLowerCase(Locale.ROOT).endsWith(".m3u8");}
         if(normalized.equals("mp4")||normalized.equals("mkv")||normalized.equals("mpd"))return false;
         return true;
@@ -60,27 +64,25 @@ public final class Media {
         try{if(url.contains("=http"))url=url.substring(url.lastIndexOf('=')+1);String host=Uri.parse(url).getHost();return host==null?"":"https://"+host+"/";}catch(Exception e){return "";}
     }
 
-    private static void extract(Activity a,String url,Map<String,String> headers,String title,boolean download,boolean requestedQualities,boolean forceSegmented,boolean dynamicEmbed){
+    private static void extract(Activity a,String url,Map<String,String> headers,String title,boolean download,boolean requestedQualities,boolean forceSegmented){
         cancelPending(a);
         ProgressDialog wait=new ProgressDialog(a);wait.setMessage(download?"يرجى الإنتظار..يتم تجهيز التحميل":"جاري تجهيز رابط السيرفر…");wait.setCancelable(true);wait.show();
         Handler timer=new Handler(Looper.getMainLooper());java.util.concurrent.atomic.AtomicBoolean finished=new java.util.concurrent.atomic.AtomicBoolean();
         Runnable timeout=()->{if(finished.compareAndSet(false,true)){PENDING.remove(a);wait.dismiss();alert(a,"انتهت مهلة تجهيز الرابط. جرّب سيرفراً آخر.");}};
         PENDING.put(a,()->{finished.set(true);timer.removeCallbacks(timeout);wait.dismiss();});
         timer.postDelayed(timeout,65000);wait.setOnCancelListener(d->cancelPending(a));
-        boolean supported=Legacy.resolve(a,url,headers,dynamicEmbed,new Legacy.Callback(){
+        boolean supported=Legacy.resolve(a,url,headers,new Legacy.Callback(){
             public void failed(){a.runOnUiThread(()->{if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();alert(a,"هذا السيرفر غير متاح حالياً. جرّب سيرفراً آخر.");});}
             public void done(List<Legacy.Stream> streams,boolean showQualities){a.runOnUiThread(()->{
                 if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();if(a.isFinishing()||a.isDestroyed())return;
                 ArrayList<Legacy.Stream> valid=new ArrayList<>();ArrayList<String> labels=new ArrayList<>();
                 for(Legacy.Stream stream:streams){
-                    try{String finalUrl=StreamCodec.forExternalPlayer(stream.url);valid.add(new Legacy.Stream(finalUrl,stream.quality,stream.cookie,stream.referer,stream.userAgent));String q=stream.quality==null?"":stream.quality.trim();labels.add(q.isEmpty()?"جودة "+valid.size():q);}catch(Exception ignored){}
+                    try{String finalUrl=StreamCodec.forExternalPlayer(stream.url);valid.add(new Legacy.Stream(finalUrl,stream.quality,stream.cookie));String q=stream.quality==null?"":stream.quality.trim();labels.add(q.isEmpty()?"جودة "+valid.size():q);}catch(Exception ignored){}
                 }
                 if(valid.isEmpty()){alert(a,"تعذر تجهيز رابط صالح من هذا السيرفر.");return;}
                 android.content.DialogInterface.OnClickListener select=(d,i)->{
                     Legacy.Stream s=valid.get(i);Map<String,String> h=new TreeMap<>(String.CASE_INSENSITIVE_ORDER);h.putAll(headers);
                     if(s.cookie!=null&&!s.cookie.isEmpty()&&validHeader("Cookie",s.cookie))h.put("Cookie",s.cookie);
-                    if(s.referer!=null&&!s.referer.isEmpty()&&validHeader("Referer",s.referer)){h.put("Referer",s.referer);try{URL u=new URL(s.referer);h.put("Origin",u.getProtocol()+"://"+u.getAuthority());}catch(Exception ignored){}}
-                    if(s.userAgent!=null&&!s.userAgent.isEmpty()&&validHeader("User-Agent",s.userAgent))h.put("User-Agent",s.userAgent);
                     final String finalUrl;try{finalUrl=StreamCodec.forExternalPlayer(s.url);}catch(Exception e){alert(a,"تعذر فك الرابط المختار.");return;}
                     String path=Uri.parse(finalUrl).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);
                     launch(a,finalUrl,h,title,download,forceSegmented||lower.endsWith(".m3u8")||lower.endsWith(".mpd"));
