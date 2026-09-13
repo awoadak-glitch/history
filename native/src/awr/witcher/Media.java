@@ -22,19 +22,31 @@ public final class Media {
         catch(Exception e){alert(activity,"تعذر قراءة رابط هذا السيرفر.");return;}
         Map<String,String> headers=headers(source,url);String type=source.optString("type").toLowerCase(Locale.ROOT);
         String path=Uri.parse(url).getPath();String lower=(path==null?"":path).toLowerCase(Locale.ROOT);
-        boolean direct=lower.endsWith(".m3u8")||lower.endsWith(".mp4")||lower.endsWith(".mkv")||lower.endsWith(".mpd")||type.equals("mp4")||type.equals("m3u8")||type.equals("mkv")||type.equals("mpd");
+        boolean direct=!needsExtraction(url,type,download,source.optBoolean("_channel"));
         if(!direct){
             extract(activity,url,headers,title,download);return;
         }
         boolean hls=lower.endsWith(".m3u8")||type.equals("m3u8");
         if(hls)qualities(activity,url,headers,title,download);else launch(activity,url,headers,title,download,lower.endsWith(".mpd")||type.equals("mpd"));
     }
+    static boolean needsExtraction(String url,String type,boolean download,boolean channel){
+        String path=Uri.parse(url).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);
+        for(String extension:new String[]{".m3u8",".mp4",".mkv",".mpd",".mov",".webm",".ts",".avi"})if(lower.endsWith(extension))return false;
+        // Drama uses these type labels for extractor pages as well as media files.
+        // A movie page tagged m3u8 is not itself a playlist. Channels use direct URLs.
+        if(channel)return !(type.equals("m3u8")||type.equals("mp4")||type.equals("mkv")||type.equals("mpd"));
+        return !(type.equals("mp4")||type.equals("mpd")||(!download&&type.equals("mkv")));
+    }
+    private static boolean validHeader(String key,String value){
+        return key!=null&&key.matches("[!#$%&'*+.^_`|~0-9A-Za-z-]+")&&value!=null&&!value.contains("\r")&&!value.contains("\n");
+    }
     public static Map<String,String> headers(JSONObject source,String url){
-        Map<String,String> h=new LinkedHashMap<>();h.put("User-Agent",UA);
-        JSONObject supplied=source.optJSONObject("headers");if(supplied!=null){Iterator<String> keys=supplied.keys();while(keys.hasNext()){String key=keys.next();String value=supplied.optString(key);if(!key.contains("\r")&&!key.contains("\n")&&!value.contains("\r")&&!value.contains("\n"))h.put(key,value);}}
+        Map<String,String> h=new TreeMap<>(String.CASE_INSENSITIVE_ORDER);h.put("User-Agent",UA);
+        JSONObject supplied=source.optJSONObject("headers");if(supplied!=null){Iterator<String> keys=supplied.keys();while(keys.hasNext()){String key=keys.next();String value=supplied.optString(key);if(validHeader(key,value))h.put(key,value);}}
         String host=source.optString("host",source.optString("size"));
         if(!(host.startsWith("http://")||host.startsWith("https://"))&&!source.optBoolean("_channel"))host=originalReferer(url);
-        if(host.startsWith("http://")||host.startsWith("https://")){h.put("Referer",host);try{URL u=new URL(host);h.put("Origin",u.getProtocol()+"://"+u.getAuthority());}catch(Exception ignored){}}
+        if((host.startsWith("http://")||host.startsWith("https://"))&&validHeader("Referer",host)&&!h.containsKey("Referer"))h.put("Referer",host);
+        if(h.containsKey("Referer")&&!h.containsKey("Origin")){try{URL u=new URL(h.get("Referer"));h.put("Origin",u.getProtocol()+"://"+u.getAuthority());}catch(Exception ignored){}}
         String cookie=source.optString("cookie");if(!cookie.isEmpty()&&!cookie.contains("\n")&&!cookie.contains("\r"))h.put("Cookie",cookie);
         return h;
     }
@@ -52,7 +64,7 @@ public final class Media {
             public void done(List<Legacy.Stream> streams){a.runOnUiThread(()->{
                 if(!finished.compareAndSet(false,true))return;timer.removeCallbacks(timeout);if(a.isFinishing()||a.isDestroyed())return;wait.dismiss();
                 String[] names=new String[streams.size()];for(int i=0;i<names.length;i++)names[i]=streams.get(i).quality==null?"جودة "+(i+1):streams.get(i).quality;
-                android.content.DialogInterface.OnClickListener select=(d,i)->{Legacy.Stream s=streams.get(i);Map<String,String> h=new LinkedHashMap<>(headers);if(s.cookie!=null&&!s.cookie.isEmpty())h.put("Cookie",s.cookie);String path=Uri.parse(s.url).getPath();boolean hls=path!=null&&path.endsWith(".m3u8");if(hls)qualities(a,s.url,h,title,download);else launch(a,s.url,h,title,download,path!=null&&path.endsWith(".mpd"));};
+                android.content.DialogInterface.OnClickListener select=(d,i)->{Legacy.Stream s=streams.get(i);Map<String,String> h=new TreeMap<>(String.CASE_INSENSITIVE_ORDER);h.putAll(headers);if(s.cookie!=null&&!s.cookie.isEmpty()&&validHeader("Cookie",s.cookie))h.put("Cookie",s.cookie);String path=Uri.parse(s.url).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);boolean hls=lower.endsWith(".m3u8");if(hls)qualities(a,s.url,h,title,download);else launch(a,s.url,h,title,download,lower.endsWith(".mpd"));};
                 if(streams.size()==1)select.onClick(null,0);else new AlertDialog.Builder(a).setTitle("اختيار الجودة").setItems(names,select).show();
             });}
         });
@@ -60,7 +72,7 @@ public final class Media {
     }
     public static Intent mxIntent(String url,Map<String,String> headers,String title){
         StreamCodec.validate(url);Intent intent=new Intent(Intent.ACTION_VIEW).setPackage(MX).setDataAndType(Uri.parse(url),"video/*");
-        ArrayList<String> flat=new ArrayList<>();for(Map.Entry<String,String> h:headers.entrySet()){flat.add(h.getKey());flat.add(h.getValue());}
+        ArrayList<String> flat=new ArrayList<>();for(Map.Entry<String,String> h:headers.entrySet())if(validHeader(h.getKey(),h.getValue())){flat.add(h.getKey());flat.add(h.getValue());}
         intent.putExtra("headers",flat.toArray(new String[0]));intent.putExtra("title",title);return intent;
     }
     private static void launch(Activity a,String url,Map<String,String> h,String title,boolean download,boolean segmented){

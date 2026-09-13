@@ -2,46 +2,97 @@
   "date": "2026-09-13",
   "checks": [
     {
-      "route": "serie/by/filtres/0/created/0/",
-      "status": 200,
-      "type": "list",
-      "items": 30,
-      "fields": []
-    },
-    {
-      "route": "movie/by/filtres/0/created/0/",
-      "status": 200,
-      "type": "list",
-      "items": 30,
-      "fields": []
-    },
-    {
-      "route": "search/test/0/",
-      "status": 200,
-      "type": "dict",
-      "items": 2,
-      "fields": [
-        "channels",
-        "posters"
-      ]
-    },
-    {
-      "route": "genre/all/",
-      "status": 200,
-      "type": "list",
-      "items": 49,
-      "fields": []
-    },
-    {
       "route": "first/",
       "status": 200,
-      "type": "dict",
       "items": 4,
-      "fields": [
+      "first_fields": [
         "channels",
         "slides",
         "genres",
         "actors"
+      ]
+    },
+    {
+      "route": "serie/by/filtres/0/created/0/",
+      "status": 200,
+      "items": 30,
+      "first_fields": [
+        "id",
+        "title",
+        "label",
+        "sublabel",
+        "type",
+        "description",
+        "year",
+        "rating",
+        "imdb",
+        "comment",
+        "duration",
+        "downloadas",
+        "classification",
+        "image",
+        "cover",
+        "genres",
+        "trailer",
+        "sources"
+      ]
+    },
+    {
+      "route": "movie/by/filtres/0/created/0/",
+      "status": 200,
+      "items": 30,
+      "first_fields": [
+        "id",
+        "type",
+        "title",
+        "label",
+        "sublabel",
+        "description",
+        "year",
+        "imdb",
+        "comment",
+        "rating",
+        "duration",
+        "downloadas",
+        "playas",
+        "classification",
+        "image",
+        "cover",
+        "genres",
+        "trailer",
+        "sources"
+      ]
+    },
+    {
+      "route": "channel/by/filtres/0/0/0/",
+      "status": 200,
+      "items": 30,
+      "first_fields": [
+        "id",
+        "title",
+        "label",
+        "sublabel",
+        "description",
+        "website",
+        "classification",
+        "views",
+        "shares",
+        "rating",
+        "playas",
+        "comment",
+        "image",
+        "sources",
+        "categories",
+        "countries"
+      ]
+    },
+    {
+      "route": "search/%D8%A7%D9%84%D9%83%D8%B1%D8%A7%D9%85%D8%A9/0/",
+      "status": 200,
+      "items": 2,
+      "first_fields": [
+        "channels",
+        "posters"
       ]
     }
   ],

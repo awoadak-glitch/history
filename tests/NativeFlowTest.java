@@ -76,6 +76,22 @@ public class NativeFlowTest {
         assertEquals(uri,StreamCodec.unwrap(fixture,true));assertEquals(uri,StreamCodec.unwrap(uri,false));
         try{StreamCodec.unwrap("not-a-url",false);fail("Invalid URI accepted");}catch(IllegalArgumentException expected){}
     }
+    @Test public void explicitPlaybackHeadersOverrideGuessedReferer()throws Exception{
+        JSONObject source=new JSONObject("{\"headers\":{\"referer\":\"https://publisher.example.org/watch/42\",\"origin\":\"https://publisher.example.org\",\"user-agent\":\"Provider agent\"},\"host\":\"https://cdn.example.org/\"}");
+        Map<String,String> headers=Media.headers(source,"https://cdn.example.org/video.mp4");
+        assertEquals("https://publisher.example.org/watch/42",headers.get("Referer"));
+        assertEquals("https://publisher.example.org",headers.get("Origin"));
+        assertEquals("Provider agent",headers.get("User-Agent"));
+        headers.put("Injected","bad\r\nextra: value");
+        assertFalse(Arrays.asList(Media.mxIntent("https://cdn.example.org/video.mp4",headers,"Title").getStringArrayExtra("headers")).contains("Injected"));
+    }
+    @Test public void providerPagesAreNotMistakenForPlaylists(){
+        assertTrue(Media.needsExtraction("https://provider.example.org/embed/42","m3u8",false,false));
+        assertTrue(Media.needsExtraction("https://provider.example.org/embed/42","mov",false,false));
+        assertTrue(Media.needsExtraction("https://provider.example.org/embed/42","mkv",true,false));
+        assertFalse(Media.needsExtraction("https://cdn.example.org/master.M3U8?token=abc","m3u8",false,false));
+        assertFalse(Media.needsExtraction("https://cdn.example.org/live?id=42","m3u8",false,true));
+    }
     @Test public void redirectedPlaylistKeepsEffectiveBaseURL()throws Exception{
         com.sun.net.httpserver.HttpServer server=com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1",0),0);
         server.createContext("/start.m3u8",exchange->{exchange.getResponseHeaders().add("Location","/nested/master.m3u8");exchange.sendResponseHeaders(302,-1);exchange.close();});
