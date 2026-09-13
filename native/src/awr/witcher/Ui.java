@@ -41,7 +41,8 @@ public final class Ui {
     public static TextView text(Context c, String s, int size, boolean bold) {
         TextView v = new TextView(c); v.setText(s); v.setTextSize(size); v.setTextColor(textColor(c));
         v.setGravity(Gravity.CENTER_VERTICAL | Gravity.START);
-        v.setTypeface(Typeface.create("sans-serif", bold ? Typeface.BOLD : Typeface.NORMAL));
+        Typeface face=null;if(android.os.Build.VERSION.SDK_INT>=26){int id=c.getResources().getIdentifier("montserrat","font",c.getPackageName());if(id!=0)try{face=c.getResources().getFont(id);}catch(Exception ignored){}}
+        v.setTypeface(face==null?Typeface.create("sans-serif", bold ? Typeface.BOLD : Typeface.NORMAL):Typeface.create(face,bold?Typeface.BOLD:Typeface.NORMAL));
         v.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG); return v;
     }
     public static LinearLayout column(Context c) {

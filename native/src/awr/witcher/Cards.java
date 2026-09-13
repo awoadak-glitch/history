@@ -51,22 +51,46 @@ public final class Cards {
         }
         scroll.addView(row);parent.addView(scroll);
     }
+    public static void actors(Activity c,LinearLayout parent,JSONArray items,Select select){
+        HorizontalScrollView scroll=new HorizontalScrollView(c);scroll.setHorizontalScrollBarEnabled(false);scroll.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        LinearLayout row=Ui.row(c);row.setGravity(Gravity.TOP);int width=Ui.dp(c,112),diameter=Ui.dp(c,82);
+        for(int i=0;i<items.length();i++){
+            JSONObject actor=items.optJSONObject(i);if(actor==null)continue;LinearLayout card=Ui.column(c);card.setGravity(Gravity.CENTER_HORIZONTAL);card.setPadding(Ui.dp(c,5),Ui.dp(c,5),Ui.dp(c,5),Ui.dp(c,12));
+            card.addView(Ui.image(c,actor.optString("image"),41),new LinearLayout.LayoutParams(diameter,diameter));
+            TextView name=Ui.text(c,Api.label(actor),13,true);name.setGravity(Gravity.CENTER);name.setMaxLines(2);name.setPadding(0,Ui.dp(c,7),0,0);card.addView(name,new LinearLayout.LayoutParams(-1,-2));
+            TextView role=Ui.text(c,actor.optString("role",actor.optString("type")),12,false);role.setGravity(Gravity.CENTER);role.setMaxLines(2);role.setTextColor(Ui.muted(c));card.addView(role,new LinearLayout.LayoutParams(-1,-2));
+            card.setContentDescription("أعمال "+Api.label(actor));card.setOnClickListener(v->select.open(actor));row.addView(card,new LinearLayout.LayoutParams(width,-2));
+        }
+        scroll.addView(row);parent.addView(scroll);
+    }
     public static View hero(Activity c,JSONArray items,Select select){
-        LinearLayout block=Ui.column(c);ViewFlipper pages=new ViewFlipper(c);
+        LinearLayout block=Ui.column(c);HeroFlipper pages=new HeroFlipper(c);
         pages.setBackground(Ui.rounded(c,Ui.surface(c),12));pages.setClipToOutline(true);
         pages.setInAnimation(c,android.R.anim.fade_in);pages.setOutAnimation(c,android.R.anim.fade_out);
-        LinearLayout dots=Ui.row(c);dots.setGravity(Gravity.CENTER);final int count=Math.min(6,items.length());
+        LinearLayout dots=Ui.row(c);dots.setGravity(Gravity.CENTER);pages.dots=dots;final int count=Math.min(6,items.length());
         for(int i=0;i<count;i++){
-            JSONObject item=items.optJSONObject(i);FrameLayout frame=new FrameLayout(c);
+            JSONObject item=items.optJSONObject(i);if(item==null)continue;FrameLayout frame=new FrameLayout(c);
             String cover=item.optString("cover");if(cover.isEmpty())cover=item.optString("image");
             frame.addView(Ui.image(c,cover,12),new FrameLayout.LayoutParams(-1,-1));
             View shade=new View(c);shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0x00000000,0xe8000000}));frame.addView(shade,new FrameLayout.LayoutParams(-1,-1));
             TextView title=Ui.text(c,Api.label(item),24,true);title.setTextColor(Color.WHITE);title.setMaxLines(2);title.setPadding(Ui.dp(c,16),Ui.dp(c,12),Ui.dp(c,16),Ui.dp(c,16));
             frame.addView(title,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));frame.setOnClickListener(v->select.open(item));pages.addView(frame);
-            final int index=i;TextView dot=Ui.text(c,"●",11,false);dot.setGravity(Gravity.CENTER);dot.setTextColor(i==0?Ui.ACCENT:Ui.muted(c));
+            final int index=pages.getChildCount()-1;TextView dot=Ui.text(c,"●",11,false);dot.setGravity(Gravity.CENTER);dot.setContentDescription("الشريحة "+(index+1));dot.setTextColor(index==0?Ui.ACCENT:Ui.muted(c));
             dots.addView(dot,new LinearLayout.LayoutParams(Ui.dp(c,26),Ui.dp(c,28)));
-            dot.setOnClickListener(v->{pages.setDisplayedChild(index);for(int j=0;j<count;j++)((TextView)dots.getChildAt(j)).setTextColor(j==index?Ui.ACCENT:Ui.muted(c));});
+            dot.setOnClickListener(v->pages.setDisplayedChild(index));
         }
+        if(pages.getChildCount()>1){pages.setFlipInterval(6000);pages.setAutoStart(true);}
         block.addView(pages,new LinearLayout.LayoutParams(-1,Ui.dp(c,220)));block.addView(dots);return block;
+    }
+    private static final class HeroFlipper extends ViewFlipper {
+        LinearLayout dots;private float x,y;
+        HeroFlipper(Activity c){super(c);}
+        @Override public void setDisplayedChild(int index){super.setDisplayedChild(index);if(dots!=null)for(int i=0;i<dots.getChildCount();i++)((TextView)dots.getChildAt(i)).setTextColor(i==getDisplayedChild()?Ui.ACCENT:Ui.muted(getContext()));}
+        @Override public boolean onInterceptTouchEvent(android.view.MotionEvent event){
+            if(event.getActionMasked()==android.view.MotionEvent.ACTION_DOWN){x=event.getX();y=event.getY();}
+            if(event.getActionMasked()==android.view.MotionEvent.ACTION_MOVE&&Math.abs(event.getX()-x)>Ui.dp(getContext(),18)&&Math.abs(event.getX()-x)>Math.abs(event.getY()-y)){getParent().requestDisallowInterceptTouchEvent(true);return true;}
+            return super.onInterceptTouchEvent(event);
+        }
+        @Override public boolean onTouchEvent(android.view.MotionEvent event){if(event.getActionMasked()==android.view.MotionEvent.ACTION_UP){float dx=event.getX()-x;if(Math.abs(dx)>Ui.dp(getContext(),30)){if(dx>0)showNext();else showPrevious();}getParent().requestDisallowInterceptTouchEvent(false);}return true;}
     }
 }

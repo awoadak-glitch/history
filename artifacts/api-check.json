@@ -94,6 +94,138 @@
         "channels",
         "posters"
       ]
+    },
+    {
+      "route": "movie/by/31437/",
+      "status": 200,
+      "items": 19,
+      "fields": [
+        "id",
+        "title",
+        "label",
+        "sublabel",
+        "type",
+        "description",
+        "year",
+        "rating",
+        "duration",
+        "downloadas",
+        "imdb",
+        "comment",
+        "playas",
+        "classification",
+        "image",
+        "cover",
+        "genres",
+        "trailer",
+        "sources"
+      ]
+    },
+    {
+      "route": "season/by/serie/31437/",
+      "status": 200,
+      "items": 1,
+      "fields": [
+        "id",
+        "title",
+        "episodes"
+      ],
+      "episodes": 1
+    },
+    {
+      "route": "movie/source/by/31519/",
+      "status": 200,
+      "items": 8,
+      "fields": [
+        "id",
+        "title",
+        "quality",
+        "size",
+        "kind",
+        "premium",
+        "external",
+        "type",
+        "url"
+      ],
+      "source_types": [
+        "embed",
+        "m3u8",
+        "webm"
+      ],
+      "source_hosts": [
+        "dw.uns.bio",
+        "dwapp.qzz.io",
+        "goodstream.one",
+        "hanerix.com",
+        "morencius.com",
+        "ok.ru",
+        "uqload.vc",
+        "vidaraa.cc"
+      ]
+    },
+    {
+      "route": "channel/by/64/",
+      "status": 200,
+      "items": 16,
+      "fields": [
+        "id",
+        "title",
+        "label",
+        "sublabel",
+        "description",
+        "website",
+        "classification",
+        "views",
+        "shares",
+        "playas",
+        "rating",
+        "comment",
+        "image",
+        "sources",
+        "categories",
+        "countries"
+      ]
+    },
+    {
+      "route": "role/by/poster/31437/",
+      "status": 200,
+      "items": 13,
+      "fields": [
+        "id",
+        "name",
+        "type",
+        "bio",
+        "height",
+        "born",
+        "image",
+        "role"
+      ]
+    },
+    {
+      "route": "country/all/",
+      "status": 200,
+      "items": 1,
+      "fields": [
+        "id",
+        "title",
+        "image"
+      ]
+    },
+    {
+      "route": "episode/source/by/207579/",
+      "status": 200,
+      "items": 17,
+      "fields": [
+        "id",
+        "title",
+        "quality",
+        "size",
+        "kind",
+        "premium",
+        "external",
+        "type",
+        "url"
+      ]
     }
   ],
   "note": "Normal content GET requests only; no protected config validation"

@@ -103,7 +103,7 @@ public class NativeFlowTest {
         start();String query="مسلسل";
         String movie="{\"id\":55,\"title\":\"نتيجة الصفحة الثانية\",\"type\":\"movie\",\"playas\":\"1\"}";
         cache(Api.search(query,0),"{\"posters\":[{\"id\":54,\"title\":\"نتيجة أولى\",\"type\":\"movie\"}],\"channels\":[]}");
-        cache(Api.search(query,1),"{\"posters\":["+movie+"],\"channels\":[]}");cache(Api.detail(false,55),movie);
+        cache(Api.search(query,1),"{\"posters\":["+movie+"],\"channels\":[]}");cache(Api.detail(false,55),movie);cache("role/by/poster/55/","[]");
         desc(activity.getWindow().getDecorView(),"بحث في عالم الدراما").performClick();findEdit(activity.getWindow().getDecorView()).setText(query);
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));waitFor("نتيجة أولى");click("نتائج إضافية");waitFor("نتيجة الصفحة الثانية");
         click("نتيجة الصفحة الثانية");waitFor("مشاهدة");activity.onBackPressed();waitFor("نتيجة الصفحة الثانية");
@@ -115,6 +115,19 @@ public class NativeFlowTest {
         click("جميع الدول");android.app.AlertDialog dialog=null;
         for(int i=0;i<200;i++){shadowOf(Looper.getMainLooper()).idle();dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();if(dialog!=null&&dialog.isShowing())break;Thread.sleep(5);}
         assertNotNull(dialog);dialog.getListView().performItemClick(null,1,1);waitFor("قناة اليمن");
+    }
+    @Test public void seriesSeasonsEpisodeServersAndCastAreConnected()throws Exception{
+        start();String series="{\"id\":51,\"title\":\"مسلسل الاختبار\",\"type\":\"serie\",\"playas\":\"1\",\"downloadas\":\"1\"}";
+        cache("first/","{\"slides\":[],\"genres\":[{\"title\":\"جديد المسلسلات\",\"posters\":["+series+"]}]}");
+        cache(Api.detail(false,51),series);cache("role/by/poster/51/","[{\"id\":81,\"name\":\"الممثل الأول\",\"role\":\"الدور الأول\"}]");cache("movie/by/actor/81/","["+series+"]");
+        cache("season/by/serie/51/","[{\"title\":\"الموسم الأول\",\"episodes\":[{\"id\":901,\"title\":\"الحلقة الأولى\",\"playas\":\"1\"}]}]");
+        cache(Api.sources(true,901),"[{\"title\":\"مشاهدة الحلقة\",\"kind\":\"play\",\"type\":\"mp4\",\"url\":\"https://media.example.org/episode.mp4\"},{\"title\":\"تنزيل فقط\",\"kind\":\"download\",\"type\":\"mp4\",\"url\":\"https://media.example.org/download.mp4\"}]");
+        click("المسلسلات");waitFor("جديد المسلسلات");click("مسلسل الاختبار");waitFor("الممثل الأول");
+        click("الممثل الأول");waitFor("مسلسل الاختبار");activity.onBackPressed();waitFor("عرض الحلقات");
+        click("عرض الحلقات");waitFor("الحلقة الأولى");click("الحلقة الأولى");waitFor("مشاهدة الحلقة");assertNull(text(activity.getWindow().getDecorView(),"تنزيل فقط"));
+        click("سيرفرات التنزيل");waitFor("تنزيل فقط");assertNull(text(activity.getWindow().getDecorView(),"مشاهدة الحلقة"));
+        click("سيرفرات المشاهدة");waitFor("مشاهدة الحلقة");click("مشاهدة الحلقة");Intent intent=shadowOf(activity).getNextStartedActivity();
+        assertNotNull(intent);assertEquals(Media.MX,intent.getPackage());assertEquals("https://media.example.org/episode.mp4",intent.getDataString());
     }
     @Test public void redirectedPlaylistKeepsEffectiveBaseURL()throws Exception{
         com.sun.net.httpserver.HttpServer server=com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1",0),0);
