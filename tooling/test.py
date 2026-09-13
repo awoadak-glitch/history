@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Run isolated native UI/intent regressions without a device or external content requests."""
-import os,pathlib,subprocess,tarfile,urllib.request,urllib.parse,zipfile
+import argparse,os,pathlib,subprocess,tarfile,urllib.request,urllib.parse,zipfile
 from xml.sax.saxutils import escape
 ROOT=pathlib.Path(__file__).resolve().parent.parent
+parser=argparse.ArgumentParser();parser.add_argument('--suite',choices=['NativeFlowTest','HitvFlowTest'],default='NativeFlowTest');args=parser.parse_args()
 CACHE=ROOT/'tooling/cache';CACHE.mkdir(exist_ok=True)
 def fetch(url,path):
     if not path.exists():urllib.request.urlretrieve(url,path)
@@ -31,7 +32,7 @@ for version in ['14-robolectric-10818077','15-robolectric-12650502']:
 classes=ROOT/'build/classes';test_classes=ROOT/'build/test-classes';test_classes.mkdir(exist_ok=True)
 cp=os.pathsep.join(str(p) for p in [classes,CACHE/'android-all-14-robolectric-10818077.jar',*sorted(deps.glob('*.jar'))])
 run(['java','com.sun.tools.javac.Main','-encoding','UTF-8','-cp',cp,'-d',test_classes,*sorted((ROOT/'tests').glob('*.java'))])
-command=['java','-Drobolectric.offline=true','-Drobolectric.usePreinstrumentedJars=false','-Drobolectric.dependency.dir='+str(CACHE),'-cp',str(test_classes)+os.pathsep+cp,'org.junit.runner.JUnitCore','awr.witcher.NativeFlowTest']
+command=['java','-Drobolectric.offline=true','-Drobolectric.usePreinstrumentedJars=false','-Drobolectric.dependency.dir='+str(CACHE),'-cp',str(test_classes)+os.pathsep+cp,'org.junit.runner.JUnitCore','awr.witcher.'+args.suite]
 result=subprocess.run(command,cwd=ROOT,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
-(ROOT/'artifacts/unit-test-results.txt').write_text(result.stdout)
+(ROOT/'artifacts'/('hitv-test-results.txt' if args.suite=='HitvFlowTest' else 'unit-test-results.txt')).write_text(result.stdout)
 print(result.stdout);raise SystemExit(result.returncode)

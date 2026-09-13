@@ -47,3 +47,11 @@ The current execution environment could not resolve `web-api.hitvpro.com` (`EAI_
 - Raw DEX inspection of HiTV `base.apk` finds only 34 shell classes. Its layouts reference `com.captha.didymoi.module_video.VideoPlayer`, which is absent from exposed DEX and resides in the protected payload. Exact transplantation of this player is **not complete**. ExoPlayer in the host is an existing alternative engine, not proof that the HiTV player was copied.
 - The host contains ExoPlayer.Builder in classes17.dex. Existing Drama sources differ from the approved embed+ADM baseline only in tab/icon integration; keep all Drama playback/download classes unchanged.
 - Review pending: real HiTV API response shapes, playback/preview separation, subtitles, episode numbering and player lifecycle before claiming a working full-content tab.
+
+## Verified API contracts and corrections
+- Direct public requests succeeded for moviePage, dramaPage, firstPage, filters and detail (HTTP 200, code 00000). Prior Node probes had no working proxy/DNS path in this environment; do not confuse that with an upstream outage.
+- A sampled playInfo request returned A0001 with the Arabic explanation that the rights holder made that content unavailable. Keep that upstream explanation. Do not mask it with an unrelated successful endpoint or call it a DNS failure.
+- `/cms/web/pc/download/urls` returned application installers (.apk/.exe), not movie download media. Removed it and previewInfo from full playback aggregation. Download selection now uses actual playInfo media only.
+- Added bounded playback normalization that keeps captions and request headers separate from videos and rejects app installers, HTML and artwork. Exact signed query strings are retained.
+- The internal host-player adapter now invokes the public Player interface: ExoPlayerImpl is package-private in the host, so invoking its methods by implementation class was invalid. Added captions, speed, buffering/errors and release on dismissal/backgrounding.
+- This remains a host ExoPlayer adapter, not the extracted protected HiTV VideoPlayer. That requested exact player is still unavailable from exposed DEX.

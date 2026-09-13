@@ -25,9 +25,6 @@ final class HitvApi {
     private static final class Req {final String name,path;final JSONObject params;final boolean post;Req(String n,String p,JSONObject q,boolean x){name=n;path=p;params=q;post=x;}}
 
     static void get(String path,JSONObject params,Callback callback){
-        if("/cms/web/hitv/movieDrama/getPlayInfo".equals(path)&&params!=null&&params.has("id")){
-            playback(params.optString("id"),params.optInt("category",1),Math.max(1,params.optInt("seriesNo",1)),callback);return;
-        }
         request(path,params,false,callback);
     }
     static void post(String path,JSONObject params,Callback callback){request(path,params,true,callback);}
@@ -58,13 +55,9 @@ final class HitvApi {
 
     static void detail(String id,int category,Callback callback){request("/cms/web/hitv/movieDrama/detail",params("id",id,"category",category),false,callback);}
 
-    /** Merge all media variants available from the HiTV web family into one quality/source list. */
+    /** Full playback is a separate contract from trailers and app installer downloads. */
     static void playback(String id,int category,int episode,Callback callback){
-        ArrayList<Req> r=new ArrayList<>();JSONObject p=params("id",id,"category",category,"seriesNo",episode);
-        r.add(new Req("playInfo","/cms/web/hitv/movieDrama/getPlayInfo",p,false));
-        r.add(new Req("downloadUrls","/cms/web/pc/download/urls",p,false));
-        r.add(new Req("previewInfo","/cms/web/pc/movieDrama/previewInfo",p,true));
-        aggregate(r,callback);
+        request("/cms/web/hitv/movieDrama/getPlayInfo",params("id",id,"category",category,"seriesNo",episode),false,callback);
     }
 
     private static void aggregate(List<Req> reqs,Callback callback){
@@ -86,11 +79,18 @@ final class HitvApi {
                 c.setConnectTimeout(12000);c.setReadTimeout(28000);c.setInstanceFollowRedirects(true);c.setRequestMethod(post?"POST":"GET");c.setRequestProperty("Content-Type","application/json");c.setRequestProperty("Accept","application/json");c.setRequestProperty("Accept-Language","ar,en;q=0.8");c.setRequestProperty("lang","ar");c.setRequestProperty("currentTime",current);c.setRequestProperty("sign",sign);c.setRequestProperty("aesKey",aesKey);c.setRequestProperty("User-Agent","Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/127.0 Mobile Safari/537.36");
                 if(post){byte[] body=safe.toString().getBytes(StandardCharsets.UTF_8);c.setDoOutput(true);c.setFixedLengthStreamingMode(body.length);try(OutputStream out=c.getOutputStream()){out.write(body);}}
                 int code=c.getResponseCode();InputStream raw=code>=200&&code<300?c.getInputStream():c.getErrorStream();String text=read(raw,8*1024*1024);if(code<200||code>=300)throw new IOException("HTTP "+code);
-                JSONObject envelope=new JSONObject(text);String apiCode=envelope.optString("code");if(!apiCode.isEmpty()&&!"00000".equals(apiCode))throw new IOException("API "+apiCode+" "+envelope.optString("msg",envelope.optString("message","")));
+                JSONObject envelope=new JSONObject(text);String apiCode=envelope.optString("code");if(!apiCode.isEmpty()&&!"00000".equals(apiCode))throw new SourceError(apiMessage(envelope));
                 Object data=envelope.opt("data");if(data==null||data==JSONObject.NULL)value=JSONObject.NULL;else if(data instanceof String){String plain;try{plain=decryptAes((String)data,uuid);}catch(Exception ignored){plain=(String)data;}value=parseAny(plain);}else value=data;
-            }catch(Exception e){error="تعذر الوصول إلى مصادر HiTV. تم تجربة DNS العادي وDNS الآمن.";}finally{if(c!=null)c.disconnect();}
+            }catch(SourceError e){error=e.getMessage();}catch(Exception e){error="تعذر الاتصال بـ HiTV حالياً. تحقق من الاتصال وحاول مجدداً.";}finally{if(c!=null)c.disconnect();}
             Object result=value;String failure=error;new android.os.Handler(android.os.Looper.getMainLooper()).post(()->callback.done(result,failure));
         });
+    }
+
+    private static final class SourceError extends IOException {SourceError(String message){super(message);}}
+    static String apiMessage(JSONObject envelope){
+        String message=envelope.optString("msg",envelope.optString("message","")).trim();
+        if(message.isEmpty())return "هذا المحتوى غير متاح من HiTV حالياً.";
+        return message.length()>240?message.substring(0,240):message;
     }
 
     private static Object parseAny(String text){String s=text==null?"":text.trim();if(s.isEmpty())return "";try{if(s.charAt(0)=='{')return new JSONObject(s);if(s.charAt(0)=='[')return new JSONArray(s);}catch(JSONException ignored){}return s;}
