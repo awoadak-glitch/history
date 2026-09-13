@@ -1,0 +1,27 @@
+name: Diagnose HiTV catalog routes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tooling/probe_hitv_catalog.mjs'
+      - '.github/workflows/diagnose-hitv-catalog.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe HiTV catalog routes
+        run: node tooling/probe_hitv_catalog.mjs
+      - name: Upload sanitized diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: hitv-catalog-diagnostic
+          path: diagnostics/hitv-catalog-probe.json
+          if-no-files-found: error
+          retention-days: 3
