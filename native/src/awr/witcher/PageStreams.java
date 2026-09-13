@@ -17,35 +17,53 @@ final class PageStreams {
         while(tags.find()){
             String tag=tags.group();String label=attribute(tag,"size");if(label.isEmpty())label=attribute(tag,"label");
             if(label.matches("\\d+"))label+="p";
-            add(result,seen,attribute(tag,"src"),label,base);result.choice=true;
+            add(result,seen,attribute(tag,"src"),label,base,true);result.choice=true;
         }
         Matcher page=Pattern.compile("data-page=([\"'])(.*?)\\1",Pattern.DOTALL).matcher(html);
         if(page.find())try{
             JSONObject data=new JSONObject(entities(page.group(2)));JSONObject props=data.optJSONObject("props");
             if("Video/Embed".equals(data.optString("component"))&&props!=null&&props.optString("mime").startsWith("video/"))
-                add(result,seen,props.optString("url"),"Original",base);
+                add(result,seen,props.optString("url"),"Original",base,true);
         }catch(JSONException ignored){}
         String expanded=unpack(html);
-        Matcher arrays=Pattern.compile("\\bsources\\s*:\\s*\\[(.*?)\\]",Pattern.DOTALL).matcher(expanded);
+        Matcher arrays=Pattern.compile("\\bsources\\s*[:=]\\s*\\[(.*?)\\]",Pattern.DOTALL|Pattern.CASE_INSENSITIVE).matcher(expanded);
         while(arrays.find()){
             String array=arrays.group(1);
             Matcher objects=Pattern.compile("\\{([^{}]+)\\}",Pattern.DOTALL).matcher(array);boolean object=false;
             while(objects.find()){
                 object=true;String entry=objects.group(1);String url=jsField(entry,"file");if(url.isEmpty())url=jsField(entry,"src");
-                add(result,seen,url,jsField(entry,"label"),base);
+                add(result,seen,url,jsField(entry,"label"),base,true);
             }
-            if(!object){Matcher values=Pattern.compile("[\"']((?:\\\\.|[^\"'\\\\])++)[\"']").matcher(array);while(values.find())add(result,seen,jsUnescape(values.group(1)),"Normal",base);}
+            if(!object){Matcher values=Pattern.compile("[\"']((?:\\\\.|[^\"'\\\\])++)[\"']").matcher(array);while(values.find())add(result,seen,jsUnescape(values.group(1)),"Normal",base,false);}
         }
+        // Many quick-play/HD pages expose a single JWPlayer/Clappr file or hls field rather than
+        // a sources[] array. These are media-specific fields, so URLs without a filename extension
+        // are still valid candidates (signed CDN endpoints often look like /stream?id=...).
+        Matcher strong=Pattern.compile("(?:^|[,\\s{;(])(?:[\"']?(?:file|hls|video)[\"']?)\\s*[:=]\\s*([\"'])((?:\\\\.|(?!\\1).)*+)\\1",Pattern.DOTALL|Pattern.CASE_INSENSITIVE).matcher(expanded);
+        while(strong.find())add(result,seen,jsUnescape(strong.group(2)),"Normal",base,true);
+        // src outside a declared sources[] can also be media, but require a media-looking URL to
+        // avoid accidentally selecting scripts/images.
+        Matcher src=Pattern.compile("(?:^|[,\\s{;(])[\"']?src[\"']?\\s*[:=]\\s*([\"'])((?:\\\\.|(?!\\1).)*+)\\1",Pattern.DOTALL|Pattern.CASE_INSENSITIVE).matcher(expanded);
+        while(src.find())add(result,seen,jsUnescape(src.group(2)),"Normal",base,false);
+        // Last compatibility pass: direct quoted media URLs, including signed URLs where the media
+        // extension appears in a query value rather than the path.
+        Matcher direct=Pattern.compile("https?:(?:\\\\/|/){2}[^\"'<>\\s]+",Pattern.CASE_INSENSITIVE).matcher(expanded);
+        while(direct.find())add(result,seen,jsUnescape(direct.group()),"Normal",base,false);
         if(result.streams.size()>1)result.choice=true;
         return result;
     }
     private static String attribute(String tag,String key){Matcher m=Pattern.compile("\\b"+key+"\\s*=\\s*([\"'])(.*?)\\1",Pattern.CASE_INSENSITIVE).matcher(tag);return m.find()?entities(m.group(2)):"";}
-    private static String jsField(String text,String key){Matcher m=Pattern.compile("(?:^|[,\\s])[\"']?"+key+"[\"']?\\s*:\\s*([\"'])((?:\\\\.|(?!\\1).)*+)\\1",Pattern.DOTALL).matcher(text);return m.find()?jsUnescape(m.group(2)):"";}
-    private static void add(Result result,Set<String> seen,String value,String label,String base){
+    private static String jsField(String text,String key){Matcher m=Pattern.compile("(?:^|[,\\s])[\"']?"+key+"[\"']?\\s*:\\s*([\"'])((?:\\\\.|(?!\\1).)*+)\\1",Pattern.DOTALL|Pattern.CASE_INSENSITIVE).matcher(text);return m.find()?jsUnescape(m.group(2)):"";}
+    private static boolean mediaLooking(String url){
+        String low=url.toLowerCase(Locale.ROOT);
+        try{String path=new URL(url).getPath().toLowerCase(Locale.ROOT);if(path.endsWith(".mp4")||path.endsWith(".m3u8")||path.endsWith(".mpd")||path.endsWith(".mkv")||path.endsWith(".webm")||path.endsWith(".mov")||path.endsWith(".ts"))return true;}catch(Exception ignored){}
+        return low.contains(".m3u8")||low.contains(".mp4")||low.contains(".mpd")||low.contains(".mkv")||low.contains(".webm")||low.contains(".mov")||low.contains(".ts?");
+    }
+    private static void add(Result result,Set<String> seen,String value,String label,String base,boolean trustedMediaField){
         if(value==null||value.isEmpty())return;
-        try{String url=new URL(new URL(base),entities(value)).toString();StreamCodec.validate(url);
-            String path=new URL(url).getPath().toLowerCase(Locale.ROOT);
-            if(!(path.endsWith(".mp4")||path.endsWith(".m3u8")||path.endsWith(".mpd")||path.endsWith(".mkv")||path.endsWith(".webm")||path.endsWith(".mov")))return;
+        try{
+            String decoded=entities(jsUnescape(value)).trim();String url=new URL(new URL(base),decoded).toString();StreamCodec.validate(url);
+            if(!trustedMediaField&&!mediaLooking(url))return;
             if(seen.add(url))result.streams.add(new Legacy.Stream(url,label==null||label.isEmpty()?"Normal":label,null));
         }catch(Exception ignored){}
     }
