@@ -1,0 +1,9 @@
+build/
+tooling/cache/
+inputs/
+*.p12
+*.jks
+*.keystore
+*.password
+__pycache__/
+.checkpoint.json
