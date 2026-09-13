@@ -39,7 +39,6 @@ public final class Api {
                 synchronized(CACHE){Entry e=CACHE.get(route);if(e!=null && System.currentTimeMillis()-e.time<90000)raw=e.text;}
                 if(raw==null){
                     raw=read(ApiConfig.BASE+route+ApiConfig.SUFFIX,Collections.emptyMap(),8*1024*1024);
-                    // Never cache challenge pages or malformed envelopes.
                     decode(raw);synchronized(CACHE){CACHE.put(route,new Entry(raw));}
                 }
                 value=decode(raw);
@@ -77,7 +76,50 @@ public final class Api {
         }
         throw new JSONException("Not a content response");
     }
-    public static JSONArray array(Object value){return value instanceof JSONArray?(JSONArray)value:new JSONArray();}
+
+    /**
+     * Source arrays are decorated with the same human-readable server names used by Drama World.
+     * A "both" source is split into equivalent play/download views so each tab can keep its own
+     * original label without changing the URL, order, access flag, or extractor metadata.
+     */
+    public static JSONArray array(Object value){
+        if(!(value instanceof JSONArray))return new JSONArray();
+        JSONArray input=(JSONArray)value;if(input.length()==0)return input;
+        JSONObject first=input.optJSONObject(0);if(first==null||!first.has("url")||!first.has("kind"))return input;
+        JSONArray out=new JSONArray();int play=0,download=0;
+        for(int i=0;i<input.length();i++){
+            JSONObject source=input.optJSONObject(i);if(source==null)continue;String kind=source.optString("kind");
+            try{
+                if("both".equals(kind)){
+                    JSONObject p=new JSONObject(source.toString());p.put("kind","play");p.put("title",sourceTitle(p,++play,false));out.put(p);
+                    JSONObject d=new JSONObject(source.toString());d.put("kind","download");d.put("title",sourceTitle(d,++download,true));out.put(d);
+                }else if("download".equals(kind)){
+                    JSONObject d=new JSONObject(source.toString());d.put("title",sourceTitle(d,++download,true));out.put(d);
+                }else{
+                    JSONObject p=new JSONObject(source.toString());p.put("title",sourceTitle(p,++play,false));out.put(p);
+                }
+            }catch(JSONException e){out.put(source);}
+        }
+        return out;
+    }
+    private static String sourceTitle(JSONObject source,int number,boolean download){
+        String type=source.optString("type").toLowerCase(Locale.ROOT);
+        if(download){
+            if("webm".equals(type))return "سيرفر تحميل "+number+" : جودة متعددة";
+            if("m3u8".equals(type))return "سيرفر تحميل "+number;
+            if("mov".equals(type))return "سيرفر تحميل "+number+" : جودة HD";
+            if("mp4".equals(type))return "سيرفر تحميل مباشر";
+            if("mkv".equals(type))return "سيرفر تحميل ملف مضغوط";
+            String original=source.optString("title");return original.isEmpty()?"سيرفر تحميل "+number:original;
+        }
+        if("embed".equals(type))return "تشغيل سيرفر "+number;
+        if("webm".equals(type))return "سيرفر "+number+" : جودة متعددة";
+        if("m3u8".equals(type))return "سيرفر "+number+" : تشغيل سريع";
+        if("mov".equals(type))return "سيرفر "+number+" : جودة HD";
+        if("mp4".equals(type)||"mkv".equals(type))return "تشغيل سيرفر مباشر";
+        if("youtube".equals(type))return "تشغيل سيرفر YT";
+        String original=source.optString("title");return original.isEmpty()?"سيرفر "+number:original;
+    }
     public static JSONObject object(Object value){return value instanceof JSONObject?(JSONObject)value:new JSONObject();}
     public static boolean channel(JSONObject o){return "channel".equals(o.optString("type"))||o.optBoolean("_channel");}
     public static boolean series(JSONObject o){return "serie".equals(o.optString("type"))||"series".equals(o.optString("type"));}
