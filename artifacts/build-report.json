@@ -1,10 +1,15 @@
 {
   "original_sha256": "7f4a930f77ed80ababcce04595b3c104a12b0a607c97397a27560e4d60254923",
-  "app_source_commit": "43907f5124b5ae71ff8aa7db0916b7d8a1fa6b95",
-  "workflow_run_id": 34748683107,
+  "fix_commits": [
+    "7a046b1a6d360185c8f1e490fbebf23fc7c08a03",
+    "2fde4ae96850eaac49bf3c350d34622b7a158d3f",
+    "cfafd6e5a3b35554b845a7ef18b4fde5a2422aca"
+  ],
+  "workflow_run_id": 34759875757,
   "workflow_conclusion": "success",
-  "compiled_patch_sha256": "6df2023c40f859158c74a23a2695772c4e95900ece777d235c7e617385065a15",
-  "compiled_custom_dex_sha256": "3f25f8aa8baed60c197b12496e08b10be9e19c6ae7d2d12c5f04c03e004299e8",
+  "workflow_artifact_id": 10318054066,
+  "compiled_patch_sha256": "9c54bd3f14eb432dfc4791881d0b51059e0e9e98fe216b5974880b3776720746",
+  "compiled_custom_dex_sha256": "a64a675f70a495755a8c33fea9aa834181f2f0819c3f7568e1f06f359b30208f",
   "preserved_original_dex": 22,
   "added_dex_entries": [
     "classes23.dex",
@@ -17,11 +22,14 @@
   ],
   "resources_arsc_unchanged": true,
   "mx_player_package": "com.mxtech.videoplayer.ad",
-  "signed_apk_sha256": "897ed77487b0470e0594d3deb75c3adb2ad7cce5b9c9db0ff4d4a01c0320ee6d",
+  "tdm_package": "com.tdm.manager",
+  "download_access_rule": "Only Drama flags 2 and 3 are restricted; 0, 1 and empty are public, matching the original APK.",
+  "external_download_rule": "For source.external=true, mp4 is direct while mkv/mov/m3u8/webm use the original extractor path. source.external=false is direct.",
+  "locally_assembled_signed_apk_sha256": "92787a1a18c2e29b88ef78bc3942aa234d412dea7b0bd7dd55ab9d31b279f172",
   "signature_verified_v1": true,
   "signature_verified_v2": true,
   "signature_verified_v3": true,
   "runtime_tested_on_device": false,
   "original_extractors_included": true,
-  "known_limitations": "Some original Drama World playback providers are already unavailable, and protected provider configuration is still not fully transferred. Build and signature verification do not prove every server plays on a real phone."
+  "known_limitations": "Some original Drama World providers are unavailable, and providers depending on protected remote extractor configuration can still fail. This build fixes the false account gate and restores the original download routing/TDM handoff; real-phone testing is still required for each provider."
 }
