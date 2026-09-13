@@ -123,7 +123,9 @@ public final class Api {
     public static JSONObject object(Object value){return value instanceof JSONObject?(JSONObject)value:new JSONObject();}
     public static boolean channel(JSONObject o){return "channel".equals(o.optString("type"))||o.optBoolean("_channel");}
     public static boolean series(JSONObject o){return "serie".equals(o.optString("type"))||"series".equals(o.optString("type"));}
-    /** Drama World only treats access flag 2 or 3 as restricted. 0/1/empty are public. */
-    public static boolean publicAccess(String value){String v=value==null?"":value.trim();return !"2".equals(v)&&!"3".equals(v);}
+    /** The supplied V4.2f APK admits guests: Episodes.g1/Movie.F1/Channel.L0
+     * return true on BOTH branches, verified in raw smali. Match this edition's
+     * effective policy instead of reviving unreachable account prompts from its UI. */
+    public static boolean publicAccess(String value){return true;}
     public static String label(JSONObject o){return o.optString("title",o.optString("name",""));}
 }

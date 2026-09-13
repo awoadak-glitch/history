@@ -34,13 +34,8 @@ public final class Media {
     static boolean needsExtractionForSource(JSONObject source,String url,String type,boolean download){
         boolean channel=source.optBoolean("_channel");
         if(channel)return needsExtraction(url,type,download,true);
-        if(download&&source.has("external")){
-            // Original download flow: internal sources are already final. External mp4 is direct;
-            // other external types are resolved by Q0/S0 before a downloader sees the URL.
-            if(!source.optBoolean("external"))return false;
-            return !"mp4".equals(type);
-        }
-        if(!download&&source.has("external")&&!source.optBoolean("external"))return false;
+        // external chooses browser versus the app in the original; false does NOT mean
+        // a final media URI. Internal MOV/WEBM/M3U8 pages still need extraction.
         return needsExtraction(url,type,download,false);
     }
 
@@ -48,14 +43,14 @@ public final class Media {
         String normalized=type==null?"":type.toLowerCase(Locale.ROOT);
         if(channel)return !(normalized.equals("m3u8")||normalized.equals("mp4")||normalized.equals("mkv")||normalized.equals("mpd"));
         if(download){
-            if(normalized.equals("mp4")||normalized.equals("mkv")||normalized.equals("mpd"))return false;
+            if(normalized.equals("mp4")||normalized.equals("mpd"))return false;
             return true;
         }
         // Exact original playback behavior: mov/webm and embed are extractor pages even when
         // their URL happens to end with a media-looking suffix. m3u8 is direct only when the
         // supplied URL itself ends in .m3u8; otherwise it is a provider page that must resolve.
         if(normalized.equals("mov")||normalized.equals("webm")||normalized.equals("embed"))return true;
-        if(normalized.equals("m3u8"))return !url.toLowerCase(Locale.ROOT).endsWith(".m3u8");
+        if(normalized.equals("m3u8")){String path=Uri.parse(url).getPath();return path==null||!path.toLowerCase(Locale.ROOT).endsWith(".m3u8");}
         if(normalized.equals("mp4")||normalized.equals("mkv")||normalized.equals("mpd"))return false;
         return true;
     }
