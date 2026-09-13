@@ -1,0 +1,13 @@
+{
+  "original_sha256": "7f4a930f77ed80ababcce04595b3c104a12b0a607c97397a27560e4d60254923",
+  "preserved_original_dex": 22,
+  "resources_arsc_unchanged": true,
+  "changed_entries": [
+    "AndroidManifest.xml",
+    "res/layout/activity_home.xml",
+    "classes23.dex"
+  ],
+  "patch_sha256": "2cae1129544b5e2c770ae15c5a323f955336863ce8f68f1cbf69e8217de86758",
+  "runtime_tested": false,
+  "signing_verified": false
+}
