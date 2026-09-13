@@ -55,3 +55,11 @@ The current execution environment could not resolve `web-api.hitvpro.com` (`EAI_
 - Added bounded playback normalization that keeps captions and request headers separate from videos and rejects app installers, HTML and artwork. Exact signed query strings are retained.
 - The internal host-player adapter now invokes the public Player interface: ExoPlayerImpl is package-private in the host, so invoking its methods by implementation class was invalid. Added captions, speed, buffering/errors and release on dismissal/backgrounding.
 - This remains a host ExoPlayer adapter, not the extracted protected HiTV VideoPlayer. That requested exact player is still unavailable from exposed DEX.
+
+## UI and verification checkpoint
+- Added an in-tab "view all" grid, visible fifth-tab selection and hardware-back navigation inside HiTV. Card titles have two readable lines without overlapping ratings.
+- Preserved explicit episode numbers and original category when details are partial. Cast/genre metadata no longer becomes fake content cards. Cancelled searches and media dialogs cannot open a stale result.
+- Seven HiTV Robolectric tests pass. A rendered Arabic screen was inspected with public catalogue artwork.
+- `tooling/VerifyHitvContracts.java` verifies all player reflection methods against the supplied embed+ADM APK; the contract check passed with 86390 unique DEX classes.
+- The existing NativeFlowTest suite has one pre-existing failure (`htmlDisguisedAsHlsNeverLaunchesMx`): the approved embed+ADM baseline sends direct .m3u8 straight to MX, whereas this older test expects a probe. Do not silently change the user's working Drama behavior to satisfy that old test. Sixteen other baseline tests passed.
+- Live keyword search for Gintama returned HTTP 200/code 00000 with searchResults. Movie and series detail replies sampled here had no episodeVo/episodeList. Do not claim complete mobile catalogue or playable episode coverage from these web replies.
