@@ -24,18 +24,39 @@ public final class Media {
         String path=Uri.parse(url).getPath();String lower=(path==null?"":path).toLowerCase(Locale.ROOT);
         boolean direct=lower.endsWith(".m3u8")||lower.endsWith(".mp4")||lower.endsWith(".mkv")||lower.endsWith(".mpd")||type.equals("mp4")||type.equals("m3u8")||type.equals("mkv")||type.equals("mpd");
         if(!direct){
-            alert(activity,"هذا السيرفر يحتاج إلى مستخرج الروابط الخاص بعالم الدراما. لم يكتمل ربط إعداداته في هذه النسخة بعد. جرّب سيرفراً مباشراً.");return;
+            extract(activity,url,headers,title,download);return;
         }
         boolean hls=lower.endsWith(".m3u8")||type.equals("m3u8");
-        if(hls)qualities(activity,url,headers,title,download);else launch(activity,url,headers,title,download,false);
+        if(hls)qualities(activity,url,headers,title,download);else launch(activity,url,headers,title,download,lower.endsWith(".mpd")||type.equals("mpd"));
     }
     public static Map<String,String> headers(JSONObject source,String url){
         Map<String,String> h=new LinkedHashMap<>();h.put("User-Agent",UA);
         JSONObject supplied=source.optJSONObject("headers");if(supplied!=null){Iterator<String> keys=supplied.keys();while(keys.hasNext()){String key=keys.next();String value=supplied.optString(key);if(!key.contains("\r")&&!key.contains("\n")&&!value.contains("\r")&&!value.contains("\n"))h.put(key,value);}}
         String host=source.optString("host",source.optString("size"));
+        if(!(host.startsWith("http://")||host.startsWith("https://"))&&!source.optBoolean("_channel"))host=originalReferer(url);
         if(host.startsWith("http://")||host.startsWith("https://")){h.put("Referer",host);try{URL u=new URL(host);h.put("Origin",u.getProtocol()+"://"+u.getAuthority());}catch(Exception ignored){}}
         String cookie=source.optString("cookie");if(!cookie.isEmpty()&&!cookie.contains("\n")&&!cookie.contains("\r"))h.put("Cookie",cookie);
         return h;
+    }
+    private static String originalReferer(String url){
+        if(url.contains("stardima")||url.contains("dailymotion.com"))return "";
+        try{if(url.contains("=http"))url=url.substring(url.lastIndexOf('=')+1);String host=Uri.parse(url).getHost();return host==null?"":"https://"+host+"/";}catch(Exception e){return "";}
+    }
+    private static void extract(Activity a,String url,Map<String,String> headers,String title,boolean download){
+        ProgressDialog wait=new ProgressDialog(a);wait.setMessage("جاري تجهيز رابط السيرفر…");wait.setCancelable(true);wait.show();
+        Handler timer=new Handler(Looper.getMainLooper());java.util.concurrent.atomic.AtomicBoolean finished=new java.util.concurrent.atomic.AtomicBoolean();
+        Runnable timeout=()->{if(finished.compareAndSet(false,true)&&!a.isFinishing()&&!a.isDestroyed()){wait.dismiss();alert(a,"انتهت مهلة تجهيز الرابط. جرّب سيرفراً آخر.");}};
+        timer.postDelayed(timeout,65000);wait.setOnCancelListener(d->{finished.set(true);timer.removeCallbacks(timeout);});
+        boolean supported=Legacy.resolve(a,url,new Legacy.Callback(){
+            public void failed(){a.runOnUiThread(()->{if(!finished.compareAndSet(false,true))return;timer.removeCallbacks(timeout);if(a.isFinishing()||a.isDestroyed())return;wait.dismiss();alert(a,"لم يتمكن مستخرج هذا السيرفر من تجهيز الرابط. قد يحتاج إعدادات المصدر أو سيرفراً آخر.");});}
+            public void done(List<Legacy.Stream> streams){a.runOnUiThread(()->{
+                if(!finished.compareAndSet(false,true))return;timer.removeCallbacks(timeout);if(a.isFinishing()||a.isDestroyed())return;wait.dismiss();
+                String[] names=new String[streams.size()];for(int i=0;i<names.length;i++)names[i]=streams.get(i).quality==null?"جودة "+(i+1):streams.get(i).quality;
+                android.content.DialogInterface.OnClickListener select=(d,i)->{Legacy.Stream s=streams.get(i);Map<String,String> h=new LinkedHashMap<>(headers);if(s.cookie!=null&&!s.cookie.isEmpty())h.put("Cookie",s.cookie);String path=Uri.parse(s.url).getPath();boolean hls=path!=null&&path.endsWith(".m3u8");if(hls)qualities(a,s.url,h,title,download);else launch(a,s.url,h,title,download,path!=null&&path.endsWith(".mpd"));};
+                if(streams.size()==1)select.onClick(null,0);else new AlertDialog.Builder(a).setTitle("اختيار الجودة").setItems(names,select).show();
+            });}
+        });
+        if(!supported){finished.set(true);timer.removeCallbacks(timeout);wait.dismiss();alert(a,"لم تُنقل إعدادات التعرف على هذا السيرفر بعد. جرّب سيرفراً آخر.");}
     }
     public static Intent mxIntent(String url,Map<String,String> headers,String title){
         StreamCodec.validate(url);Intent intent=new Intent(Intent.ACTION_VIEW).setPackage(MX).setDataAndType(Uri.parse(url),"video/*");

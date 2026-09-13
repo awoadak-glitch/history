@@ -58,6 +58,7 @@ def main():
     p.add_argument('--keystore',type=pathlib.Path)
     p.add_argument('--alias',default='awr')
     p.add_argument('--compile-only',action='store_true')
+    p.add_argument('--without-extractors',action='store_true',help='Compile UI-only checkpoint, omitting original extractor DEX')
     args=p.parse_args()
     if sha(args.anime)!=EXPECTED: raise SystemExit('Wrong Anime Witcher original: refusing to patch a different APK')
     build=ROOT/'build';build.mkdir(exist_ok=True)
@@ -73,6 +74,8 @@ def main():
         if len(suffixes)!=1:raise SystemExit('Cannot unambiguously extract the original API route suffix')
         generated=build/'generated/awr/witcher';generated.mkdir(parents=True,exist_ok=True)
         (generated/'ApiConfig.java').write_text('package awr.witcher; final class ApiConfig { static final String BASE='+json.dumps(args.api_base.rstrip('/')+'/')+'; static final String SUFFIX='+json.dumps(next(iter(suffixes)).decode())+'; }\n')
+        providers=[line.split('\t') for line in (ROOT/'tooling/providers.tsv').read_text().splitlines()]
+        (generated/'Providers.java').write_text('package awr.witcher; final class Providers { static final String[][] TABLE={'+','.join('{'+','.join(json.dumps(v) for v in row)+'}' for row in providers)+'}; }\n')
     classes=build/'classes';dex=build/'dex'
     for d in [classes,dex]:
         if d.exists():shutil.rmtree(d)
@@ -85,6 +88,11 @@ def main():
     java_home=pathlib.Path(shutil.which('java')).resolve().parent.parent
     run('java','-cp',args.compiler,'com.android.tools.r8.D8','--min-api','21','--lib',args.android_jar,'--lib',java_home,'--output',dex,archive)
     if args.compile_only:return
+    legacy=build/'legacy'
+    if not args.without_extractors:
+        if not args.drama:raise SystemExit('--drama required for original extractors')
+        # The validated original hash is fixed above. Each entry point is checked in raw DEX.
+        if not (legacy/'legacy6.dex').exists():run('java','-cp',args.compiler,ROOT/'tooling/RelocateDex.java',args.drama,legacy,ROOT/'tooling/providers.tsv')
     decoded=build/'host'
     if not decoded.exists():run('java','-jar',args.apktool,'d','--no-src','-f','-o',decoded,args.anime)
     # Start fresh resource edits on every build; never append a second tab bar.
@@ -99,7 +107,8 @@ def main():
     with zipfile.ZipFile(args.anime) as original:
         names=[n for n in original.namelist() if re.fullmatch(r'classes\d*\.dex',n)]
         next_id=max(int(re.search(r'\d+',n).group()) if re.search(r'\d+',n) else 1 for n in names)+1
-        for f in sorted(dex.glob('*.dex')):
+        added=(sorted(legacy.glob('*.dex')) if not args.without_extractors else [])+sorted(dex.glob('*.dex'))
+        for f in added:
             patch[f'classes{next_id}.dex']=f.read_bytes();next_id+=1
         unsigned=build/'anime-witcher-unsigned.apk'
         with zipfile.ZipFile(unsigned,'w') as out:
@@ -116,7 +125,8 @@ def main():
                 z.writestr('README.txt','Copy these entries into an exact copy of Anime Witcher 1.3.8. Replace existing entries, then sign in MT Manager. This is a development checkpoint.\n')
     report={'original_sha256':EXPECTED,'preserved_original_dex':len(names),'resources_arsc_unchanged':True,
         'changed_entries':differences,'patch_sha256':sha(artifacts/'mt-manager-patch.zip'),
-        'runtime_tested':False,'signing_verified':False}
+        'runtime_tested':False,'signing_verified':False,'original_extractors_included':not args.without_extractors,
+        'extractor_selection':'known hostname matching; protected server regex configuration not yet transferred'}
     if args.keystore:
         # Password is passed only through the environment, never committed or printed.
         if not os.environ.get('AWR_KEYSTORE_PASSWORD'):raise SystemExit('Set AWR_KEYSTORE_PASSWORD')
