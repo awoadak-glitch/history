@@ -7,45 +7,55 @@ import android.os.*;
 import android.widget.Toast;
 import java.util.*;
 
-/** Download handoff kept separate from playback. Uses the already-resolved media URL. */
+/** Download handoff kept separate from playback. Receives the already-resolved R0/a media URL. */
 final class DownloadFlow {
     static final String TDM="com.tdm.manager";
-    private static final String[] IDM={"idm.internet.download.manager.plus","idm.internet.download.manager","idm.internet.download.manager.adm.lite","com.dv.adm"};
+    private static final String[] IDM={"idm.internet.download.manager","idm.internet.download.manager.plus","idm.internet.download.manager.adm.lite"};
+    private static final String UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36";
     private DownloadFlow(){}
 
     static void open(Activity a,String url,Map<String,String> headers,String title,boolean segmented){
         String direct=segmented?"تحميل مباشر بواسطة التطبيق (غير متاح لـ HLS)":"تحميل مباشر بواسطة التطبيق";
         String[] choices={"تحميل سريع ⚡ TDM",direct,"تحميل خارجي بواسطة 1DM"};
         new AlertDialog.Builder(a).setTitle("خيارات التنزيل!").setItems(choices,(d,which)->{
-            if(which==0){if(!start(a,tdmIntent(url,headers,title,segmented)))missingTdm(a);return;}
-            if(which==1){if(segmented){alert(a,"هذا الرابط بث HLS متجزئ. استخدم TDM أو 1DM حتى يتم تنزيله كاملاً.");return;}internal(a,url,headers,title);return;}
-            if(!startIdm(a,url,headers,title,segmented))missingIdm(a);
+            if(which==0){if(!start(a,tdmIntent(url,headers,title)))missingTdm(a);return;}
+            if(which==1){if(segmented){alert(a,"هذا الرابط بث HLS متجزئ. استخدم TDM أو 1DM.");return;}internal(a,url,headers,title);return;}
+            if(!startIdm(a,url,headers,title))missingIdm(a);
         }).setNegativeButton("إلغاء",null).show();
     }
 
-    static Intent tdmIntent(String url,Map<String,String> headers,String title,boolean segmented){
-        Intent i=new Intent(Intent.ACTION_VIEW).setPackage(TDM).setDataAndType(Uri.parse(url),segmented?"application/x-mpegURL":"video/*");
-        addCommon(i,headers,title);i.putExtra("secure_uri",true);return i;
-    }
-
-    private static Intent idmIntent(String packageName,String url,Map<String,String> headers,String title,boolean segmented){
-        Intent i=new Intent(Intent.ACTION_VIEW).setPackage(packageName).setDataAndType(Uri.parse(url),segmented?"application/x-mpegURL":"video/*");
-        addCommon(i,headers,title);return i;
-    }
-
-    private static void addCommon(Intent i,Map<String,String> headers,String title){
-        String referer=headers.get("Referer"),cookie=headers.get("Cookie"),ua=headers.get("User-Agent");
+    /**
+     * Matches EpisodesActivity.o1 in the supplied Drama World V4.2f APK.
+     * TDM is deliberately given application/x-mpegURL even for the resolved file URL, a secure URI,
+     * the original referer, all cookie spellings, and a .ts filename for HLS instead of .m3u8.
+     */
+    static Intent tdmIntent(String url,Map<String,String> headers,String title){
+        Intent i=new Intent(Intent.ACTION_VIEW).setPackage(TDM).setDataAndType(Uri.parse(url),"application/x-mpegURL");
+        String referer=headers.get("Referer"),cookie=headers.get("Cookie");
         if(referer!=null&&!referer.isEmpty())i.putExtra("Referer",referer);
-        if(ua!=null&&!ua.isEmpty())i.putExtra("user_agent",ua);
+        i.putExtra("secure_uri",true);
+        i.putExtra("com.android.extra.filename",safe(title)+"."+originalExtension(url));
         if(cookie!=null&&!cookie.isEmpty()){
             i.putExtra("Cookie",cookie);i.putExtra("Cookies",cookie);i.putExtra("cookie",cookie);i.putExtra("cookies",cookie);
         }
-        ArrayList<String> flat=new ArrayList<>();for(Map.Entry<String,String> e:headers.entrySet()){flat.add(e.getKey());flat.add(e.getValue());}
-        i.putExtra("headers",flat.toArray(new String[0]));i.putExtra("title",title);i.putExtra("com.android.extra.filename",safe(title)+extension(i.getDataString()));
+        return i;
     }
 
-    private static boolean startIdm(Activity a,String url,Map<String,String> headers,String title,boolean segmented){
-        for(String p:IDM)if(start(a,idmIntent(p,url,headers,title,segmented)))return true;return false;
+    /** Matches EpisodesActivity.p1 extras used by 1DM/IDM. */
+    private static Intent idmIntent(String packageName,String url,Map<String,String> headers,String title){
+        Intent i=new Intent(Intent.ACTION_VIEW).setPackage(packageName).setDataAndType(Uri.parse(url),"application/x-mpegURL");
+        String referer=headers.get("Referer"),cookie=headers.get("Cookie"),ua=headers.get("User-Agent");
+        i.putExtra("extra_useragent",ua==null||ua.isEmpty()?UA:ua);
+        i.putExtra("extra_headers",new String[]{"Accept","*/*"});
+        i.putExtra("hide_browser_option",true);i.putExtra("secure_uri",true);
+        if(referer!=null&&!referer.isEmpty())i.putExtra("extra_referer",referer);
+        i.putExtra("extra_filename",safe(title)+"."+originalExtension(url));
+        if(cookie!=null&&!cookie.isEmpty())i.putExtra("extra_cookies",cookie);
+        return i;
+    }
+
+    private static boolean startIdm(Activity a,String url,Map<String,String> headers,String title){
+        for(String p:IDM)if(start(a,idmIntent(p,url,headers,title)))return true;return false;
     }
     private static boolean start(Activity a,Intent i){try{a.startActivity(i);return true;}catch(ActivityNotFoundException e){return false;}catch(Exception e){return false;}}
 
@@ -62,15 +72,20 @@ final class DownloadFlow {
     }
 
     private static String safe(String title){String s=title==null?"video":title.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]","_").trim();if(s.length()>110)s=s.substring(0,110);return s.isEmpty()?"video":s;}
+    /** Same extension decision used by EpisodesActivity.o1/p1: HLS downloads are named .ts. */
+    private static String originalExtension(String url){
+        String u=url==null?"":url.toLowerCase(Locale.ROOT);String path=Uri.parse(u).getPath();String p=path==null?u:path;
+        if(p.endsWith(".mkv"))return "mkv";if(p.endsWith(".rmvb"))return "rmvb";if(u.contains(".m3u8"))return "ts";return "mp4";
+    }
     private static String extension(String url){
         String path=Uri.parse(url==null?"":url).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);
-        for(String ext:new String[]{".mkv",".webm",".mov",".mp4",".ts",".m3u8"})if(lower.endsWith(ext))return ext;return ".mp4";
+        for(String ext:new String[]{".mkv",".webm",".mov",".mp4",".ts"})if(lower.endsWith(ext))return ext;return ".mp4";
     }
     private static void missingTdm(Activity a){
         new AlertDialog.Builder(a).setMessage("تطبيق TDM غير مثبت.").setNegativeButton("إلغاء",null).setPositiveButton("فتح صفحة TDM",(d,w)->start(a,new Intent(Intent.ACTION_VIEW,Uri.parse("https://upd.traidmod.com/go?id="+TDM)))).show();
     }
     private static void missingIdm(Activity a){
-        new AlertDialog.Builder(a).setMessage("لم يتم العثور على 1DM أو ADM.").setNegativeButton("إلغاء",null).setPositiveButton("فتح 1DM",(d,w)->{
+        new AlertDialog.Builder(a).setMessage("لم يتم العثور على 1DM.").setNegativeButton("إلغاء",null).setPositiveButton("فتح 1DM",(d,w)->{
             if(!start(a,new Intent(Intent.ACTION_VIEW,Uri.parse("market://details?id=idm.internet.download.manager"))))start(a,new Intent(Intent.ACTION_VIEW,Uri.parse("https://play.google.com/store/apps/details?id=idm.internet.download.manager")));
         }).show();
     }
