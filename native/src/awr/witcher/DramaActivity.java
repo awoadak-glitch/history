@@ -73,7 +73,26 @@ public final class DramaActivity extends Activity {
     private void markChannels(JSONArray a){for(int i=0;i<a.length();i++){JSONObject o=a.optJSONObject(i);if(o!=null)put(o,"_channel",true);}}
     private void showCatalog(){
         LinearLayout filters=Ui.row(this);filters.addView(Ui.button(this,page.optString("categoryTitle","جميع التصنيفات"),v->chooseCategory()),new LinearLayout.LayoutParams(0,-2,1));
-        if(tab!=3){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(Ui.dp(this,90),-2);lp.setMarginStart(Ui.dp(this,8));filters.addView(Ui.button(this,"ترتيب",v->chooseOrder()),lp);}content.addView(filters);LinearLayout results=Ui.column(this);content.addView(results);catalogPage(results,0);
+        if(tab!=3){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(Ui.dp(this,90),-2);lp.setMarginStart(Ui.dp(this,8));filters.addView(Ui.button(this,"ترتيب",v->chooseOrder()),lp);}content.addView(filters);LinearLayout results=Ui.column(this);content.addView(results);
+        if(tab!=3&&page.optInt("category")==0&&page.optString("order","created").equals("created")&&!page.optBoolean("fullList"))landing(results);else catalogPage(results,0);
+    }
+    private JSONArray selectType(JSONArray items){
+        JSONArray result=new JSONArray();for(int i=0;i<items.length();i++){JSONObject item=items.optJSONObject(i);if(item!=null&&((tab==1&&Api.series(item))||(tab==2&&"movie".equals(item.optString("type")))))result.put(item);}return result;
+    }
+    private void landing(LinearLayout target){
+        final int token=generation;loading(target);Api.get("first/",(value,error)->{
+            if(token!=generation||isFinishing()||isDestroyed())return;target.removeAllViews();
+            if(error!=null){catalogPage(target,0);return;}JSONObject data=Api.object(value);JSONArray sections=Api.array(data.optJSONArray("genres")),slides=Api.array(data.optJSONArray("slides")),hero=new JSONArray();
+            for(int i=0;i<slides.length();i++){JSONObject slide=slides.optJSONObject(i);if(slide==null)continue;JSONObject poster=slide.optJSONObject("poster");if(poster==null)continue;
+                if((tab==1&&Api.series(poster))||(tab==2&&"movie".equals(poster.optString("type")))){try{JSONObject cover=new JSONObject(poster.toString());put(cover,"cover",slide.optString("image",poster.optString("cover")));hero.put(cover);}catch(JSONException ignored){}}
+            }
+            if(hero.length()==0)for(int i=0;i<sections.length();i++){JSONObject section=sections.optJSONObject(i);if(section==null)continue;JSONArray items=selectType(Api.array(section.optJSONArray("posters")));for(int j=0;j<items.length()&&hero.length()<6;j++)hero.put(items.optJSONObject(j));if(hero.length()>=6)break;}
+            if(hero.length()>0)target.addView(Cards.hero(this,hero,this::detail));int visible=0;
+            for(int i=0;i<sections.length();i++){JSONObject section=sections.optJSONObject(i);if(section==null)continue;JSONArray items=selectType(Api.array(section.optJSONArray("posters")));if(items.length()==0)continue;Cards.rail(this,target,Api.label(section),items,this::detail);visible++;}
+            if(visible==0){target.removeAllViews();catalogPage(target,0);return;}
+            TextView all=Ui.button(this,tab==1?"جميع المسلسلات":"جميع الأفلام",v->{put(page,"fullList",true);put(page,"scroll",0);render();});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=Ui.dp(this,18);target.addView(all,lp);
+            int y=page.optInt("scroll");if(y>0)scroll.post(()->scroll.scrollTo(0,y));
+        });
     }
     private void catalogPage(LinearLayout target,int number){
         LinearLayout batch=Ui.column(this);target.addView(batch);final int selected=tab;
