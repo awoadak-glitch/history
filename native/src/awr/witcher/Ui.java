@@ -66,8 +66,8 @@ public final class Ui {
         IMAGES.execute(() -> {
             HttpURLConnection connection = null;
             try {
-                connection = (HttpURLConnection)new URL(url).openConnection(); connection.setConnectTimeout(12000); connection.setReadTimeout(15000);
-                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Android)");
+                URL target=new URL(url);URLConnection opened=HitvNet.open(target);connection=(HttpURLConnection)opened;connection.setConnectTimeout(12000);connection.setReadTimeout(16000);
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/127.0 Mobile Safari/537.36");
                 ByteArrayOutputStream data = new ByteArrayOutputStream();
                 try(InputStream in = connection.getInputStream()) {
                     byte[] buffer = new byte[16384]; int n;
