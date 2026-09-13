@@ -75,7 +75,7 @@ final class HitvExperience {
                 if(error!=null){message(error);TextView retry=button("إعادة المحاولة");retry.setOnClickListener(v->render());content.addView(retry);return;}
                 ArrayList<Section> sections=sections(value);ArrayList<Item> flat=items(value);if(sections.isEmpty()&&!flat.isEmpty()){Section s=new Section("مختارات HiTV");s.items.addAll(flat);sections.add(s);}if(sections.isEmpty()){message("لم يصل محتوى من HiTV حالياً.");return;}
                 Item hero=null;for(Section s:sections)if(!s.items.isEmpty()){hero=s.items.get(0);break;}if(hero!=null)addHero(hero);
-                for(Section s:sections){if(s.items.isEmpty())continue;addRail(s.title,s.items);} 
+                for(Section s:sections){if(s.items.isEmpty())continue;addRail(s.title,s.items);}
             });
         }
         void addHero(Item item){
@@ -105,7 +105,7 @@ final class HitvExperience {
 
         void renderDetail(){
             Item initial=state.item;if(initial==null){message("تعذر فتح هذا العمل.");return;}final int token=generation;loading();HitvApi.get("/cms/web/hitv/movieDrama/detail",HitvApi.params("id",initial.id,"category",initial.category),(value,error)->{
-                if(token!=generation||!"detail".equals(state.kind))return;content.removeAllViews();Item item=initial;if(error==null){ArrayList<Item> found=items(value);if(!found.isEmpty()){Item richer=found.get(0);if(initial.id.equals(richer.id)||richer.id.isEmpty())item=merge(initial,richer);else item=merge(initial,richer);}else if(value instanceof JSONObject)item=merge(initial,normalize((JSONObject)value));}state.item=item;drawDetail(item);
+                if(token!=generation||!"detail".equals(state.kind))return;content.removeAllViews();Item item=initial;if(error==null){ArrayList<Item> found=items(value);if(!found.isEmpty()){Item richer=found.get(0);item=merge(initial,richer);}else if(value instanceof JSONObject)item=merge(initial,normalize((JSONObject)value));}state.item=item;drawDetail(item);
             });
         }
         void drawDetail(Item item){
@@ -135,7 +135,7 @@ final class HitvExperience {
     static Item normalize(JSONObject o){
         Item x=new Item();x.id=first(o,"id","contentId","relatedId","relationId");String name=first(o,"name","title");if(!name.isEmpty())x.name=name;x.vertical=first(o,"coverVerticalUrl","imageUrl","cover","bannerUrl");x.horizontal=first(o,"coverHorizontalUrl","bannerUrl","cover","imageUrl","coverVerticalUrl");x.intro=first(o,"introduction","description","summary");x.update=first(o,"updateInfo");x.score=parseDouble(first(o,"score"));
         Object cat=o.opt("domainType");if(cat==null||cat==JSONObject.NULL)cat=o.opt("category");String c=String.valueOf(cat);x.category=("0".equals(c)||"movie".equalsIgnoreCase(c))?0:1;Object area=o.opt("area");if(area instanceof JSONObject)x.area=first((JSONObject)area,"name");else if(area instanceof String)x.area=(String)area;Object tag=o.opt("categoryTag");if(tag instanceof JSONObject)x.genre=first((JSONObject)tag,"name");else if(tag instanceof String)x.genre=(String)tag;
-        JSONArray eps=o.optJSONArray("episodeVo");if(eps==null)eps=o.optJSONArray("episodeList");if(eps!=null&&eps.length()>0)x.episodes=eps.length();else{x.episodes=Math.max(1,o.optInt("episodeCount",1));if(x.episodes==1){Matcher m=Pattern.compile("(\\d+)").matcher(x.update);if(m.find())try{x.episodes=Math.max(1,Integer.parseInt(m.group(1)));catch(Exception ignored){}}}return x;
+        JSONArray eps=o.optJSONArray("episodeVo");if(eps==null)eps=o.optJSONArray("episodeList");if(eps!=null&&eps.length()>0)x.episodes=eps.length();else{x.episodes=Math.max(1,o.optInt("episodeCount",1));if(x.episodes==1){Matcher m=Pattern.compile("(\\d+)").matcher(x.update);if(m.find())try{x.episodes=Math.max(1,Integer.parseInt(m.group(1)));}catch(Exception ignored){}}}return x;
     }
     static double parseDouble(String s){try{return Double.parseDouble(s);}catch(Exception e){return 0;}}
     static ArrayList<Item> items(Object value){LinkedHashMap<String,Item> map=new LinkedHashMap<>();collectItems(value,0,map);return new ArrayList<>(map.values());}
