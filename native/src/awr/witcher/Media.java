@@ -75,7 +75,7 @@ public final class Media {
         Api.IO.execute(()->{
             ArrayList<String> names=new ArrayList<>(),urls=new ArrayList<>();names.add("تلقائي");urls.add(url);
             try{
-                String body=Api.read(url,h,1024*1024);String[] lines=body.split("\\r?\\n");
+                Api.Response response=Api.readResponse(url,h,1024*1024);String[] lines=response.text.split("\\r?\\n");
                 for(int i=0;i<lines.length-1;i++)if(lines[i].startsWith("#EXT-X-STREAM-INF:")){
                     String descriptor=lines[i];
                     // Separate audio renditions need the master playlist; avoid silent playback.
@@ -83,7 +83,7 @@ public final class Media {
                     int j=i+1;while(j<lines.length&&lines[j].trim().isEmpty())j++;
                     if(j>=lines.length||lines[j].startsWith("#"))continue;
                     String label="جودة "+names.size();Matcher resolution=Pattern.compile("RESOLUTION=\\d+x(\\d+)").matcher(descriptor);if(resolution.find())label=resolution.group(1)+"p";
-                    String resolved=new URL(new URL(url),lines[j].trim()).toString();StreamCodec.validate(resolved);names.add(label);urls.add(resolved);
+                    String resolved=new URL(new URL(response.url),lines[j].trim()).toString();StreamCodec.validate(resolved);names.add(label);urls.add(resolved);
                 }
             }catch(Exception ignored){/* Original master remains playable; MX can choose adaptively. */}
             a.runOnUiThread(()->{if(a.isFinishing()||a.isDestroyed())return;wait.dismiss();if(canceled[0])return;if(urls.size()==1){launch(a,url,h,title,download,true);return;}new AlertDialog.Builder(a).setTitle("اختيار الجودة").setItems(names.toArray(new String[0]),(d,i)->launch(a,urls.get(i),h,title,download,true)).show();});

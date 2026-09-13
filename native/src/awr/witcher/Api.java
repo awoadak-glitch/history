@@ -47,7 +47,11 @@ public final class Api {
         });
     }
     public static final class HttpError extends IOException {public final int code;HttpError(int n){super("HTTP "+n);code=n;}}
+    public static final class Response {public final String text,url;Response(String t,String u){text=t;url=u;}}
     public static String read(String url,Map<String,String> headers,int limit)throws IOException{
+        return readResponse(url,headers,limit).text;
+    }
+    public static Response readResponse(String url,Map<String,String> headers,int limit)throws IOException{
         HttpURLConnection c=(HttpURLConnection)new URL(url).openConnection();
         c.setConnectTimeout(15000);c.setReadTimeout(25000);c.setRequestProperty("User-Agent","okhttp/4.12.0");
         for(Map.Entry<String,String> h:headers.entrySet())c.setRequestProperty(h.getKey(),h.getValue());
@@ -56,7 +60,7 @@ public final class Api {
             try(InputStream in=c.getInputStream();ByteArrayOutputStream bytes=new ByteArrayOutputStream()){
                 byte[] block=new byte[16384];int count;
                 while((count=in.read(block))!=-1){bytes.write(block,0,count);if(bytes.size()>limit)throw new IOException("Response too large");}
-                return new String(bytes.toByteArray(),StandardCharsets.UTF_8);
+                return new Response(new String(bytes.toByteArray(),StandardCharsets.UTF_8),c.getURL().toString());
             }
         }finally{c.disconnect();}
     }
