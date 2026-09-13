@@ -18,7 +18,7 @@ import static org.junit.Assert.*;
 import static org.robolectric.Shadows.shadowOf;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk=34,manifest=Config.NONE)
+@Config(sdk=34,manifest=Config.NONE,qualifiers="ar-rYE-w411dp-h891dp-420dpi")
 @LooperMode(LooperMode.Mode.PAUSED)
 public class NativeFlowTest {
     private ActivityController<DramaActivity> controller;
@@ -30,6 +30,7 @@ public class NativeFlowTest {
         Map map=(Map)f.get(null);synchronized(map){map.put(route,ctor.newInstance(body));}
     }
     private void start()throws Exception{
+        RuntimeEnvironment.getApplication().getApplicationInfo().flags|=android.content.pm.ApplicationInfo.FLAG_SUPPORTS_RTL;
         cache(Api.list(3,0,"created",0),"["+CHANNEL+"]");cache(Api.detail(true,701),CHANNEL);
         Intent intent=new Intent(RuntimeEnvironment.getApplication(),DramaActivity.class).putExtra("tab",3);
         controller=Robolectric.buildActivity(DramaActivity.class,intent).setup().visible();activity=controller.get();
@@ -65,6 +66,10 @@ public class NativeFlowTest {
         assertEquals(12,decoded.getJSONObject(0).getInt("id"));assertEquals(3,decoded.getJSONObject(1).getInt("id"));assertEquals(7,decoded.getJSONObject(2).getInt("id"));
         assertFalse(Api.publicAccess("2"));assertFalse(Api.publicAccess("3"));assertTrue(Api.publicAccess("1"));
     }
+    @Test public void seriesHomeUsesActualServerSections()throws Exception{
+        start();cache("first/","{\"slides\":[],\"genres\":[{\"title\":\"آخر الحلقات المضافة\",\"posters\":[{\"id\":51,\"title\":\"مسلسل الاختبار\",\"type\":\"serie\"}]},{\"title\":\"آخر الأفلام المضافة\",\"posters\":[{\"id\":61,\"title\":\"فيلم الاختبار\",\"type\":\"movie\"}]}]}");
+        click("المسلسلات");waitFor("آخر الحلقات المضافة");assertNull(text(activity.getWindow().getDecorView(),"آخر الأفلام المضافة"));assertNotNull(text(activity.getWindow().getDecorView(),"جميع المسلسلات"));
+    }
     @Test public void dwEnvelopeIsDecodedBeforeMxReceivesIt()throws Exception{
         String uri="https://media.example.org/movie.mp4?token=abc";
         String fixture=new StringBuilder(Base64.encodeToString(uri.getBytes("UTF-8"),Base64.NO_WRAP)).reverse()+"A1b2C3d4E5f6G7h8I";
@@ -84,7 +89,7 @@ public class NativeFlowTest {
         start();render("channels");click("قناة الاختبار");waitFor("مشاهدة");click("مشاهدة");waitFor("السيرفر الأول");render("servers");
     }
     private void render(String name)throws Exception{
-        View view=activity.findViewById(android.R.id.content);int width=1080,height=2160;
+        View view=activity.findViewById(android.R.id.content);int width=1080,height=2340;
         view.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));view.layout(0,0,width,height);
         android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(width,height,android.graphics.Bitmap.Config.ARGB_8888);view.draw(new android.graphics.Canvas(bitmap));
         java.io.File file=new java.io.File("artifacts/qa-"+name+".png");try(java.io.FileOutputStream out=new java.io.FileOutputStream(file)){bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}assertTrue(file.length()>1000);
