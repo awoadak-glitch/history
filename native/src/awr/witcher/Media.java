@@ -11,7 +11,6 @@ import java.util.*;
 /** Resolve/decode inside the app; MX always receives the final clean media URI plus headers. */
 public final class Media {
     public static final String MX="com.mxtech.videoplayer.ad";
-    // Same browser identity used by Drama World's original extractor family.
     private static final String UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36";
     private static final Map<Activity,Runnable> PENDING=new WeakHashMap<>();
     private Media(){}
@@ -23,38 +22,29 @@ public final class Media {
         try{url=StreamCodec.sourceUrl(StreamCodec.unwrap(source.optString("url"),source.optBoolean("is_encoded")));}
         catch(Exception e){alert(activity,"تعذر فك رابط هذا السيرفر.");return;}
         Map<String,String> headers=headers(source,url);String type=source.optString("type").toLowerCase(Locale.ROOT);
-        if(needsExtractionForSource(source,url,type,download)){extract(activity,url,headers,title,download,"webm".equals(type));return;}
+        boolean declaredHls="m3u8".equals(type),declaredDash="mpd".equals(type);
+        if(needsExtractionForSource(source,url,type,download)){extract(activity,url,headers,title,download,"webm".equals(type),declaredHls||declaredDash);return;}
         String path=Uri.parse(url).getPath();String lower=(path==null?"":path).toLowerCase(Locale.ROOT);
-        // Drama World does not download/parse an already-final HLS manifest before handoff.
-        // A real .m3u8 goes straight to its player; we do the same, but to MX.
-        launch(activity,url,headers,title,download,lower.endsWith(".m3u8")||lower.endsWith(".mpd")||"mpd".equals(type));
+        launch(activity,url,headers,title,download,declaredHls||declaredDash||lower.endsWith(".m3u8")||lower.endsWith(".mpd"));
     }
 
-    /** Mirrors EpisodesActivity.W1/n0 before the original DW-player-only transport wrapping. */
     static boolean needsExtractionForSource(JSONObject source,String url,String type,boolean download){
         boolean channel=source.optBoolean("_channel");
         if(channel)return needsExtraction(url,type,download,true);
-        // `external` selects an original UI route; it does not prove that a provider URL is media.
         return needsExtraction(url,type,download,false);
     }
 
     static boolean needsExtraction(String url,String type,boolean download,boolean channel){
         String normalized=type==null?"":type.toLowerCase(Locale.ROOT);
         if(channel)return !(normalized.equals("m3u8")||normalized.equals("mp4")||normalized.equals("mkv")||normalized.equals("mpd"));
-        if(download){
-            // Exact EpisodesActivity.n0 switch in V4.2f: mp4 is direct. mkv/mov/m3u8/webm
-            // all go through Q0/b with download=true before any downloader sees the URL.
-            return !normalized.equals("mp4");
-        }
+        if(download)return !normalized.equals("mp4");
         if(normalized.equals("mov")||normalized.equals("webm")||normalized.equals("embed"))return true;
         if(normalized.equals("m3u8")){String path=Uri.parse(url).getPath();return path==null||!path.toLowerCase(Locale.ROOT).endsWith(".m3u8");}
         if(normalized.equals("mp4")||normalized.equals("mkv")||normalized.equals("mpd"))return false;
         return true;
     }
 
-    private static boolean validHeader(String key,String value){
-        return key!=null&&key.matches("[!#$%&'*+.^_`|~0-9A-Za-z-]+")&&value!=null&&!value.contains("\r")&&!value.contains("\n");
-    }
+    private static boolean validHeader(String key,String value){return key!=null&&key.matches("[!#$%&'*+.^_`|~0-9A-Za-z-]+")&&value!=null&&!value.contains("\r")&&!value.contains("\n");}
     public static Map<String,String> headers(JSONObject source,String url){
         Map<String,String> h=new TreeMap<>(String.CASE_INSENSITIVE_ORDER);h.put("User-Agent",UA);
         JSONObject supplied=source.optJSONObject("headers");if(supplied!=null){Iterator<String> keys=supplied.keys();while(keys.hasNext()){String key=keys.next();String value=supplied.optString(key);if(validHeader(key,value))h.put(key,value);}}
@@ -70,7 +60,7 @@ public final class Media {
         try{if(url.contains("=http"))url=url.substring(url.lastIndexOf('=')+1);String host=Uri.parse(url).getHost();return host==null?"":"https://"+host+"/";}catch(Exception e){return "";}
     }
 
-    private static void extract(Activity a,String url,Map<String,String> headers,String title,boolean download,boolean requestedQualities){
+    private static void extract(Activity a,String url,Map<String,String> headers,String title,boolean download,boolean requestedQualities,boolean forceSegmented){
         cancelPending(a);
         ProgressDialog wait=new ProgressDialog(a);wait.setMessage(download?"يرجى الإنتظار..يتم تجهيز التحميل":"جاري تجهيز رابط السيرفر…");wait.setCancelable(true);wait.show();
         Handler timer=new Handler(Looper.getMainLooper());java.util.concurrent.atomic.AtomicBoolean finished=new java.util.concurrent.atomic.AtomicBoolean();
@@ -83,11 +73,7 @@ public final class Media {
                 if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();if(a.isFinishing()||a.isDestroyed())return;
                 ArrayList<Legacy.Stream> valid=new ArrayList<>();ArrayList<String> labels=new ArrayList<>();
                 for(Legacy.Stream stream:streams){
-                    try{
-                        String finalUrl=StreamCodec.forExternalPlayer(stream.url);
-                        valid.add(new Legacy.Stream(finalUrl,stream.quality,stream.cookie));
-                        String q=stream.quality==null?"":stream.quality.trim();labels.add(q.isEmpty()?"جودة "+valid.size():q);
-                    }catch(Exception ignored){}
+                    try{String finalUrl=StreamCodec.forExternalPlayer(stream.url);valid.add(new Legacy.Stream(finalUrl,stream.quality,stream.cookie));String q=stream.quality==null?"":stream.quality.trim();labels.add(q.isEmpty()?"جودة "+valid.size():q);}catch(Exception ignored){}
                 }
                 if(valid.isEmpty()){alert(a,"تعذر تجهيز رابط صالح من هذا السيرفر.");return;}
                 android.content.DialogInterface.OnClickListener select=(d,i)->{
@@ -95,26 +81,23 @@ public final class Media {
                     if(s.cookie!=null&&!s.cookie.isEmpty()&&validHeader("Cookie",s.cookie))h.put("Cookie",s.cookie);
                     final String finalUrl;try{finalUrl=StreamCodec.forExternalPlayer(s.url);}catch(Exception e){alert(a,"تعذر فك الرابط المختار.");return;}
                     String path=Uri.parse(finalUrl).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);
-                    // Match the original callback: after Q0/S0 returns R0/a, hand that chosen
-                    // final stream straight to the player/downloader. Do not refetch HLS here.
-                    launch(a,finalUrl,h,title,download,lower.endsWith(".m3u8")||lower.endsWith(".mpd"));
+                    launch(a,finalUrl,h,title,download,forceSegmented||lower.endsWith(".m3u8")||lower.endsWith(".mpd"));
                 };
-                if(valid.size()==1&&!showQualities&&!requestedQualities)select.onClick(null,0);
-                else new AlertDialog.Builder(a).setTitle(download?"اختر جودة التنزيل":"إختر جودة التشغيل!").setItems(labels.toArray(new String[0]),select).show();
+                if(valid.size()==1&&!showQualities&&!requestedQualities)select.onClick(null,0);else new AlertDialog.Builder(a).setTitle(download?"اختر جودة التنزيل":"إختر جودة التشغيل!").setItems(labels.toArray(new String[0]),select).show();
             });}
         });
         if(!supported){cancelPending(a);alert(a,"هذا السيرفر غير متاح حالياً. جرّب سيرفراً آخر.");}
     }
 
-    private static String mimeFor(String url){
+    private static String mimeFor(String url,boolean segmented){
         String path=Uri.parse(url).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);
-        if(lower.endsWith(".m3u8"))return "application/x-mpegURL";
+        if(segmented||lower.endsWith(".m3u8"))return "application/x-mpegURL";
         if(lower.endsWith(".mpd"))return "application/dash+xml";
         return "video/*";
     }
-    public static Intent mxIntent(String url,Map<String,String> headers,String title){
-        String finalUrl=StreamCodec.forExternalPlayer(url);
-        Intent intent=new Intent(Intent.ACTION_VIEW).setPackage(MX).setDataAndType(Uri.parse(finalUrl),mimeFor(finalUrl));
+    public static Intent mxIntent(String url,Map<String,String> headers,String title){return mxIntent(url,headers,title,false);}
+    static Intent mxIntent(String url,Map<String,String> headers,String title,boolean segmented){
+        String finalUrl=StreamCodec.forExternalPlayer(url);Intent intent=new Intent(Intent.ACTION_VIEW).setPackage(MX).setDataAndType(Uri.parse(finalUrl),mimeFor(finalUrl,segmented));
         ArrayList<String> flat=new ArrayList<>();for(Map.Entry<String,String> h:headers.entrySet())if(validHeader(h.getKey(),h.getValue())){flat.add(h.getKey());flat.add(h.getValue());}
         intent.putExtra("headers",flat.toArray(new String[0]));intent.putExtra("title",title);return intent;
     }
@@ -122,7 +105,7 @@ public final class Media {
         if(a.isFinishing()||a.isDestroyed())return;
         final String finalUrl;try{finalUrl=StreamCodec.forExternalPlayer(url);}catch(Exception e){alert(a,"تعذر فك الرابط النهائي.");return;}
         if(download){DownloadFlow.open(a,finalUrl,h,title,segmented);return;}
-        try{a.startActivity(mxIntent(finalUrl,h,title));}
+        try{a.startActivity(mxIntent(finalUrl,h,title,segmented));}
         catch(ActivityNotFoundException e){new AlertDialog.Builder(a).setMessage("ثبّت MX Player لفتح هذا الفيديو.").setNegativeButton("إلغاء",null).setPositiveButton("فتح صفحة MX Player",(d,w)->{try{a.startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("market://details?id="+MX)));}catch(ActivityNotFoundException ignored){a.startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://play.google.com/store/apps/details?id="+MX)));}}).show();}
         catch(Exception e){alert(a,"تعذر فتح الفيديو في MX Player.");}
     }
