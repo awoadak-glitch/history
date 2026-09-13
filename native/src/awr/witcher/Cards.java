@@ -34,10 +34,10 @@ public final class Cards {
         int available=c.getResources().getDisplayMetrics().widthPixels-Ui.dp(c,24);
         int columns=channels?2:(available/Ui.dp(c,110));columns=Math.max(2,Math.min(5,columns));
         int width=available/columns;
-        LinearLayout row=null;
+        LinearLayout row=null;int shown=0;
         for(int i=0;i<items.length();i++){
             JSONObject item=items.optJSONObject(i);if(item==null)continue;
-            if(i%columns==0){row=Ui.row(c);row.setGravity(Gravity.TOP);parent.addView(row,new LinearLayout.LayoutParams(-1,-2));}
+            if(shown++%columns==0){row=Ui.row(c);row.setGravity(Gravity.TOP);parent.addView(row,new LinearLayout.LayoutParams(-1,-2));}
             row.addView(poster(c,item,channels,width,select),new LinearLayout.LayoutParams(width,-2));
         }
     }

@@ -22,7 +22,10 @@ public final class Api {
     private static final class Entry { final String text; final long time=System.currentTimeMillis(); Entry(String t){text=t;} }
     private Api(){}
     public static String list(int tab,int category,String order,int page){
-        if(tab==3)return "channel/by/filtres/"+category+"/0/"+page+"/";
+        return list(tab,category,0,order,page);
+    }
+    public static String list(int tab,int category,int country,String order,int page){
+        if(tab==3)return "channel/by/filtres/"+category+"/"+country+"/"+page+"/";
         return (tab==1?"serie":"movie")+"/by/filtres/"+category+"/"+Uri.encode(order)+"/"+page+"/";
     }
     public static String search(String query,int page){return "search/"+Uri.encode(query)+"/"+page+"/";}

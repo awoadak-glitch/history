@@ -92,6 +92,30 @@ public class NativeFlowTest {
         assertFalse(Media.needsExtraction("https://cdn.example.org/master.M3U8?token=abc","m3u8",false,false));
         assertFalse(Media.needsExtraction("https://cdn.example.org/live?id=42","m3u8",false,true));
     }
+    @Test public void catalogKeepsLoadedPagesAfterDetailsAndRecreation()throws Exception{
+        start();String second=CHANNEL.replace("701","702").replace("قناة الاختبار","قناة الصفحة الثانية");
+        cache(Api.list(3,0,"created",1),"["+second+"]");cache(Api.detail(true,702),second);
+        click("عرض المزيد");waitFor("قناة الصفحة الثانية");click("قناة الصفحة الثانية");waitFor("مشاهدة");
+        activity.onBackPressed();waitFor("قناة الصفحة الثانية");
+        controller.recreate();activity=controller.get();waitFor("قناة الصفحة الثانية");
+    }
+    @Test public void searchKeepsSecondPageWhenReturningFromMovie()throws Exception{
+        start();String query="مسلسل";
+        String movie="{\"id\":55,\"title\":\"نتيجة الصفحة الثانية\",\"type\":\"movie\",\"playas\":\"1\"}";
+        cache(Api.search(query,0),"{\"posters\":[{\"id\":54,\"title\":\"نتيجة أولى\",\"type\":\"movie\"}],\"channels\":[]}");
+        cache(Api.search(query,1),"{\"posters\":["+movie+"],\"channels\":[]}");cache(Api.detail(false,55),movie);
+        desc(activity.getWindow().getDecorView(),"بحث في عالم الدراما").performClick();findEdit(activity.getWindow().getDecorView()).setText(query);
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(500));waitFor("نتيجة أولى");click("نتائج إضافية");waitFor("نتيجة الصفحة الثانية");
+        click("نتيجة الصفحة الثانية");waitFor("مشاهدة");activity.onBackPressed();waitFor("نتيجة الصفحة الثانية");
+        assertEquals(query,findEdit(activity.getWindow().getDecorView()).getText().toString());
+    }
+    @Test public void countryFilterUsesTheSelectedServerCountry()throws Exception{
+        start();cache("country/all/","[{\"id\":21,\"title\":\"اليمن\"}]");
+        cache(Api.list(3,0,21,"created",0),"["+CHANNEL.replace("قناة الاختبار","قناة اليمن")+"]");
+        click("جميع الدول");android.app.AlertDialog dialog=null;
+        for(int i=0;i<200;i++){shadowOf(Looper.getMainLooper()).idle();dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();if(dialog!=null&&dialog.isShowing())break;Thread.sleep(5);}
+        assertNotNull(dialog);dialog.getListView().performItemClick(null,1,1);waitFor("قناة اليمن");
+    }
     @Test public void redirectedPlaylistKeepsEffectiveBaseURL()throws Exception{
         com.sun.net.httpserver.HttpServer server=com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1",0),0);
         server.createContext("/start.m3u8",exchange->{exchange.getResponseHeaders().add("Location","/nested/master.m3u8");exchange.sendResponseHeaders(302,-1);exchange.close();});

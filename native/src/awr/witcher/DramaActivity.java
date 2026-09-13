@@ -43,13 +43,14 @@ public final class DramaActivity extends Activity {
         JSONArray back=new JSONArray();for(JSONObject p:history)back.put(p);state.putString("back",back.toString());super.onSaveInstanceState(state);
     }
     @Override public void onBackPressed(){if(history.isEmpty()){finish();return;}page=history.removeLast();render();}
-    @Override protected void onDestroy(){generation++;handler.removeCallbacksAndMessages(null);super.onDestroy();}
+    @Override protected void onDestroy(){generation++;Media.cancelPending(this);handler.removeCallbacksAndMessages(null);super.onDestroy();}
     private void navigate(JSONObject next){
         if(scroll!=null)put(page,"scroll",scroll.getScrollY());if(history.size()>=12)history.removeFirst();history.addLast(page);page=next;
         View focus=getCurrentFocus();if(focus!=null)((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(focus.getWindowToken(),0);render();
     }
     private Ui.Icon icon(String name){Ui.Icon v=new Ui.Icon(this,name,Ui.textColor(this));v.setPadding(Ui.dp(this,11),Ui.dp(this,11),Ui.dp(this,11),Ui.dp(this,11));Ui.clickable(v,0,24);return v;}
     private void render(){
+        Media.cancelPending(this);
         generation++;searchGeneration++;if(searchTask!=null)handler.removeCallbacks(searchTask);
         String kind=page.optString("kind","catalog");getWindow().setStatusBarColor(Ui.bg(this));getWindow().setNavigationBarColor(Ui.surface(this));
         root=Ui.column(this);root.setBackgroundColor(Ui.bg(this));LinearLayout bar=Ui.row(this);bar.setPadding(Ui.dp(this,8),0,Ui.dp(this,8),0);
@@ -73,6 +74,7 @@ public final class DramaActivity extends Activity {
     private void markChannels(JSONArray a){for(int i=0;i<a.length();i++){JSONObject o=a.optJSONObject(i);if(o!=null)put(o,"_channel",true);}}
     private void showCatalog(){
         LinearLayout filters=Ui.row(this);filters.addView(Ui.button(this,page.optString("categoryTitle","جميع التصنيفات"),v->chooseCategory()),new LinearLayout.LayoutParams(0,-2,1));
+        if(tab==3){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMarginStart(Ui.dp(this,8));filters.addView(Ui.button(this,page.optString("countryTitle","جميع الدول"),v->chooseCountry()),lp);}
         if(tab!=3){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(Ui.dp(this,90),-2);lp.setMarginStart(Ui.dp(this,8));filters.addView(Ui.button(this,"ترتيب",v->chooseOrder()),lp);}content.addView(filters);LinearLayout results=Ui.column(this);content.addView(results);
         if(tab!=3&&page.optInt("category")==0&&page.optString("order","created").equals("created")&&!page.optBoolean("fullList"))landing(results);else catalogPage(results,0);
     }
@@ -90,39 +92,50 @@ public final class DramaActivity extends Activity {
             if(hero.length()>0)target.addView(Cards.hero(this,hero,this::detail));int visible=0;
             for(int i=0;i<sections.length();i++){JSONObject section=sections.optJSONObject(i);if(section==null)continue;JSONArray items=selectType(Api.array(section.optJSONArray("posters")));if(items.length()==0)continue;Cards.rail(this,target,Api.label(section),items,this::detail);visible++;}
             if(visible==0){target.removeAllViews();catalogPage(target,0);return;}
-            TextView all=Ui.button(this,tab==1?"جميع المسلسلات":"جميع الأفلام",v->{put(page,"fullList",true);put(page,"scroll",0);render();});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=Ui.dp(this,18);target.addView(all,lp);
+            TextView all=Ui.button(this,tab==1?"جميع المسلسلات":"جميع الأفلام",v->{put(page,"fullList",true);resetListing();render();});LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.topMargin=Ui.dp(this,18);target.addView(all,lp);
             int y=page.optInt("scroll");if(y>0)scroll.post(()->scroll.scrollTo(0,y));
         });
     }
     private void catalogPage(LinearLayout target,int number){
         LinearLayout batch=Ui.column(this);target.addView(batch);final int selected=tab;
-        load(Api.list(tab,page.optInt("category"),page.optString("order","created"),number),batch,value->{
+        load(Api.list(tab,page.optInt("category"),page.optInt("country"),page.optString("order","created"),number),batch,value->{
             JSONArray list=Api.array(value);if(selected==3)markChannels(list);if(list.length()==0){if(number==0)message(batch,"لا يوجد محتوى في هذا القسم حالياً.");return;}
             if(number==0&&selected!=3&&page.optInt("category")==0){batch.addView(Cards.hero(this,list,this::detail));heading(batch,selected==1?"أحدث المسلسلات":"أحدث الأفلام");}Cards.grid(this,batch,list,selected==3,this::detail);
-            TextView more=Ui.button(this,"عرض المزيد",v->{});batch.addView(more,new LinearLayout.LayoutParams(-1,-2));more.setOnClickListener(v->{batch.removeView(more);catalogPage(target,number+1);});
+            if(number<page.optInt("lastPage")){catalogPage(target,number+1);return;}
+            TextView more=Ui.button(this,"عرض المزيد",v->{});batch.addView(more,new LinearLayout.LayoutParams(-1,-2));more.setOnClickListener(v->{put(page,"lastPage",number+1);batch.removeView(more);catalogPage(target,number+1);});
         });
     }
-    private void chooseOrder(){String[] titles={"الأحدث إضافة","الأعلى تقييماً","تقييم IMDb","الاسم","السنة","الأكثر مشاهدة"},values={"created","rating","imdb","title","year","views"};new AlertDialog.Builder(this).setTitle("ترتيب المحتوى").setItems(titles,(d,i)->{put(page,"order",values[i]);put(page,"scroll",0);render();}).show();}
+    private void resetListing(){put(page,"scroll",0);put(page,"lastPage",0);}
+    private void chooseOrder(){String[] titles={"الأحدث إضافة","الأعلى تقييماً","تقييم IMDb","الاسم","السنة","الأكثر مشاهدة"},values={"created","rating","imdb","title","year","views"};new AlertDialog.Builder(this).setTitle("ترتيب المحتوى").setItems(titles,(d,i)->{put(page,"order",values[i]);resetListing();render();}).show();}
+    private void chooseCountry(){
+        final int token=generation;Api.get("country/all/",(value,error)->{
+            if(token!=generation||isFinishing()||isDestroyed())return;if(error!=null){Toast.makeText(this,error,Toast.LENGTH_LONG).show();return;}
+            JSONArray list=Api.array(value);String[] names=new String[list.length()+1];names[0]="جميع الدول";for(int i=0;i<list.length();i++)names[i+1]=Api.label(list.optJSONObject(i));
+            new AlertDialog.Builder(this).setTitle("الدول").setItems(names,(d,i)->{put(page,"country",i==0?0:list.optJSONObject(i-1).optInt("id"));put(page,"countryTitle",names[i]);resetListing();render();}).show();
+        });
+    }
     private void chooseCategory(){
         final int token=generation;Api.get(tab==3?"category/all/":"genre/all/",(value,error)->{
             if(token!=generation||isFinishing())return;if(error!=null){Toast.makeText(this,error,Toast.LENGTH_LONG).show();return;}JSONArray list=Api.array(value);String[] names=new String[list.length()+1];names[0]="جميع التصنيفات";for(int i=0;i<list.length();i++)names[i+1]=Api.label(list.optJSONObject(i));
-            new AlertDialog.Builder(this).setTitle("التصنيفات").setItems(names,(d,i)->{put(page,"category",i==0?0:list.optJSONObject(i-1).optInt("id"));put(page,"categoryTitle",names[i]);put(page,"scroll",0);render();}).show();
+            new AlertDialog.Builder(this).setTitle("التصنيفات").setItems(names,(d,i)->{put(page,"category",i==0?0:list.optJSONObject(i-1).optInt("id"));put(page,"categoryTitle",names[i]);resetListing();render();}).show();
         });
     }
     private void showSearch(){
         EditText field=new EditText(this);field.setSingleLine(true);field.setTextSize(16);field.setTextColor(Ui.textColor(this));field.setHintTextColor(Ui.muted(this));field.setHint("ابحث عن فيلم أو مسلسل أو قناة");field.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);field.setPadding(Ui.dp(this,16),0,Ui.dp(this,16),0);field.setBackground(Ui.rounded(this,Ui.surface(this),12));content.addView(field,new LinearLayout.LayoutParams(-1,Ui.dp(this,52)));LinearLayout results=Ui.column(this);content.addView(results);
         String query=page.optString("query");field.setText(query);if(query.trim().isEmpty())message(results,"اكتب اسم العمل للبحث في مصادر عالم الدراما.");else searchPage(results,query,0,++searchGeneration);
         field.addTextChangedListener(new TextWatcher(){public void beforeTextChanged(CharSequence s,int a,int c,int f){}public void afterTextChanged(Editable e){}public void onTextChanged(CharSequence s,int a,int b,int c){
-            if(searchTask!=null)handler.removeCallbacks(searchTask);String q=s.toString().trim();put(page,"query",q);int token=++searchGeneration;results.removeAllViews();if(q.isEmpty()){message(results,"اكتب اسم العمل للبحث.");return;}searchTask=()->searchPage(results,q,0,token);handler.postDelayed(searchTask,450);
+            if(searchTask!=null)handler.removeCallbacks(searchTask);String q=s.toString().trim();put(page,"query",q);resetListing();int token=++searchGeneration;results.removeAllViews();if(q.isEmpty()){message(results,"اكتب اسم العمل للبحث.");return;}searchTask=()->searchPage(results,q,0,token);handler.postDelayed(searchTask,450);
         }});
-        field.setOnEditorActionListener((v,action,event)->{if(searchTask!=null)handler.removeCallbacks(searchTask);results.removeAllViews();String q=field.getText().toString().trim();if(!q.isEmpty())searchPage(results,q,0,++searchGeneration);((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(field.getWindowToken(),0);return true;});
+        field.setOnEditorActionListener((v,action,event)->{if(searchTask!=null)handler.removeCallbacks(searchTask);results.removeAllViews();resetListing();String q=field.getText().toString().trim();int token=++searchGeneration;if(!q.isEmpty())searchPage(results,q,0,token);else message(results,"اكتب اسم العمل للبحث.");((InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(field.getWindowToken(),0);return true;});
     }
     private void searchPage(LinearLayout target,String query,int number,int token){
         final int screen=generation;LinearLayout batch=Ui.column(this);target.addView(batch);loading(batch);Api.get(Api.search(query,number),(value,error)->{
             if(token!=searchGeneration||screen!=generation||isFinishing()||isDestroyed())return;batch.removeAllViews();if(error!=null){message(batch,error);batch.addView(Ui.button(this,"إعادة المحاولة",v->{target.removeView(batch);searchPage(target,query,number,token);}));return;}
             JSONObject data=Api.object(value);JSONArray posters=Api.array(data.optJSONArray("posters")),channels=Api.array(data.optJSONArray("channels"));markChannels(channels);if(posters.length()+channels.length()==0){if(number==0)message(batch,"لم نعثر على نتائج لهذا الاسم.");return;}
             if(posters.length()>0){heading(batch,"الأفلام والمسلسلات");Cards.grid(this,batch,posters,false,this::detail);}if(channels.length()>0){heading(batch,"القنوات");Cards.grid(this,batch,channels,true,this::detail);}
-            TextView more=Ui.button(this,"نتائج إضافية",v->{});batch.addView(more);more.setOnClickListener(v->{batch.removeView(more);searchPage(target,query,number+1,token);});
+            if(number<page.optInt("lastPage")){searchPage(target,query,number+1,token);return;}
+            int y=page.optInt("scroll");if(y>0)scroll.post(()->scroll.scrollTo(0,y));
+            TextView more=Ui.button(this,"نتائج إضافية",v->{});batch.addView(more);more.setOnClickListener(v->{put(page,"lastPage",number+1);batch.removeView(more);searchPage(target,query,number+1,token);});
         });
     }
     private void detail(JSONObject item){JSONObject n=make("detail");put(n,"item",item);put(n,"title",Api.label(item));navigate(n);}

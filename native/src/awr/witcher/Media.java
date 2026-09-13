@@ -14,7 +14,9 @@ import java.util.regex.*;
 public final class Media {
     public static final String MX="com.mxtech.videoplayer.ad";
     private static final String UA="Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36";
+    private static final Map<Activity,Runnable> PENDING=new WeakHashMap<>();
     private Media(){}
+    public static void cancelPending(Activity activity){Runnable cancel=PENDING.remove(activity);if(cancel!=null)cancel.run();}
     public static void open(Activity activity,JSONObject source,String title,boolean download){
         if(!Api.publicAccess(source.optString("premium"))){alert(activity,"هذا المصدر يحتاج إلى حساب أو اشتراك.");return;}
         final String url;
@@ -55,20 +57,22 @@ public final class Media {
         try{if(url.contains("=http"))url=url.substring(url.lastIndexOf('=')+1);String host=Uri.parse(url).getHost();return host==null?"":"https://"+host+"/";}catch(Exception e){return "";}
     }
     private static void extract(Activity a,String url,Map<String,String> headers,String title,boolean download){
+        cancelPending(a);
         ProgressDialog wait=new ProgressDialog(a);wait.setMessage("جاري تجهيز رابط السيرفر…");wait.setCancelable(true);wait.show();
         Handler timer=new Handler(Looper.getMainLooper());java.util.concurrent.atomic.AtomicBoolean finished=new java.util.concurrent.atomic.AtomicBoolean();
-        Runnable timeout=()->{if(finished.compareAndSet(false,true)&&!a.isFinishing()&&!a.isDestroyed()){wait.dismiss();alert(a,"انتهت مهلة تجهيز الرابط. جرّب سيرفراً آخر.");}};
-        timer.postDelayed(timeout,65000);wait.setOnCancelListener(d->{finished.set(true);timer.removeCallbacks(timeout);});
+        Runnable timeout=()->{if(finished.compareAndSet(false,true)){PENDING.remove(a);wait.dismiss();alert(a,"انتهت مهلة تجهيز الرابط. جرّب سيرفراً آخر.");}};
+        PENDING.put(a,()->{finished.set(true);timer.removeCallbacks(timeout);wait.dismiss();});
+        timer.postDelayed(timeout,65000);wait.setOnCancelListener(d->cancelPending(a));
         boolean supported=Legacy.resolve(a,url,new Legacy.Callback(){
-            public void failed(){a.runOnUiThread(()->{if(!finished.compareAndSet(false,true))return;timer.removeCallbacks(timeout);if(a.isFinishing()||a.isDestroyed())return;wait.dismiss();alert(a,"لم يتمكن مستخرج هذا السيرفر من تجهيز الرابط. قد يحتاج إعدادات المصدر أو سيرفراً آخر.");});}
+            public void failed(){a.runOnUiThread(()->{if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();alert(a,"تعذر تجهيز رابط هذا السيرفر. جرّب سيرفراً آخر.");});}
             public void done(List<Legacy.Stream> streams){a.runOnUiThread(()->{
-                if(!finished.compareAndSet(false,true))return;timer.removeCallbacks(timeout);if(a.isFinishing()||a.isDestroyed())return;wait.dismiss();
+                if(!finished.compareAndSet(false,true))return;PENDING.remove(a);timer.removeCallbacks(timeout);wait.dismiss();if(a.isFinishing()||a.isDestroyed())return;
                 String[] names=new String[streams.size()];for(int i=0;i<names.length;i++)names[i]=streams.get(i).quality==null?"جودة "+(i+1):streams.get(i).quality;
                 android.content.DialogInterface.OnClickListener select=(d,i)->{Legacy.Stream s=streams.get(i);Map<String,String> h=new TreeMap<>(String.CASE_INSENSITIVE_ORDER);h.putAll(headers);if(s.cookie!=null&&!s.cookie.isEmpty()&&validHeader("Cookie",s.cookie))h.put("Cookie",s.cookie);String path=Uri.parse(s.url).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);boolean hls=lower.endsWith(".m3u8");if(hls)qualities(a,s.url,h,title,download);else launch(a,s.url,h,title,download,lower.endsWith(".mpd"));};
                 if(streams.size()==1)select.onClick(null,0);else new AlertDialog.Builder(a).setTitle("اختيار الجودة").setItems(names,select).show();
             });}
         });
-        if(!supported){finished.set(true);timer.removeCallbacks(timeout);wait.dismiss();alert(a,"لم تُنقل إعدادات التعرف على هذا السيرفر بعد. جرّب سيرفراً آخر.");}
+        if(!supported){cancelPending(a);alert(a,"هذا السيرفر غير متاح حالياً. جرّب سيرفراً آخر.");}
     }
     public static Intent mxIntent(String url,Map<String,String> headers,String title){
         StreamCodec.validate(url);Intent intent=new Intent(Intent.ACTION_VIEW).setPackage(MX).setDataAndType(Uri.parse(url),"video/*");
@@ -83,7 +87,7 @@ public final class Media {
         catch(Exception e){alert(a,"تعذر فتح الفيديو في MX Player.");}
     }
     private static void qualities(Activity a,String url,Map<String,String> h,String title,boolean download){
-        ProgressDialog wait=new ProgressDialog(a);wait.setMessage("جاري تجهيز الجودات…");wait.setCancelable(true);wait.show();final boolean[] canceled={false};wait.setOnCancelListener(d->canceled[0]=true);
+        cancelPending(a);ProgressDialog wait=new ProgressDialog(a);wait.setMessage("جاري تجهيز الجودات…");wait.setCancelable(true);wait.show();final boolean[] canceled={false};PENDING.put(a,()->{canceled[0]=true;wait.dismiss();});wait.setOnCancelListener(d->cancelPending(a));
         Api.IO.execute(()->{
             ArrayList<String> names=new ArrayList<>(),urls=new ArrayList<>();names.add("تلقائي");urls.add(url);
             try{
@@ -98,7 +102,7 @@ public final class Media {
                     String resolved=new URL(new URL(response.url),lines[j].trim()).toString();StreamCodec.validate(resolved);names.add(label);urls.add(resolved);
                 }
             }catch(Exception ignored){/* Original master remains playable; MX can choose adaptively. */}
-            a.runOnUiThread(()->{if(a.isFinishing()||a.isDestroyed())return;wait.dismiss();if(canceled[0])return;if(urls.size()==1){launch(a,url,h,title,download,true);return;}new AlertDialog.Builder(a).setTitle("اختيار الجودة").setItems(names.toArray(new String[0]),(d,i)->launch(a,urls.get(i),h,title,download,true)).show();});
+            a.runOnUiThread(()->{if(canceled[0]||a.isFinishing()||a.isDestroyed())return;PENDING.remove(a);wait.dismiss();if(urls.size()==1){launch(a,url,h,title,download,true);return;}new AlertDialog.Builder(a).setTitle("اختيار الجودة").setItems(names.toArray(new String[0]),(d,i)->launch(a,urls.get(i),h,title,download,true)).show();});
         });
     }
     private static void download(Activity a,String url,Map<String,String> h,String title,boolean segmented){
