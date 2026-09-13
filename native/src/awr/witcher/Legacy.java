@@ -3,7 +3,6 @@ package awr.witcher;
 import android.app.Activity;
 import android.content.Context;
 import android.net.Uri;
-import android.os.*;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
@@ -11,9 +10,8 @@ import java.util.concurrent.atomic.*;
 /** Invokes original extractor bytecode without booting Drama's application or config validator. */
 public final class Legacy {
     public static final class Stream {
-        public final String url,quality,cookie,referer,userAgent;
-        Stream(String u,String q,String c){this(u,q,c,"","");}
-        Stream(String u,String q,String c,String r,String a){url=u;quality=q;cookie=c;referer=r==null?"":r;userAgent=a==null?"":a;}
+        public final String url,quality,cookie;
+        Stream(String u,String q,String c){url=u;quality=q;cookie=c;}
     }
     public interface Callback {void done(List<Stream> streams,boolean showQualities);void failed();}
     private Legacy(){}
@@ -27,17 +25,16 @@ public final class Legacy {
         return null;
     }
 
-    public static boolean resolve(Activity activity,String url,Map<String,String> headers,Callback callback){return resolve(activity,url,headers,false,callback);}
-
     /**
-     * Original Q0/S0 and static public-page parsing run together. For `embed` sources only, an
-     * off-screen WebView also runs the provider's normal player JavaScript and observes the media
-     * request. This mirrors the behavior that made embed servers work in Drama World without ever
-     * passing the provider page itself to MX.
+     * The supplied Drama APK uses original Q0/S0 extractors, but several of them depend on
+     * dynamic server configuration that is not present in the host app. Do not let such an
+     * extractor block a provider page that can be resolved directly. Run both paths together and
+     * accept the first valid result. This keeps original quality/cookie output when it works, while
+     * avoiding the all-servers-unavailable regression caused by waiting on Q0/S0 exclusively.
      */
-    public static boolean resolve(Activity activity,String url,Map<String,String> headers,boolean dynamicEmbed,Callback callback){
+    public static boolean resolve(Activity activity,String url,Map<String,String> headers,Callback callback){
         final String clean=StreamCodec.sourceUrl(url);final boolean hasOriginal=provider(clean)!=null;
-        final int attempts=(hasOriginal?2:1)+(dynamicEmbed?1:0);AtomicInteger failed=new AtomicInteger();AtomicBoolean delivered=new AtomicBoolean();
+        final int attempts=hasOriginal?2:1;AtomicInteger failed=new AtomicInteger();AtomicBoolean delivered=new AtomicBoolean();
         Callback guarded=new Callback(){
             public void done(List<Stream> streams,boolean showQualities){
                 if(streams==null||streams.isEmpty()){failed();return;}
@@ -47,7 +44,6 @@ public final class Legacy {
         };
         resolvePage(activity,clean,headers,guarded);
         if(hasOriginal)activity.runOnUiThread(()->invokeOriginal(activity,clean,guarded));
-        if(dynamicEmbed)new Handler(Looper.getMainLooper()).postDelayed(()->{if(!delivered.get())EmbedResolver.resolve(activity,clean,headers,guarded);else guarded.failed();},900);
         return true;
     }
 
