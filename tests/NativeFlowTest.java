@@ -71,4 +71,22 @@ public class NativeFlowTest {
         assertEquals(uri,StreamCodec.unwrap(fixture,true));assertEquals(uri,StreamCodec.unwrap(uri,false));
         try{StreamCodec.unwrap("not-a-url",false);fail("Invalid URI accepted");}catch(IllegalArgumentException expected){}
     }
+    @Test public void redirectedPlaylistKeepsEffectiveBaseURL()throws Exception{
+        com.sun.net.httpserver.HttpServer server=com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1",0),0);
+        server.createContext("/start.m3u8",exchange->{exchange.getResponseHeaders().add("Location","/nested/master.m3u8");exchange.sendResponseHeaders(302,-1);exchange.close();});
+        server.createContext("/nested/master.m3u8",exchange->{byte[] bytes="#EXTM3U\n#EXT-X-STREAM-INF:RESOLUTION=1280x720\n720.m3u8\n".getBytes("UTF-8");exchange.sendResponseHeaders(200,bytes.length);exchange.getResponseBody().write(bytes);exchange.close();});
+        server.start();try{
+            Api.Response response=Api.readResponse("http://127.0.0.1:"+server.getAddress().getPort()+"/start.m3u8",Collections.emptyMap(),4096);
+            assertTrue(response.url.endsWith("/nested/master.m3u8"));assertTrue(new java.net.URL(new java.net.URL(response.url),"720.m3u8").toString().endsWith("/nested/720.m3u8"));
+        }finally{server.stop(0);}
+    }
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE) public void renderNativeScreensForReview()throws Exception{
+        start();render("channels");click("قناة الاختبار");waitFor("مشاهدة");click("مشاهدة");waitFor("السيرفر الأول");render("servers");
+    }
+    private void render(String name)throws Exception{
+        View view=activity.findViewById(android.R.id.content);int width=1080,height=2160;
+        view.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY));view.layout(0,0,width,height);
+        android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(width,height,android.graphics.Bitmap.Config.ARGB_8888);view.draw(new android.graphics.Canvas(bitmap));
+        java.io.File file=new java.io.File("artifacts/qa-"+name+".png");try(java.io.FileOutputStream out=new java.io.FileOutputStream(file)){bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out);}assertTrue(file.length()>1000);
+    }
 }
