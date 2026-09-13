@@ -24,7 +24,12 @@ final class HitvApi {
     interface Callback {void done(Object value,String error);}
     private static final class Req {final String name,path;final JSONObject params;final boolean post;Req(String n,String p,JSONObject q,boolean x){name=n;path=p;params=q;post=x;}}
 
-    static void get(String path,JSONObject params,Callback callback){request(path,params,false,callback);}
+    static void get(String path,JSONObject params,Callback callback){
+        if("/cms/web/hitv/movieDrama/getPlayInfo".equals(path)&&params!=null&&params.has("id")){
+            playback(params.optString("id"),params.optInt("category",1),Math.max(1,params.optInt("seriesNo",1)),callback);return;
+        }
+        request(path,params,false,callback);
+    }
     static void post(String path,JSONObject params,Callback callback){request(path,params,true,callback);}
 
     /** Pull every useful HiTV catalogue surface, not only album/page. */
@@ -51,9 +56,9 @@ final class HitvApi {
         aggregate(r,callback);
     }
 
-    static void detail(String id,int category,Callback callback){get("/cms/web/hitv/movieDrama/detail",params("id",id,"category",category),callback);}
+    static void detail(String id,int category,Callback callback){request("/cms/web/hitv/movieDrama/detail",params("id",id,"category",category),false,callback);}
 
-    /** HiTV has three media surfaces in the web family; merge all returned playback/download candidates. */
+    /** Merge all media variants available from the HiTV web family into one quality/source list. */
     static void playback(String id,int category,int episode,Callback callback){
         ArrayList<Req> r=new ArrayList<>();JSONObject p=params("id",id,"category",category,"seriesNo",episode);
         r.add(new Req("playInfo","/cms/web/hitv/movieDrama/getPlayInfo",p,false));
