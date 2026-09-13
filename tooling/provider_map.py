@@ -20,9 +20,10 @@ for m in re.finditer(r'case (.+?):\s+(\w+)\.(\w+)\((.*?)\);',source,re.S):
  if 'b.this.f3384b' not in m.group(4):continue
  try:methods[number(m.group(1))]=(aliases[m.group(2)],m.group(3),'1' if 'b.this.f3383a' in m.group(4) else '0')
  except (ValueError,SyntaxError,KeyError):pass
-fixes={'liiivideo':('S0.H','b','0'),'fembed':('S0.l','d','0'),'gounlimited':('S0.v','c','0'),'videoBIN':('S0.m0','b','0'),'vidspeed':('S0.x0','i','0')}
+fixes={'streamtape':('S0.e0','b','0'),'liiivideo':('S0.H','b','0'),'fembed':('S0.l','d','0'),'gounlimited':('S0.v','c','0'),'videoBIN':('S0.m0','b','0'),'vidspeed':('S0.x0','i','0')}
 rows=[]
-for key,n in keys.items():
+for key in dict.fromkeys([*keys,*fixes]):
+ n=keys.get(key)
  target=fixes.get(key,methods.get(n))
  if target is None:raise SystemExit('Unresolved provider '+key)
  rows.append('\t'.join((key,*target)))
