@@ -1,9 +1,7 @@
 package awr.witcher;
 
 import android.app.*;
-import android.content.*;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.*;
 import android.view.*;
 import android.webkit.*;
@@ -39,18 +37,20 @@ final class EmbedPlayer {
             @Override public void onReceivedError(WebView view,WebResourceRequest req,WebResourceError error){if(Build.VERSION.SDK_INT>=23&&req.isForMainFrame())errorPage(view,"تعذر تحميل الفيديو. تحقق من الاتصال ثم أعد المحاولة.");}
             @Override public void onReceivedHttpError(WebView view,WebResourceRequest req,WebResourceResponse response){if(Build.VERSION.SDK_INT>=21&&req.isForMainFrame()&&response.getStatusCode()>=400)errorPage(view,"تعذر تحميل الفيديو الآن ("+response.getStatusCode()+").");}
         });
-        web.setWebChromeClient(new WebChromeClient(){
+        Runnable hideCustom=()->{
+            if(customCallback[0]==null)return;custom.setVisibility(View.GONE);custom.removeAllViews();web.setVisibility(View.VISIBLE);customCallback[0].onCustomViewHidden();customCallback[0]=null;
+        };
+        WebChromeClient chrome=new WebChromeClient(){
             @Override public void onShowCustomView(View view,CustomViewCallback callback){
                 if(customCallback[0]!=null){callback.onCustomViewHidden();return;}customCallback[0]=callback;web.setVisibility(View.GONE);custom.removeAllViews();custom.addView(view,new FrameLayout.LayoutParams(-1,-1));custom.setVisibility(View.VISIBLE);
             }
-            @Override public void onHideCustomView(){
-                if(customCallback[0]==null)return;custom.setVisibility(View.GONE);custom.removeAllViews();web.setVisibility(View.VISIBLE);customCallback[0].onCustomViewHidden();customCallback[0]=null;
-            }
+            @Override public void onHideCustomView(){hideCustom.run();}
             @Override public View getVideoLoadingProgressView(){ProgressBar p=new ProgressBar(activity);p.setIndeterminate(true);return p;}
-        });
+        };
+        web.setWebChromeClient(chrome);
 
-        dialog.setOnDismissListener(d->{try{web.stopLoading();web.loadUrl("about:blank");web.removeAllViews();web.destroy();}catch(Exception ignored){}});
-        dialog.setOnKeyListener((d,key,event)->{if(key==KeyEvent.KEYCODE_BACK&&event.getAction()==KeyEvent.ACTION_UP){if(customCallback[0]!=null){web.getWebChromeClient().onHideCustomView();return true;}dialog.dismiss();return true;}return false;});
+        dialog.setOnDismissListener(d->{try{hideCustom.run();web.stopLoading();web.loadUrl("about:blank");web.removeAllViews();web.destroy();}catch(Exception ignored){}});
+        dialog.setOnKeyListener((d,key,event)->{if(key==KeyEvent.KEYCODE_BACK&&event.getAction()==KeyEvent.ACTION_UP){if(customCallback[0]!=null){hideCustom.run();return true;}dialog.dismiss();return true;}return false;});
         dialog.show();load(web,url,referer);
     }
 
