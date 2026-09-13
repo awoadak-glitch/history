@@ -1,0 +1,27 @@
+name: Diagnose HiTV playback sources
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tooling/probe_hitv_playback.mjs'
+      - '.github/workflows/diagnose-hitv-playback.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Probe HiTV detail playback and downloads
+        run: node tooling/probe_hitv_playback.mjs
+      - name: Upload sanitized diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: hitv-playback-diagnostic
+          path: diagnostics/hitv-playback-probe.json
+          if-no-files-found: error
+          retention-days: 3
