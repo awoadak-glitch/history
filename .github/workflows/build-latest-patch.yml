@@ -1,0 +1,104 @@
+name: Build latest Anime Witcher patch
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android platform and build tools
+        run: sdkmanager "platforms;android-34" "build-tools;35.0.0"
+
+      - name: Generate compile-time configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/generated/awr/witcher
+          cat > build/generated/awr/witcher/ApiConfig.java <<'EOF'
+          package awr.witcher;
+          final class ApiConfig {
+              static final String BASE="https://dwapp.arabypros.com/api/";
+              static final String SUFFIX="4F5A9C3D9A86FA54EACEDDD635185/d506abfd-9fe2-4b71-b979-feff21bcad13/";
+          }
+          EOF
+          python3 - <<'PY'
+          import json, pathlib
+          rows=[line.split('\t') for line in pathlib.Path('tooling/providers.tsv').read_text().splitlines() if line.strip()]
+          body='package awr.witcher; final class Providers { static final String[][] TABLE={'+','.join('{'+','.join(json.dumps(v) for v in row)+'}' for row in rows)+'}; }\n'
+          pathlib.Path('build/generated/awr/witcher/Providers.java').write_text(body)
+          PY
+
+      - name: Compile latest Java and DEX
+        shell: bash
+        run: |
+          set -euo pipefail
+          ANDROID_JAR="$ANDROID_HOME/platforms/android-34/android.jar"
+          D8="$ANDROID_HOME/build-tools/35.0.0/d8"
+          rm -rf build/classes build/dex build/classes.jar
+          mkdir -p build/classes build/dex
+          mapfile -t SRC < <(find native/src build/generated -name '*.java' -print | sort)
+          javac --release 8 -encoding UTF-8 -cp "$ANDROID_JAR" -d build/classes "${SRC[@]}"
+          (cd build/classes && jar cf ../classes.jar .)
+          "$D8" --min-api 21 --lib "$ANDROID_JAR" --output build/dex build/classes.jar
+          test -s build/dex/classes.dex
+
+      - name: Replace only the custom DEX in the verified patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          python3 - <<'PY'
+          import hashlib, json, pathlib, re, zipfile
+          src=pathlib.Path('artifacts/mt-manager-patch.zip')
+          out=pathlib.Path('dist/mt-manager-patch-latest.zip')
+          newdex=pathlib.Path('build/dex/classes.dex').read_bytes()
+          with zipfile.ZipFile(src) as z:
+              names=z.namelist()
+              dex_names=[n for n in names if re.fullmatch(r'classes\d+\.dex',n)]
+              if dex_names != [f'classes{i}.dex' for i in range(23,30)]:
+                  raise SystemExit(f'Unexpected DEX entries: {dex_names}')
+              custom='classes29.dex'
+              with zipfile.ZipFile(out,'w',compression=zipfile.ZIP_DEFLATED) as w:
+                  for info in z.infolist():
+                      data=newdex if info.filename==custom else z.read(info.filename)
+                      w.writestr(info,data)
+          with zipfile.ZipFile(out) as z:
+              assert z.read('classes29.dex')==newdex
+              assert all(name in z.namelist() for name in ['AndroidManifest.xml','res/layout/activity_home.xml'])
+          meta={
+              'source_commit': pathlib.Path('.git/HEAD').read_text().strip(),
+              'patch_sha256': hashlib.sha256(out.read_bytes()).hexdigest(),
+              'custom_dex_sha256': hashlib.sha256(newdex).hexdigest(),
+              'replaced_entry': 'classes29.dex',
+              'dex_entries': [f'classes{i}.dex' for i in range(23,30)]
+          }
+          pathlib.Path('dist/build-meta.json').write_text(json.dumps(meta,indent=2)+'\n')
+          pathlib.Path('dist/patch-listing.txt').write_text('\n'.join(zipfile.ZipFile(out).namelist())+'\n')
+          PY
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" dist/apksigner.jar
+          sha256sum dist/mt-manager-patch-latest.zip dist/apksigner.jar > dist/SHA256SUMS.txt
+
+      - name: Upload build bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: anime-witcher-latest-build-bundle
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
