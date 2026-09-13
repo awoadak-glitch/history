@@ -19,7 +19,10 @@ public class VerifyApk {
         ApkVerifier.Result previous=new ApkVerifier.Builder(new File(args[0])).build().verify();
         ApkVerifier.Result updated=new ApkVerifier.Builder(new File(args[1])).build().verify();
         if(!previous.isVerified()||!updated.isVerified())throw new IllegalStateException("APK signature verification failed");
-        if(!certificates(previous).equals(certificates(updated)))throw new IllegalStateException("Signing certificate differs; cannot install as an update");
+        if(!certificates(previous).equals(certificates(updated))){
+            System.err.println("Both APK signatures are valid, but certificates differ; this is a fresh-install build, not a compatible update.");
+            System.exit(42);
+        }
         System.out.println("Previous and updated APK signatures verified; signing certificates match.");
     }
 }
