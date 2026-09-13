@@ -17,7 +17,7 @@ public final class Api {
     public static final ExecutorService IO=Executors.newFixedThreadPool(3);
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
     private static final Map<String,Entry> CACHE=new LinkedHashMap<String,Entry>(32,0.75f,true){
-        protected boolean removeEldestEntry(Map.Entry<String,Entry> e){return size()>36;}
+        protected boolean removeEldestEntry(Map.Entry<String,Api.Entry> e){return size()>36;}
     };
     private static final class Entry { final String text; final long time=System.currentTimeMillis(); Entry(String t){text=t;} }
     private Api(){}
