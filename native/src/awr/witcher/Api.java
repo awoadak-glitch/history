@@ -81,6 +81,7 @@ public final class Api {
     public static JSONObject object(Object value){return value instanceof JSONObject?(JSONObject)value:new JSONObject();}
     public static boolean channel(JSONObject o){return "channel".equals(o.optString("type"))||o.optBoolean("_channel");}
     public static boolean series(JSONObject o){return "serie".equals(o.optString("type"))||"series".equals(o.optString("type"));}
-    public static boolean publicAccess(String value){return value==null||value.isEmpty()||"1".equals(value);}
+    /** Drama World only treats access flag 2 or 3 as restricted. 0/1/empty are public. */
+    public static boolean publicAccess(String value){String v=value==null?"":value.trim();return !"2".equals(v)&&!"3".equals(v);}
     public static String label(JSONObject o){return o.optString("title",o.optString("name",""));}
 }
