@@ -1,0 +1,178 @@
+{
+  "source_apk_sha256": "e15d2de82257e55a5ea7ffef7a78ec205caf0c02ddfa7b80673dba68006226d7",
+  "source_package": "com.drama.mp4",
+  "api_base": "https://ostvapp.cam/",
+  "methods": {
+    "getContentCategories": {
+      "method": "GET",
+      "path": "api/content-categories.php",
+      "query": [
+        "app_version"
+      ]
+    },
+    "getCountries": {
+      "method": "GET",
+      "path": "api/countries/",
+      "query": []
+    },
+    "getDownloadLinks": {
+      "method": "GET",
+      "path": "api/download_links/",
+      "query": [
+        "episode_id"
+      ]
+    },
+    "getEpisodeDetail": {
+      "method": "GET",
+      "path": "api/episodes/show.php",
+      "query": [
+        "id"
+      ]
+    },
+    "getEpisodes": {
+      "method": "GET",
+      "path": "api/episodes/",
+      "query": [
+        "season_id"
+      ]
+    },
+    "getEpisodesPaged": {
+      "method": "GET",
+      "path": "api/episodes/",
+      "query": [
+        "season_id",
+        "page",
+        "per_page",
+        "sort",
+        "q"
+      ]
+    },
+    "getGenres": {
+      "method": "GET",
+      "path": "api/genres/",
+      "query": []
+    },
+    "getHomeConfig": {
+      "method": "GET",
+      "path": "api/v2/home.php",
+      "query": [
+        "app_version"
+      ]
+    },
+    "getMovieCategories": {
+      "method": "GET",
+      "path": "api/movies/request_categories.php",
+      "query": []
+    },
+    "getMovieCollection": {
+      "method": "GET",
+      "path": "api/movies/collection.php",
+      "query": [
+        "id"
+      ]
+    },
+    "getMovieCollections": {
+      "method": "GET",
+      "path": "api/movies/collections.php",
+      "query": [
+        "page",
+        "limit",
+        "search",
+        "category"
+      ]
+    },
+    "getMovieDetail": {
+      "method": "GET",
+      "path": "api/movies/show.php",
+      "query": [
+        "id",
+        "country"
+      ]
+    },
+    "getMovies": {
+      "method": "GET",
+      "path": "api/movies/",
+      "query": [
+        "page",
+        "limit",
+        "search",
+        "status",
+        "year",
+        "country",
+        "genre_id",
+        "language",
+        "category",
+        "content_type",
+        "age_rating",
+        "collection_id",
+        "quality_source",
+        "has_links",
+        "featured",
+        "awards",
+        "sort_by",
+        "app_version"
+      ]
+    },
+    "getMoviesFilters": {
+      "method": "GET",
+      "path": "api/movies/filters.php",
+      "query": []
+    },
+    "getSeasons": {
+      "method": "GET",
+      "path": "api/seasons/",
+      "query": [
+        "series_id"
+      ]
+    },
+    "getSeries": {
+      "method": "GET",
+      "path": "api/series/",
+      "query": [
+        "page",
+        "limit",
+        "search",
+        "status",
+        "year",
+        "country",
+        "genre_id",
+        "language",
+        "is_colored",
+        "sort_by",
+        "age_rating",
+        "type",
+        "category",
+        "content_type",
+        "app_version"
+      ]
+    },
+    "getSeriesDetail": {
+      "method": "GET",
+      "path": "api/series/show.php",
+      "query": [
+        "id"
+      ]
+    },
+    "getSeriesFilters": {
+      "method": "GET",
+      "path": "api/series/filters.php",
+      "query": [
+        "type",
+        "app_version",
+        "category"
+      ]
+    },
+    "getTdmConfig": {
+      "method": "GET",
+      "path": "api/app/tdm-config.php",
+      "query": []
+    },
+    "getWatchLinks": {
+      "method": "GET",
+      "path": "api/watch_links/",
+      "query": [
+        "episode_id"
+      ]
+    }
+  }
+}
