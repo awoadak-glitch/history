@@ -1,4 +1,14 @@
-# HiTV integration — 2026-09-13
+# HiTV integration — 2026-09-14
+
+## Current deliverable
+- Test APK: `AWR-Anime-Witcher-HiTV-test.apk`, SHA-256 `18da0a6cf71867f6e50464b8d9a4137629caffde739a31da28c8226962c22b70`.
+- Built from `2c307d5567aecbfa2bda113771264fc42af39564`. See `artifacts/hitv-build-report.json`; older build hashes below are historical.
+- `tooling/MergeHitvDex.java` merges only HiTV classes and tab/image hooks into the approved classes29.dex. Canonical serialization confirmed 96 retained integration classes are identical. All 28 other DEX files and every other non-signature APK payload entry are unchanged.
+- The exact merged DEX is saved as `artifacts/hitv-classes29.dex` (SHA-256 `8a1e88fb907e9a8306b510b8851af7a410d69aae01aa22c1422edf8341fd238d`). It can be applied to the approved APK using `tooling/patch_apk.py` and the appropriate signing key.
+- HiTV image transport is isolated from the previous sections; their original user-agent, timeout and connection path are retained.
+- Final APK signatures v1/v2/v3, ZIP alignment and actual host player contracts passed; 86451 unique DEX classes. No real-device test.
+- **Not a compatible update:** the available signing key differs from the approved input APK. Do not suggest removing the user's existing app/data as the default solution. Its signing key is needed for a compatible update.
+- **Not the original HiTV player:** the protected VideoPlayer was not extracted. Full mobile catalogue/episode/playback coverage remains unverified; the sampled full-playback request was denied upstream. A usable unprotected source/build is needed to finish the exact-player request.
 
 ## Goal
 Add a fifth **HiTV** tab to the existing Anime Witcher + Drama World build without disturbing the working Drama/MX/embed/download flows.
@@ -13,7 +23,7 @@ Add a fifth **HiTV** tab to the existing Anime Witcher + Drama World build witho
 ## Native Android implementation
 - `HitvApi.java`: direct HiTV catalogue/search/detail/playInfo client.
 - `HitvExperience.java`: full-screen native HiTV interface, hero/rails, all/western/korean filters, search, detail page and episode selection.
-- `HitvPlayer.java`: internal ExoPlayer-family playback by reusing the ExoPlayer runtime already present in Anime Witcher; MX Player remains a fallback if the internal player cannot be created.
+- `HitvPlayer.java`: internal playback using the host ExoPlayer runtime. Initialization failures are reported inside HiTV; there is no automatic MX fallback. Existing Drama MX behavior is unchanged.
 - `WitcherTabs.java`: adds a fifth `HiTV` tab.
 - `Ui.java`: adds the HiTV TV/play icon.
 
@@ -28,7 +38,7 @@ Playback source normalization follows the user's HITV-WEB model: `sources`, `pla
 ## Existing features preserved
 Drama World playback/extraction, MX Player handoff, embed WebView behavior, TDM/1DM/ADM download options, Anime Witcher home content and all original DEX payloads are preserved. The new build replaces only the custom integration DEX (`classes29.dex`).
 
-## Build
+## Historical initial build (superseded by the current deliverable above)
 GitHub Actions run `34769342234` completed successfully from commit `bb7d828d6701ae21b93f680935751845297ff59a`.
 - Patch SHA-256: `8e985d689795003401aee0869ca69e578e7283644d649658897061da1c1e452a`
 - Custom DEX SHA-256: `91b29626c1a7e50faa29397fa13cb697eedb9ab26fe36342f7bb3382a1cab13a`
@@ -38,7 +48,7 @@ GitHub Actions run `34769342234` completed successfully from commit `bb7d828d670
 - Stored-entry/native-library alignment verified.
 
 ## Testing limitation
-The current execution environment could not resolve `web-api.hitvpro.com` (`EAI_AGAIN`), so live HiTV content/playback still requires real-device testing. Compile, DEX injection, APK integrity and signature validation succeeded.
+Initial Node probes had a proxy/DNS failure; later ordinary catalogue/search requests succeeded. This does not establish full mobile content coverage or working playback on a phone. See the verified API findings below.
 
 ## Current user request — preserve embed+ADM (2026-09-13)
 - New authoritative input: `AWR-Anime-Witcher-Drama-embed-adm.apk`, SHA-256 `7859ea13210920393ac7b176908b73193e9b7f66f806297c2e6d2f7aea9df87b`.
@@ -46,7 +56,7 @@ The current execution environment could not resolve `web-api.hitvpro.com` (`EAI_
 - Main at resume already contains a HiTV integration (`86cb4d4`). Continue that work; do not replay old Drama fixes.
 - Raw DEX inspection of HiTV `base.apk` finds only 34 shell classes. Its layouts reference `com.captha.didymoi.module_video.VideoPlayer`, which is absent from exposed DEX and resides in the protected payload. Exact transplantation of this player is **not complete**. ExoPlayer in the host is an existing alternative engine, not proof that the HiTV player was copied.
 - The host contains ExoPlayer.Builder in classes17.dex. Existing Drama sources differ from the approved embed+ADM baseline only in tab/icon integration; keep all Drama playback/download classes unchanged.
-- Review pending: real HiTV API response shapes, playback/preview separation, subtitles, episode numbering and player lifecycle before claiming a working full-content tab.
+- Review completed below for API response shapes, preview separation, subtitles, episode numbering and lifecycle; full-content playback still must not be claimed.
 
 ## Verified API contracts and corrections
 - Direct public requests succeeded for moviePage, dramaPage, firstPage, filters and detail (HTTP 200, code 00000). Prior Node probes had no working proxy/DNS path in this environment; do not confuse that with an upstream outage.

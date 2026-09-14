@@ -1,0 +1,48 @@
+{
+  "source_commit": "2c307d5567aecbfa2bda113771264fc42af39564",
+  "input_apk_sha256": "7859ea13210920393ac7b176908b73193e9b7f66f806297c2e6d2f7aea9df87b",
+  "apk_sha256": "18da0a6cf71867f6e50464b8d9a4137629caffde739a31da28c8226962c22b70",
+  "custom_dex_sha256": "8a1e88fb907e9a8306b510b8851af7a410d69aae01aa22c1422edf8341fd238d",
+  "replaced_entry": "classes29.dex",
+  "preserved_other_dex": 28,
+  "all_other_payload_entries_unchanged": true,
+  "stored_entries_alignment_verified": 980,
+  "signature_verified_v1": true,
+  "signature_verified_v2": true,
+  "signature_verified_v3": true,
+  "signing_certificate_matches_input": false,
+  "runtime_tested_on_device": false,
+  "install_as_update": false,
+  "mx_player_package": "com.mxtech.videoplayer.ad",
+  "verification_scope": "APK signatures, ZIP payload preservation and alignment only; this tool does not validate network playback or application behavior.",
+  "known_limitations": "No real-device playback test. A different signing certificate prevents installation as an update to the input APK.",
+  "apk_filename": "AWR-Anime-Witcher-HiTV-test.apk",
+  "built_at": "2026-09-14",
+  "build_kind": "fresh-install test APK",
+  "preservation": {
+    "preserved_integration_classes": 96,
+    "new_or_replaced_hitv_and_hook_classes": 70,
+    "preserved_classes_canonical_dex_sha256": "ee189d5861c9b17c46c87906b3e82bc4911ce6e97a1af5cd298640e4b56981be",
+    "preserved_classes_canonical_dex_identical": true,
+    "merged_dex_sha256": "8a1e88fb907e9a8306b510b8851af7a410d69aae01aa22c1422edf8341fd238d"
+  },
+  "player_contracts_verified": true,
+  "unique_dex_classes": 86451,
+  "hitv_tests": {
+    "suite": "HitvFlowTest",
+    "passed": 7,
+    "tested_source_commit": "aa8569a870af6f6002790b8aba117b60532eb1a3",
+    "latest_image_isolation_and_dex_merge": "compiled; preserved bytecode canonical comparison and final APK contract check passed"
+  },
+  "hitv": {
+    "player": "Host ExoPlayer adapter; NOT the protected original HiTV VideoPlayer",
+    "exact_original_player_transferred": false,
+    "catalogue_search_live_check": "HTTP 200/code 00000 on tested public web API routes",
+    "all_content_coverage_verified": false,
+    "sample_playback_result": "A0001: rights holder made the sampled title unavailable",
+    "sample_series_episode_list_present": false,
+    "playback_on_device_verified": false
+  },
+  "signing_certificate_sha256": "4fa58c877d37854607ef8c5861a8e2c2edeb9f2b64bc960e558cdd8b4c01f8d6",
+  "input_signing_certificate_sha256": "6b2b35b661dd1be3d159e99728a78a1d89003eede4bcd6ef9e216a8c1885000b"
+}
