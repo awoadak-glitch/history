@@ -56,18 +56,28 @@ public final class Ui {
         v.setPadding(dp(c,16),dp(c,10),dp(c,16),dp(c,10)); clickable(v,surface(c),12); v.setOnClickListener(action); return v;
     }
     public static ImageView image(Context c, String url, int radius) {
+        return image(c,url,radius,false);
+    }
+    public static ImageView hitvImage(Context c, String url, int radius) {
+        return image(c,url,radius,true);
+    }
+    private static ImageView image(Context c, String url, int radius, boolean hitv) {
         ImageView v = new ImageView(c); v.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        v.setBackground(rounded(c,surface(c),radius)); v.setClipToOutline(true); load(v,url); return v;
+        v.setBackground(rounded(c,surface(c),radius)); v.setClipToOutline(true); load(v,url,hitv); return v;
     }
     public static void load(ImageView view, String url) {
+        load(view,url,false);
+    }
+    private static void load(ImageView view, String url, boolean hitv) {
         view.setTag(url); if(url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return;
         Bitmap cached = CACHE.get(url); if(cached != null){ view.setImageBitmap(cached); return; }
         WeakReference<ImageView> ref = new WeakReference<>(view);
         IMAGES.execute(() -> {
             HttpURLConnection connection = null;
             try {
-                URL target=new URL(url);URLConnection opened=HitvNet.open(target);connection=(HttpURLConnection)opened;connection.setConnectTimeout(12000);connection.setReadTimeout(16000);
-                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/127.0 Mobile Safari/537.36");
+                URL target=new URL(url);connection=(HttpURLConnection)(hitv?HitvNet.open(target):target.openConnection());
+                connection.setConnectTimeout(12000);connection.setReadTimeout(hitv?16000:15000);
+                connection.setRequestProperty("User-Agent", hitv?"Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/127.0 Mobile Safari/537.36":"Mozilla/5.0 (Android)");
                 ByteArrayOutputStream data = new ByteArrayOutputStream();
                 try(InputStream in = connection.getInputStream()) {
                     byte[] buffer = new byte[16384]; int n;

@@ -56,10 +56,8 @@ def main():
         'signing_certificate_matches_input':matching_certificate,'runtime_tested_on_device':False,
         'install_as_update':matching_certificate,
         'mx_player_package':'com.mxtech.videoplayer.ad',
-        'download_access_rule':'The supplied Drama V4.2f guest paths return true in both branches; flags 2/3 do not block this edition.',
-        'source_routing':'external=false still requires provider extraction for MOV/WEBM/M3U8 pages.',
-        'quality_selection':'Choose extracted qualities before MX or TDM; reject invalid HLS responses.',
-        'known_limitations':'No real-device playback test. Some original extractors depend on unavailable protected settings; provider availability can change.'
+        'verification_scope':'APK signatures, ZIP payload preservation and alignment only; this tool does not validate network playback or application behavior.',
+        'known_limitations':'No real-device playback test. A different signing certificate prevents installation as an update to the input APK.'
     }
     a.report.parent.mkdir(parents=True,exist_ok=True)
     a.report.write_text(json.dumps(report,indent=2,ensure_ascii=False)+'\n')
