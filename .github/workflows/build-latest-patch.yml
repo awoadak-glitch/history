@@ -26,13 +26,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install Android platform and build tools
-        shell: bash
-        run: |
-          set -euo pipefail
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/16.0/bin/sdkmanager"
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" "platforms;android-34" "build-tools;35.0.0"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;35.0.0'
 
       - name: Generate compile-time configuration
         shell: bash
