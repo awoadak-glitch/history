@@ -23,10 +23,10 @@ public final class Ui {
     private static final LruCache<String, Bitmap> CACHE = new LruCache<String, Bitmap>(18 * 1024 * 1024) { protected int sizeOf(String key, Bitmap value) { return value.getByteCount(); } };
     public static int dp(Context c, float n) { return Math.round(c.getResources().getDisplayMetrics().density * n); }
     public static int color(Context c, String name, int fallback) { int id=c.getResources().getIdentifier(name,"color",c.getPackageName());return id==0?fallback:c.getResources().getColor(id); }
-    public static int bg(Context c) { return color(c,"windowBackground",0xff161617); }
-    public static int surface(Context c) { return color(c,"colorPrimary",0xff28282c); }
-    public static int textColor(Context c) { return color(c,"textColor",Color.WHITE); }
-    public static int muted(Context c) { return color(c,"textColor2",0xffbfbfbf); }
+    public static int bg(Context c) { return 0xff101116; }
+    public static int surface(Context c) { return 0xff1b1d25; }
+    public static int textColor(Context c) { return 0xfff5f5f7; }
+    public static int muted(Context c) { return 0xffacb1c0; }
     public static GradientDrawable rounded(Context c,int color,float radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(c,radius));return d;}
     public static void clickable(View v,int color,float radius){v.setBackground(new RippleDrawable(ColorStateList.valueOf(0x30eec60a),rounded(v.getContext(),color,radius),rounded(v.getContext(),Color.WHITE,radius)));}
     public static TextView text(Context c,String s,int size,boolean bold){TextView v=new TextView(c);v.setText(s);v.setTextSize(size);v.setTextColor(textColor(c));v.setGravity(Gravity.CENTER_VERTICAL|Gravity.START);Typeface face=null;if(android.os.Build.VERSION.SDK_INT>=26){int id=c.getResources().getIdentifier("montserrat","font",c.getPackageName());if(id!=0)try{face=c.getResources().getFont(id);}catch(Exception ignored){}}v.setTypeface(face==null?Typeface.create("sans-serif",bold?Typeface.BOLD:Typeface.NORMAL):Typeface.create(face,bold?Typeface.BOLD:Typeface.NORMAL));v.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);return v;}
@@ -49,6 +49,10 @@ public final class Ui {
             case "movies":c.drawRoundRect(3,7,21,21,2,2,p);c.drawLine(3,11,21,11,p);c.drawLine(3,6,20,2,p);c.drawLine(7,5,10,9,p);c.drawLine(14,3,17,7,p);break;
             case "channels":c.drawCircle(12,12,2,p);c.drawArc(6,6,18,18,-55,110,false,p);c.drawArc(6,6,18,18,125,110,false,p);c.drawArc(2,2,22,22,-55,110,false,p);c.drawArc(2,2,22,22,125,110,false,p);break;
             case "hitv":c.drawRoundRect(3,5,21,19,3,3,p);path.moveTo(10,9);path.lineTo(16,12);path.lineTo(10,15);path.close();p.setStyle(Paint.Style.FILL);c.drawPath(path,p);p.setStyle(Paint.Style.STROKE);c.drawLine(8,2,12,5,p);c.drawLine(16,2,12,5,p);break;
+            case "ball":c.drawCircle(12,12,9,p);c.drawCircle(12,12,3,p);for(int j=0;j<5;j++){double angle=j*Math.PI*2/5;c.drawLine(12+(float)Math.sin(angle)*3,12+(float)Math.cos(angle)*3,12+(float)Math.sin(angle)*9,12+(float)Math.cos(angle)*9,p);}break;
+            case "heart":path.moveTo(12,21);path.cubicTo(-4,10,3,-2,12,7);path.cubicTo(21,-2,28,10,12,21);c.drawPath(path,p);break;
+            case "settings":c.drawCircle(12,12,7,p);c.drawCircle(12,12,2,p);for(int j=0;j<8;j++){double angle=j*Math.PI/4;c.drawLine(12+(float)Math.sin(angle)*7,12+(float)Math.cos(angle)*7,12+(float)Math.sin(angle)*10,12+(float)Math.cos(angle)*10,p);}break;
+            case "wrestling":c.drawRoundRect(3,6,21,19,3,3,p);c.drawLine(3,10,21,10,p);c.drawLine(3,15,21,15,p);break;
             case "oscar":c.drawCircle(12,12,9,p);path.moveTo(10,7);path.lineTo(17,12);path.lineTo(10,17);path.close();p.setStyle(Paint.Style.FILL);c.drawPath(path,p);p.setStyle(Paint.Style.STROKE);break;
             case "download":c.drawLine(12,3,12,16,p);path.moveTo(7,11);path.lineTo(12,16);path.lineTo(17,11);c.drawPath(path,p);c.drawLine(5,21,19,21,p);break;
             default:p.setStyle(Paint.Style.FILL);path.moveTo(7,4);path.lineTo(21,12);path.lineTo(7,20);path.close();c.drawPath(path,p);

@@ -9,7 +9,7 @@ import android.widget.*;
 /** Inflated by the original activity_home.xml: no hook into protected lifecycle code. */
 public final class WitcherTabs extends LinearLayout {
     public interface Listener { void select(int tab); }
-    public static final String[] LABELS={"الأنمي","المسلسلات","الأفلام","القنوات","HiTV","Oscar"};
+    public static final String[] LABELS={"الأنمي","المسلسلات","الأفلام","القنوات","HiTV","عالم المصادر"};
     private static final String[] ICONS={"anime","series","movies","channels","hitv","oscar"};
     private int selected;
     private Listener listener;
@@ -40,7 +40,7 @@ public final class WitcherTabs extends LinearLayout {
             LayoutParams t=new LayoutParams(-1,-2);t.topMargin=Ui.dp(c,2);item.addView(label,t);
             LayoutParams lp=new LayoutParams(0,Ui.dp(c,56),1);lp.setMargins(Ui.dp(c,1),Ui.dp(c,4),Ui.dp(c,1),Ui.dp(c,4));addView(item,lp);
             item.setOnClickListener(v->{
-                if(index==4){HitvExperience.open(c);return;}
+                if(index==4){if(selected!=4)HitvExperience.open(c);return;}
                 if(index==5){OscarExperience.open(c);return;}
                 if(index!=selected && listener!=null)listener.select(index);
             });
