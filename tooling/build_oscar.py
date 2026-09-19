@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Compile Source World and brand an existing AWR APK without replacing host/Drama/HiTV code."""
-import argparse,hashlib,importlib.util,json,pathlib,re,shutil,struct,subprocess,zipfile
+import argparse,hashlib,importlib.util,json,pathlib,re,shutil,struct,subprocess,zipfile,xml.etree.ElementTree as ET
 ROOT=pathlib.Path(__file__).resolve().parent.parent
 spec=importlib.util.spec_from_file_location('builder',ROOT/'build.py');builder=importlib.util.module_from_spec(spec);spec.loader.exec_module(builder)
 def run(*args):subprocess.run([str(x) for x in args],check=True,cwd=ROOT)
@@ -29,20 +29,30 @@ def main():
         run('java','-jar',a.apktool,'d','--no-src','-f','-o',decoded,a.input)
         run('python3',ROOT/'tooling/brand_resources.py',decoded,'--entries',entries)
         run('java','-jar',a.apktool,'b',decoded,'-o',resources)
+    checked=build/'awr-resource-check'
+    run('java','-jar',a.apktool,'d','--no-src','--no-assets','-f','-o',checked,resources)
+    public=lambda root:{(n.get('type'),n.get('name')):n.get('id') for n in ET.parse(root/'res/values/public.xml').getroot()}
+    assert public(decoded)==public(checked),'Resource IDs changed'
     replacements=set(json.loads(entries.read_text()));replacements.add('classes29.dex')
     unsigned=build/'awr-world-unsigned.apk'
     with zipfile.ZipFile(a.input) as old,zipfile.ZipFile(resources) as branded,zipfile.ZipFile(unsigned,'w') as out:
-        assert replacements.issubset(set(old.namelist())), 'Branding must reuse existing resource IDs and ZIP paths'
+        # Aapt2 normalizes some configuration suffixes (e.g. -hdpi-v4 -> -hdpi).
+        # Keep every original entry and add the normalized resource aliases referenced
+        # by the rebuilt table. Only explicitly branded existing entries are replaced.
+        aliases={n for n in branded.namelist() if n.startswith('res/') and n not in old.namelist()}
+        assert replacements.issubset(set(old.namelist())|aliases)
+        replacements.intersection_update(set(old.namelist()))
         for info in old.infolist():
             if signature(info.filename):continue
             data=merged.read_bytes() if info.filename=='classes29.dex' else branded.read(info.filename) if info.filename in replacements else old.read(info)
             builder.write_aligned(out,info.filename,data,info.compress_type)
+        for name in sorted(aliases):builder.write_aligned(out,name,branded.read(name),branded.getinfo(name).compress_type)
     run('java','-cp',a.compiler,ROOT/'tooling/SignApk.java',unsigned,a.output,a.keystore,a.alias)
     run('java','-cp',a.compiler,ROOT/'tooling/VerifyApk.java',a.input,a.output)
     preserved=0;alignment=0
     with zipfile.ZipFile(a.input) as old,zipfile.ZipFile(a.output) as new,a.output.open('rb') as raw:
         assert new.testzip() is None
-        assert {n for n in old.namelist() if not signature(n)}=={n for n in new.namelist() if not signature(n)}
+        assert {n for n in old.namelist() if not signature(n)}=={n for n in new.namelist() if not signature(n)}-aliases
         for n in old.namelist():
             if signature(n) or n in replacements:continue
             assert old.read(n)==new.read(n),n
@@ -52,6 +62,6 @@ def main():
             raw.seek(i.header_offset+26);nl,el=struct.unpack('<HH',raw.read(4));offset=i.header_offset+30+nl+el
             assert offset%(16384 if i.filename.startswith('lib/') and i.filename.endswith('.so') else 4)==0,i.filename
             alignment+=1
-    report={'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'input_apk_sha256':sha(a.input),'apk_sha256':sha(a.output),'custom_dex_sha256':sha(merged),'preserved_other_dex':preserved,'explicitly_replaced_entries':sorted(replacements),'all_other_payload_entries_unchanged':True,'stored_entries_alignment_verified':alignment,'signature_verified_v1':True,'signature_verified_v2':True,'signature_verified_v3':True,'signing_certificate_matches_input':True,'install_as_update_to_input':True,'runtime_tested_on_device':False,'live_oscar_catalogue_verified':False,'live_oscar_playback_verified':False,'known_limitations':['Oscar server returned HTTP 403 / Cloudflare 1010 in this environment.','Opaque source-player deep links require the source application; only prepared HTTP media goes to MX.','Not a claim of complete feature parity: source account sync, comments, predictions and all sports subpages are not implemented.']}
+    report={'source_commit':subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),'input_apk_sha256':sha(a.input),'apk_sha256':sha(a.output),'custom_dex_sha256':sha(merged),'preserved_other_dex':preserved,'explicitly_replaced_entries':sorted(replacements),'added_normalized_resource_aliases':len(aliases),'resource_ids_identical':True,'all_other_payload_entries_unchanged':True,'stored_entries_alignment_verified':alignment,'signature_verified_v1':True,'signature_verified_v2':True,'signature_verified_v3':True,'signing_certificate_matches_input':True,'install_as_update_to_input':True,'runtime_tested_on_device':False,'live_oscar_catalogue_verified':False,'live_oscar_playback_verified':False,'known_limitations':['Oscar server returned HTTP 403 / Cloudflare 1010 in this environment.','Opaque source-player deep links require the source application; only prepared HTTP media goes to MX.','Not a claim of complete feature parity: source account sync, comments, predictions and all sports subpages are not implemented.']}
     (ROOT/'artifacts/oscar-build-report.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');print(json.dumps(report,ensure_ascii=False,indent=2))
 if __name__=='__main__':main()

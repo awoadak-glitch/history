@@ -1,0 +1,37 @@
+{
+  "source_commit": "034e09c65096c433e34ea904f93bcbe7c35d8d64",
+  "input_apk_sha256": "18da0a6cf71867f6e50464b8d9a4137629caffde739a31da28c8226962c22b70",
+  "apk_sha256": "f5fa2b3126760adf0f746ffe2fd2151e0a16bf1f3ed4aa13b980cdd9587874aa",
+  "custom_dex_sha256": "120731386bae952e9c4f014a3709be733b459ae7b12a497d6163c269e3973369",
+  "preserved_other_dex": 28,
+  "explicitly_replaced_entries": [
+    "classes29.dex",
+    "res/drawable-anydpi-v24/ic_launcher_foreground.xml",
+    "res/layout/activity_home.xml",
+    "res/layout/item_carousel.xml",
+    "res/layout/layout_anime_view_holder_small.xml",
+    "res/layout/layout_anime_view_holder_small_more.xml",
+    "resources.arsc"
+  ],
+  "added_normalized_resource_aliases": 1041,
+  "resource_ids_identical": true,
+  "all_other_payload_entries_unchanged": true,
+  "stored_entries_alignment_verified": 1835,
+  "signature_verified_v1": true,
+  "signature_verified_v2": true,
+  "signature_verified_v3": true,
+  "signing_certificate_matches_input": true,
+  "install_as_update_to_input": true,
+  "runtime_tested_on_device": false,
+  "live_oscar_catalogue_verified": false,
+  "live_oscar_playback_verified": false,
+  "known_limitations": [
+    "Oscar server returned HTTP 403 / Cloudflare 1010 in this environment.",
+    "Opaque source-player deep links require the source application; only prepared HTTP media goes to MX.",
+    "Not a claim of complete feature parity: source account sync, comments, predictions and all sports subpages are not implemented."
+  ],
+  "dex_class_count": 86516,
+  "duplicate_dex_classes": false,
+  "hiTV_reflection_contracts_verified": true,
+  "local_regression_tests_passed": 12
+}
