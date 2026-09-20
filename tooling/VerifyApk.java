@@ -19,6 +19,8 @@ public class VerifyApk {
         ApkVerifier.Result previous=new ApkVerifier.Builder(new File(args[0])).build().verify();
         ApkVerifier.Result updated=new ApkVerifier.Builder(new File(args[1])).build().verify();
         if(!previous.isVerified()||!updated.isVerified())throw new IllegalStateException("APK signature verification failed");
+        if(!updated.isVerifiedUsingV1Scheme()||!updated.isVerifiedUsingV2Scheme()||!updated.isVerifiedUsingV3Scheme())
+            throw new IllegalStateException("Updated APK must verify with v1, v2 and v3 signing schemes");
         if(!certificates(previous).equals(certificates(updated))){
             System.err.println("Both APK signatures are valid, but certificates differ; this is a fresh-install build, not a compatible update.");
             System.exit(42);

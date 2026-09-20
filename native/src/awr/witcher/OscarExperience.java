@@ -22,7 +22,7 @@ final class OscarExperience {
     static final class Screen {
         final Activity a;final Handler handler=new Handler(Looper.getMainLooper());final ArrayDeque<State> history=new ArrayDeque<>();
         final SharedPreferences prefs;Dialog dialog;LinearLayout root,content;ScrollView scroll;HorizontalScrollView tabs;State state=new State();String active="home";int generation;
-        Screen(Activity activity){a=activity;prefs=a.getSharedPreferences("awr_sources",0);}
+        Screen(Activity activity){a=activity;OscarApi.initialize(a);prefs=a.getSharedPreferences("awr_sources",0);}
         void show(){dialog=new Dialog(a,android.R.style.Theme_Material_NoActionBar);dialog.setOnDismissListener(d->{generation++;handler.removeCallbacksAndMessages(null);});dialog.setOnKeyListener((d,key,event)->{if(key!=KeyEvent.KEYCODE_BACK)return false;if(event.getAction()==KeyEvent.ACTION_UP)back();return true;});render();dialog.show();Window w=dialog.getWindow();if(w!=null){w.setLayout(-1,-1);w.setBackgroundDrawable(new ColorDrawable(Ui.bg(a)));w.setStatusBarColor(Ui.bg(a));w.setNavigationBarColor(Ui.bg(a));}}
         void back(){if(history.isEmpty()){dialog.dismiss();return;}state=history.removeLast();render();}
         void navigate(State next){state.scroll=scroll.getScrollY();history.addLast(state);state=next;render();}
