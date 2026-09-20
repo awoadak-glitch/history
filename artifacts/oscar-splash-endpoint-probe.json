@@ -1,0 +1,45 @@
+{
+  "checked_at_utc": "2026-09-20T12:12:26.348084+00:00",
+  "headers": {
+    "Accept": "application/json",
+    "User-Agent": "AWR-World/1.0"
+  },
+  "results": [
+    {
+      "route": "api/v2/home.php?app_version=14",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "set_cookie_present": false,
+      "top_level_keys": [
+        "status",
+        "data"
+      ],
+      "data_type": "dict"
+    },
+    {
+      "route": "api/series/?page=1&limit=24&app_version=14",
+      "status": 403,
+      "content_type": "application/json; charset=utf-8",
+      "set_cookie_present": false,
+      "top_level_keys": [
+        "status",
+        "message"
+      ],
+      "data_type": "NoneType",
+      "error_message": "Forbidden"
+    },
+    {
+      "route": "api/movies/?page=1&limit=24&app_version=14",
+      "status": 403,
+      "content_type": "application/json; charset=utf-8",
+      "set_cookie_present": false,
+      "top_level_keys": [
+        "status",
+        "message"
+      ],
+      "data_type": "NoneType",
+      "error_message": "Forbidden"
+    }
+  ],
+  "scope": "Server environment only; user screenshot separately confirms home success on phone."
+}
