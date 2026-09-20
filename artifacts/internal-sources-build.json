@@ -1,0 +1,20 @@
+{
+  "source_commit": "530784a73062c25340e03663c63b686e2e238898",
+  "input_apk_sha256": "85aca2be533a5905801b6633c94939e5f32ea88df28be1124298f5edcfdabd51",
+  "apk_sha256": "82570927efa97baaff6ac2bcdc5326f0ac0008782b38aec3eb2d752d4c3c9a0b",
+  "custom_dex_sha256": "28678977f6e0eb07bdb9975282dd67081cc1d1500eafd6403956a190c5dbb5f2",
+  "replaced_entry": "classes29.dex",
+  "preserved_other_dex": 28,
+  "all_other_payload_entries_unchanged": true,
+  "stored_entries_alignment_verified": 1835,
+  "signature_verified_v1": true,
+  "signature_verified_v2": true,
+  "signature_verified_v3": true,
+  "unsigned": false,
+  "signing_certificate_matches_input": false,
+  "runtime_tested_on_device": false,
+  "install_as_update": false,
+  "mx_player_package": "com.mxtech.videoplayer.ad",
+  "verification_scope": "APK signatures, ZIP payload preservation and alignment only; this tool does not validate network playback or application behavior.",
+  "known_limitations": "No real-device playback test. A different signing certificate prevents installation as an update to the input APK."
+}

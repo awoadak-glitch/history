@@ -10,6 +10,9 @@
 - ما زال طلب كتالوج أوسكار يرفض الاتصال (403). لم تُنقل مكتبة توقيع الطلبات أو تُحاكَ هوية أوسكار، ولم يتم دمج APK الأصلي داخل المضيف. الواجهة الداخلية الموجودة سابقاً محفوظة، لكن الوصول الحي غير مكتمل. إنشاء توقيع جديد للتطبيق لا يوفر توثيق خدمة أوسكار.
 - المصدر المعتمد ما زال `AWR-World-Sources-season-restore.apk`؛ الدمج يحفظ Ui وOscarMedia وOscarCatalog وإصلاح المواسم ويستبدل WitcherTabs وOscarApi وOscarExperience فقط.
 
+- APK النهائي لهذه الجولة: `AWR-World-internal-tabs.apk`، SHA-256: `82570927efa97baaff6ac2bcdc5326f0ac0008782b38aec3eb2d752d4c3c9a0b`. توقيعات v1/v2/v3 والمحاذاة وحفظ الحمولة متحقق منها؛ ليس اختباراً على هاتف.
+- كود النسخة `530784a`، والحزمة لإعادة بنائها `artifacts/internal-sources-patch.zip` مع تقريري `internal-sources-build.json` و`internal-sources-preservation.json`.
+
 ## الطلب السابق — إزالة HiTV والتشخيص
 
 ## الطلب الأحدث — 2026-09-20
