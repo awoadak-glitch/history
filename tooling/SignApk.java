@@ -18,6 +18,7 @@ public class SignApk {
         ApkSigner.SignerConfig signer=new ApkSigner.SignerConfig.Builder("AWR Witcher",key,chain).build();
         new ApkSigner.Builder(Collections.singletonList(signer)).setInputApk(new File(args[0])).setOutputApk(new File(args[1]))
             .setV1SigningEnabled(true).setV2SigningEnabled(true).setV3SigningEnabled(true).setV4SigningEnabled(false)
+            .setAlignmentPreserved(true).setLibraryPageAlignmentBytes(16384)
             .setOtherSignersSignaturesPreserved(false).build().sign();
         ApkVerifier.Result result=new ApkVerifier.Builder(new File(args[1])).build().verify();
         if(!result.isVerified())throw new IllegalStateException("Signature invalid: "+result.getErrors());
