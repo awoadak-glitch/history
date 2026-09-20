@@ -36,7 +36,7 @@ final class OscarApi {
         }finally{c.disconnect();}
     }
     static String read(InputStream in,int max)throws IOException{try(InputStream input=in;ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[8192];int n;while((n=input.read(b))!=-1){if(out.size()+n>max)throw new IOException("استجابة المصدر أكبر من الحد المسموح");out.write(b,0,n);}return out.toString("UTF-8");}}
-    static String httpError(int code){if(code==401||code==403)return "رفض المصدر الاتصال (HTTP "+code+"). لم يتم تحميل المحتوى. يمكنك متابعة المحتوى من تطبيق أوسكار الأصلي.";return "تعذر تحميل المحتوى من المصدر (HTTP "+code+").";}
+    static String httpError(int code){if(code==401||code==403)return "المصدر لم يسمح بتحميل المحتوى حالياً (HTTP "+code+"). أعد المحاولة لاحقاً.";return "تعذر تحميل المحتوى من المصدر (HTTP "+code+").";}
     static String apiError(JSONObject o){String s=o.optString("status","");if(o.optBoolean("is_blocked")||"error".equalsIgnoreCase(s)||"failed".equalsIgnoreCase(s)||"false".equalsIgnoreCase(s))return OscarCatalog.text(o,"message","msg").isEmpty()?"المصدر لا يتيح هذا المحتوى حالياً.":OscarCatalog.text(o,"message","msg");return null;}
     static String message(Exception e){if(e instanceof SocketTimeoutException)return "انتهت مهلة الاتصال بالمصدر. أعد المحاولة.";if(e instanceof UnknownHostException)return "تعذر الوصول إلى عنوان المصدر. تحقق من الاتصال.";return e instanceof IOException&&e.getMessage()!=null?e.getMessage():"تعذر قراءة بيانات المصدر. أعد المحاولة.";}
 }
