@@ -1,0 +1,39 @@
+{
+  "source_commit": "f23a958f88ec266f6e526cf9a9cbd319a5fddb58",
+  "input_apk_sha256": "82570927efa97baaff6ac2bcdc5326f0ac0008782b38aec3eb2d752d4c3c9a0b",
+  "apk_sha256": "e79a2a945b4a73ee0a4f62f46d2901f14d3ce09a7784d6828e8a01bb6fef0388",
+  "custom_dex_sha256": "074b8adca88f48074671e6637271b1dce4678f0b93c39c3dbf3a91dbb6a9761c",
+  "replaced_entry": "classes29.dex",
+  "preserved_other_dex": 28,
+  "added_native_entries": [
+    "lib/arm64-v8a/libiron_fingerprint.so",
+    "lib/armeabi-v7a/libiron_fingerprint.so",
+    "lib/x86/libiron_fingerprint.so",
+    "lib/x86_64/libiron_fingerprint.so"
+  ],
+  "native_library_source_apk_sha256": "e15d2de82257e55a5ea7ffef7a78ec205caf0c02ddfa7b80673dba68006226d7",
+  "native_libraries_unchanged_sha256": {
+    "lib/arm64-v8a/libiron_fingerprint.so": "8d7da2647a1a4227f6d263b14a86c1bd4390c60ca401d2f2c7226ab82d1ed021",
+    "lib/armeabi-v7a/libiron_fingerprint.so": "d97abcac21e6ee209f18eb205b13ff8287841d36dabcd0aadee5a32411bc6e6b",
+    "lib/x86/libiron_fingerprint.so": "1228f5d9c361898a565609ed116cb9eeaee5fb324f23de0f38a28b6756260803",
+    "lib/x86_64/libiron_fingerprint.so": "27812c986ced1ac3b68ba71a86f016ed893d5ddbab37a7058d3cd57838463b93"
+  },
+  "all_other_payload_entries_unchanged": true,
+  "stored_entries_alignment_verified": 1839,
+  "signature_verified_v1": true,
+  "signature_verified_v2": true,
+  "signature_verified_v3": true,
+  "unsigned": false,
+  "signing_certificate_matches_input": true,
+  "runtime_tested_on_device": false,
+  "install_as_update": true,
+  "mx_player_package": "com.mxtech.videoplayer.ad",
+  "verification_scope": "APK signatures, ZIP payload preservation and alignment only; this tool does not validate network playback or application behavior.",
+  "known_limitations": "Native execution and Oscar catalogue/playback require a phone test. The unchanged native integrity check may reject the actual AWR package/certificate; it is not overridden.",
+  "app_source_commit": "32c87346cc5515ebc6962bfbac1f69883ea70a55",
+  "live_oscar_catalogue_verified": false,
+  "live_oscar_playback_verified": false,
+  "native_runtime_verified": false,
+  "local_regression_tests_passed": 18,
+  "library_save_status": "failed: library_storage_limit_exceeded"
+}
