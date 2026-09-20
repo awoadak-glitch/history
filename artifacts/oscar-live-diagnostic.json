@@ -1,0 +1,11 @@
+{
+  "checked_at_utc": "2026-09-20T04:44:36.391169+00:00",
+  "url": "https://ostvapp.cam/api/v2/home.php?app_version=14",
+  "request_headers": {
+    "Accept": "application/json",
+    "User-Agent": "AWR-World/1.0"
+  },
+  "status": 403,
+  "content_type": "application/json; charset=utf-8",
+  "body_preview": "{\"status\":\"error\",\"message\":\"Forbidden\"}"
+}

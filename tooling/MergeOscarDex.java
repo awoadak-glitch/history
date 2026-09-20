@@ -11,7 +11,9 @@ import java.util.zip.*;
 
 /** Keep approved integration bytecode; replace only Oscar and its tab/theme hooks. */
 public class MergeOscarDex {
+    static List<String> selectedTypes;
     static boolean changed(String type) {
+        if(selectedTypes!=null){for(String selected:selectedTypes)if(type.equals(selected+";")||type.startsWith(selected+"$"))return true;return false;}
         return type.startsWith("Lawr/witcher/Oscar") || type.equals("Lawr/witcher/Ui;") ||
             type.startsWith("Lawr/witcher/Ui$") || type.equals("Lawr/witcher/WitcherTabs;") ||
             type.startsWith("Lawr/witcher/WitcherTabs$");
@@ -28,7 +30,8 @@ public class MergeOscarDex {
         StringBuilder s=new StringBuilder();for(byte b:MessageDigest.getInstance("SHA-256").digest(bytes))s.append(String.format("%02x",b&255));return s.toString();
     }
     public static void main(String[] args)throws Exception {
-        if(args.length!=4)throw new IllegalArgumentException("approved.apk compiled.dex output.dex report.json");
+        if(args.length<4||args.length>5)throw new IllegalArgumentException("approved.apk compiled.dex output.dex report.json [comma-separated top-level Java classes to replace]");
+        if(args.length==5){selectedTypes=new ArrayList<>();for(String name:args[4].split(",")){if(!name.matches("awr\\.witcher\\.[A-Za-z][A-Za-z0-9]*"))throw new IllegalArgumentException("Unexpected replacement class: "+name);selectedTypes.add("L"+name.replace('.','/'));}}
         SortedMap<String,ClassDef> original=new TreeMap<>(), retained=new TreeMap<>(), merged=new TreeMap<>();
         try(ZipFile apk=new ZipFile(args[0])) {
             ZipEntry entry=apk.getEntry("classes29.dex");
