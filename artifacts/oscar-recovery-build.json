@@ -1,0 +1,20 @@
+{
+  "source_commit": "40d64ee88928acec05f494b6ccc36b72c510cdc2",
+  "input_apk_sha256": "85aca2be533a5905801b6633c94939e5f32ea88df28be1124298f5edcfdabd51",
+  "apk_sha256": "b801dc4dc88efa86b6bc673aa94c135be8a9dbb8ad73f9fbfd88cd8078442722",
+  "custom_dex_sha256": "cc9df3c28ccb299b198a3e1ae5bfc7d4e0101a4a6d955f0c78c479a6f462f698",
+  "replaced_entry": "classes29.dex",
+  "preserved_other_dex": 28,
+  "all_other_payload_entries_unchanged": true,
+  "stored_entries_alignment_verified": 1835,
+  "signature_verified_v1": false,
+  "signature_verified_v2": false,
+  "signature_verified_v3": false,
+  "unsigned": true,
+  "signing_certificate_matches_input": false,
+  "runtime_tested_on_device": false,
+  "install_as_update": false,
+  "mx_player_package": "com.mxtech.videoplayer.ad",
+  "verification_scope": "APK signatures, ZIP payload preservation and alignment only; this tool does not validate network playback or application behavior.",
+  "known_limitations": "Unsigned preparation only; cannot be installed until signed with the approved key."
+}
