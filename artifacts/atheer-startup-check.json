@@ -1,0 +1,13 @@
+{
+  "host_registrars_preserved": 14,
+  "module_registrars_isolated": 15,
+  "host_and_module_metadata_match_originals": true,
+  "device_execution_tested": false,
+  "previous_broken_candidate_rejected_by_gate": true,
+  "previous_candidate_sha256": "e22366464e6b7ba15dfde2985c496c82b2727b89b5b04afd4542d80435ad68b2",
+  "fixed_apk_sha256": "a07c19d5d924a469dedc25e07dd2becbfcc28ce6afc1b8f6d5c1e22f83860539",
+  "fixed_apk_bytes": 57941471,
+  "same_signing_certificate_as_previous_atheer": true,
+  "v1_v2_v3_verified": true,
+  "iron_verifier_and_native_libraries_unchanged": true
+}

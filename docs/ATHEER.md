@@ -24,7 +24,11 @@ This is a new integration architecture. APK assembly/signature/DEX checks cannot
 
 Same package as Oscar; the new private AWR signing key differs from the original Oscar certificate. It cannot update that installation in place. Do not delete installed apps/data to work around this. A separate test phone without that conflicting package is the trial target. Existing AWR is a separate package and remains installed; its stored watch history is not automatically migrated.
 
-## Built candidate and reproducible verification
+## Latest startup correction
+
+The first candidate below failed on the user's phone. Its merged Firebase registration metadata was incorrect. Use `Atheer-startup-fix.apk` (`a07c19d5…`) and read `ATHEER-STARTUP-FIX.md` plus `artifacts/atheer-startup-check.json`. Host and module now use distinct metadata services with their own original registrars. The correction keeps the previous Atheer signing certificate.
+
+## Superseded candidate and reproducible verification
 
 Candidate SHA-256: `e22366464e6b7ba15dfde2985c496c82b2727b89b5b04afd4542d80435ad68b2` (57,941,787 bytes), source commit `a120bc919fb9dd5b610fd5b57ec2a4de39aeebe1`.
 

@@ -9,6 +9,8 @@
   "host_update_calls_remaining": 0,
   "module_classes": 86525,
   "module_activity_adapters_verified": 117,
+  "module_discovery_refs": 1,
+  "host_firebase_initializer_unchanged": true,
   "device_tested": false,
   "host_patch": {
     "dex_files": 1,
@@ -17,7 +19,8 @@
     "activity_themes": 0,
     "update_calls_removed": 3,
     "host_tab_hooks": 2,
-    "internal_return_hooks": 0
+    "internal_return_hooks": 0,
+    "isolated_firebase_discovery": 0
   },
   "module_patch": {
     "dex_files": 29,
@@ -26,6 +29,7 @@
     "activity_themes": 117,
     "update_calls_removed": 0,
     "host_tab_hooks": 0,
-    "internal_return_hooks": 2
+    "internal_return_hooks": 2,
+    "isolated_firebase_discovery": 1
   }
 }
