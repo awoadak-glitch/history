@@ -35,10 +35,13 @@ def main():
   run('java','-jar',a.apktool,'d','--no-src','-f','-o',m,a.module,log=b/'atheer-module-decode.log')
   hr=E.parse(h/'AndroidManifest.xml').getroot().find('application');mr=E.parse(m/'AndroidManifest.xml').getroot().find('application')
   host_names={n.get(A+'name') for n in hr};ids=public(m);rows=[]
+  style_dump=subprocess.check_output(['java','-cp',str(a.android_jar),'com.sun.tools.javap.Main','-constants','android.R$style'],text=True)
+  system_styles=dict(re.findall(r'public static final int (\w+) = (\d+);',style_dump))
   for n in mr.findall('activity'):
    name=n.get(A+'name')
    if name in host_names or name in OMITTED:continue
-   theme=n.get(A+'theme',mr.get(A+'theme'));theme='0x01030224' if theme.startswith('@android:') else ids[tuple(theme[1:].split('/'))]
+   theme=n.get(A+'theme',mr.get(A+'theme'))
+   theme=hex(int(system_styles[theme.split('/')[-1].replace('.','_')])) if theme.startswith('@android:') else ids[tuple(theme[1:].split('/'))]
    rows.append(name+'='+theme[2:])
   rows_path.write_text('\n'.join(rows)+'\n')
   run('python',ROOT/'tooling/atheer_resources.py',h,m,ROOT/'branding/atheer-logo.png',rows_path,log=b/'atheer-branding.json')
