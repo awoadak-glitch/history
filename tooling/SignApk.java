@@ -20,7 +20,7 @@ public class SignApk {
             .setV1SigningEnabled(true).setV2SigningEnabled(true).setV3SigningEnabled(true).setV4SigningEnabled(false)
             .setAlignmentPreserved(true).setLibraryPageAlignmentBytes(16384)
             .setOtherSignersSignaturesPreserved(false).build().sign();
-        ApkVerifier.Result result=new ApkVerifier.Builder(new File(args[1])).build().verify();
+        ApkVerifier.Result result=new ApkVerifier.Builder(new File(args[1])).setMinCheckedPlatformVersion(21).build().verify();
         if(!result.isVerified())throw new IllegalStateException("Signature invalid: "+result.getErrors());
         System.out.println("Signature verified: v1="+result.isVerifiedUsingV1Scheme()+" v2="+result.isVerifiedUsingV2Scheme()+" v3="+result.isVerifiedUsingV3Scheme());
     }
