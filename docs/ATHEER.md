@@ -22,4 +22,12 @@ Three calls to Oscar's application-update endpoint are replaced with a local dis
 
 This is a new integration architecture. APK assembly/signature/DEX checks cannot validate real Android lifecycle, native execution, Firebase/AppCheck acceptance, every SDK component, or backend acceptance of the new signing certificate. No emulator/device is attached here. Do not call it fully working until a phone verifies startup, every main section, Source World entry/exit, episode playback, downloads, background/restore, and process recreation.
 
-Same package as Oscar; the new private AWR signing key differs from the original Oscar certificate. It cannot update that installation in place. Do not delete installed apps/data to work around this. A separate test phone/profile without that conflicting package is the safe trial target. Existing AWR is a separate package and remains installed; its stored watch history is not automatically migrated.
+Same package as Oscar; the new private AWR signing key differs from the original Oscar certificate. It cannot update that installation in place. Do not delete installed apps/data to work around this. A separate test phone without that conflicting package is the trial target. Existing AWR is a separate package and remains installed; its stored watch history is not automatically migrated.
+
+## Built candidate and reproducible verification
+
+Candidate SHA-256: `e22366464e6b7ba15dfde2985c496c82b2727b89b5b04afd4542d80435ad68b2` (57,941,787 bytes), source commit `a120bc919fb9dd5b610fd5b57ec2a4de39aeebe1`.
+
+Run `tooling/build_atheer.py --help` for the required input paths. Use a complete Android API JAR and the retained private signing key; provide its password through `AWR_KEYSTORE_PASSWORD`, never in arguments or Git. The build independently re-decodes resources, verifies stable IDs, checks all original native libraries, verifies ZIP alignment and v1/v2/v3 signatures, and emits `artifacts/atheer-build.json`.
+
+`java -cp 'tooling/cache/oscar-tools/*' tooling/VerifyAtheer.java OSCAR.apk ATHEER.apk build/atheer-sources.apk build/module-activities.txt` independently checks class presence, compares the host application's classes, rejects unexpected content/authentication edits, verifies no update call remains, and checks all embedded activity adapters for missing classes or final-method conflicts. Results are saved in `artifacts/atheer-structure-check.json`. These are structural checks, not a device test.

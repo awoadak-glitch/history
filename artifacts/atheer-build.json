@@ -1,0 +1,33 @@
+{
+  "apk_sha256": "e22366464e6b7ba15dfde2985c496c82b2727b89b5b04afd4542d80435ad68b2",
+  "apk_bytes": 57941787,
+  "source_commit": "a120bc919fb9dd5b610fd5b57ec2a4de39aeebe1",
+  "base_apk_sha256": "e15d2de82257e55a5ea7ffef7a78ec205caf0c02ddfa7b80673dba68006226d7",
+  "module_input_sha256": "e79a2a945b4a73ee0a4f62f46d2901f14d3ce09a7784d6828e8a01bb6fef0388",
+  "embedded_module_sha256": "70708b6a64db091da233dcdb5ab5615b0a330585af2b23d9f2f30bd10d31c241",
+  "module_activities": 117,
+  "package": "com.drama.mp4",
+  "label": "أثير",
+  "android_min_sdk": 28,
+  "new_certificate": true,
+  "signature_v1_v2_v3_valid": true,
+  "source_resource_ids_preserved": true,
+  "module_assets_and_native_libraries_unchanged": true,
+  "host_native_libraries_unchanged": {
+    "lib/arm64-v8a/libiron_fingerprint.so": "8d7da2647a1a4227f6d263b14a86c1bd4390c60ca401d2f2c7226ab82d1ed021",
+    "lib/armeabi-v7a/libiron_fingerprint.so": "d97abcac21e6ee209f18eb205b13ff8287841d36dabcd0aadee5a32411bc6e6b",
+    "lib/x86/libiron_fingerprint.so": "1228f5d9c361898a565609ed116cb9eeaee5fb324f23de0f38a28b6756260803",
+    "lib/x86_64/libiron_fingerprint.so": "27812c986ced1ac3b68ba71a86f016ed893d5ddbab37a7058d3cd57838463b93"
+  },
+  "stored_entries_alignment_verified": 449,
+  "installed_as_separate_app": false,
+  "runtime_tested_on_device": false,
+  "live_catalogue_verified": false,
+  "live_playback_verified": false,
+  "limitations": [
+    "Not an in-place update of original Oscar signed with another certificate.",
+    "Embedded activity lifecycle, native Anime execution, SDK initialization, and server acceptance require device testing.",
+    "Original AWR watch history is not migrated from its separate installed package.",
+    "Four dangling source manifest activities were excluded; background third-party services are not fully migrated."
+  ]
+}

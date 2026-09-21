@@ -1,0 +1,31 @@
+{
+  "original_host_classes_present": 10619,
+  "host_application_classes_compared": 1013,
+  "changed_host_classes": [
+    "Lcom/drama/mp4/data/api/ApiService$DefaultImpls;",
+    "Lcom/drama/mp4/data/model/AppUpdate;",
+    "Lcom/drama/mp4/ui/main/MainActivity;"
+  ],
+  "host_update_calls_remaining": 0,
+  "module_classes": 86525,
+  "module_activity_adapters_verified": 117,
+  "device_tested": false,
+  "host_patch": {
+    "dex_files": 1,
+    "classes": 10619,
+    "activity_contexts": 0,
+    "activity_themes": 0,
+    "update_calls_removed": 3,
+    "host_tab_hooks": 2,
+    "internal_return_hooks": 0
+  },
+  "module_patch": {
+    "dex_files": 29,
+    "classes": 86525,
+    "activity_contexts": 117,
+    "activity_themes": 117,
+    "update_calls_removed": 0,
+    "host_tab_hooks": 0,
+    "internal_return_hooks": 2
+  }
+}
