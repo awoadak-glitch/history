@@ -14,7 +14,7 @@ import java.io.*;import java.nio.file.*;import java.util.*;import java.util.zip.
 public final class AtheerDex {
  static final String R="Lcom/atheer/shell/ModuleRuntime;", H="Lcom/atheer/shell/Host;", CTX="Landroid/content/Context;", ACT="Landroid/app/Activity;";
  static final Set<String> seenActivities=new HashSet<>();
- static int wrapped=0,themed=0,updates=0,attached=0,returns=0;
+ static int wrapped=0,themed=0,updates=0,attached=0,returns=0,discovery=0;
  static ImmutableMethodReference ref(String owner,String name,String result,String... args){return new ImmutableMethodReference(owner,name,Arrays.asList(args),result);}
  static Method replace(Method m,MethodImplementation body){return new ImmutableMethod(m.getDefiningClass(),m.getName(),m.getParameters(),m.getReturnType(),m.getAccessFlags(),m.getAnnotations(),m.getHiddenApiRestrictions(),body);}
  static Method added(ClassDef c,String name,String arg,boolean theme){
@@ -38,6 +38,10 @@ public final class AtheerDex {
    }
    for(int i=body.getInstructions().size()-1;i>=0;i--){
     Instruction inst=body.getInstructions().get(i);
+    if(!host&&c.getType().equals("Lcom/google/firebase/FirebaseApp;")&&inst.getOpcode()==Opcode.CONST_CLASS&&inst instanceof ReferenceInstruction&&((ReferenceInstruction)inst).getReference() instanceof TypeReference&&((TypeReference)((ReferenceInstruction)inst).getReference()).getType().equals("Lcom/google/firebase/components/ComponentDiscoveryService;")){
+     int reg=((OneRegisterInstruction)inst).getRegisterA();
+     body.replaceInstruction(i,new BuilderInstruction21c(Opcode.CONST_CLASS,reg,new ImmutableTypeReference("Lcom/atheer/shell/SourceDiscoveryService;")));discovery++;edit=true;
+    }
     if(host&&c.getType().equals("Lcom/drama/mp4/ui/main/MainActivity;")&&m.getName().equals("onCreate")&&inst.getOpcode()==Opcode.RETURN_VOID){
      int self=body.getRegisterCount()-2;body.addInstruction(i,new BuilderInstruction3rc(Opcode.INVOKE_STATIC_RANGE,self,1,ref(H,"attach","V",ACT)));attached++;edit=true;
     }
@@ -76,7 +80,7 @@ public final class AtheerDex {
   }}
   if(host&&(attached!=2||updates!=3))throw new IllegalStateException("Unexpected host patch counts "+attached+" "+updates);
   if(!host){Set<String> missing=new TreeSet<>(types);missing.removeAll(seenActivities);System.err.println("Missing manifest classes: "+missing);}
-  if(!host&&(wrapped!=types.size()||returns<1))throw new IllegalStateException("Incomplete module patch: "+wrapped+" / "+types.size());
-  System.out.println("{\"dex_files\":"+dexCount+",\"classes\":"+classes+",\"activity_contexts\":"+wrapped+",\"activity_themes\":"+themed+",\"update_calls_removed\":"+updates+",\"host_tab_hooks\":"+attached+",\"internal_return_hooks\":"+returns+"}");
+  if(!host&&(wrapped!=types.size()||returns<1||discovery!=1))throw new IllegalStateException("Incomplete module patch: "+wrapped+" / "+types.size()+" discovery="+discovery);
+  System.out.println("{\"dex_files\":"+dexCount+",\"classes\":"+classes+",\"activity_contexts\":"+wrapped+",\"activity_themes\":"+themed+",\"update_calls_removed\":"+updates+",\"host_tab_hooks\":"+attached+",\"internal_return_hooks\":"+returns+",\"isolated_firebase_discovery\":"+discovery+"}");
  }
 }

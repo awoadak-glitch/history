@@ -78,12 +78,13 @@ def main():
  for name in ['com.mxtech.videoplayer.ad','com.dv.adm','idm.internet.download.manager','idm.internet.download.manager.plus']:
   if name not in names:E.SubElement(queries,'package',{A+'name':name})
  discovery='com.google.firebase.components.ComponentDiscoveryService'
- hs=next((n for n in app.findall('service') if n.get(A+'name')==discovery),None)
  gs=next((n for n in ga.findall('service') if n.get(A+'name')==discovery),None)
- if hs is not None and gs is not None:
-  registered={n.get(A+'name') for n in hs}
-  for n in gs:
-   if n.get(A+'name') not in registered:hs.append(copy.deepcopy(n))
+ if gs is None:raise ValueError('Source Firebase discovery metadata missing')
+ # Each isolated Firebase runtime must discover only its own registrars. Combining
+ # these services registers old/new coroutine dispatchers twice and crashes the
+ # host FirebaseInitProvider before Application.onCreate or the launcher activity.
+ source_discovery=E.SubElement(app,'service',{A+'name':'com.atheer.shell.SourceDiscoveryService',A+'exported':'false',A+'directBootAware':'true'})
+ for n in gs:source_discovery.append(copy.deepcopy(n))
  save(t,a.host/'AndroidManifest.xml')
  y=a.host/'apktool.yml';s=y.read_text();s=re.sub(r'minSdkVersion: [^\n]+','minSdkVersion: 28',s);y.write_text(s)
  print(json.dumps({'host_package':r.get('package'),'module_activities':len(theme_map),'file_provider_paths':paths,'min_sdk':28}))

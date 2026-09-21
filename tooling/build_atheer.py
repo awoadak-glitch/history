@@ -34,6 +34,9 @@ def main():
   run('java','-jar',a.apktool,'d','--no-src','-f','-o',h,a.host,log=b/'atheer-host-decode.log')
   run('java','-jar',a.apktool,'d','--no-src','-f','-o',m,a.module,log=b/'atheer-module-decode.log')
   hr=E.parse(h/'AndroidManifest.xml').getroot().find('application');mr=E.parse(m/'AndroidManifest.xml').getroot().find('application')
+  for name,app in [('host',hr),('module',mr)]:
+   service=next(n for n in app.findall('service') if n.get(A+'name')=='com.google.firebase.components.ComponentDiscoveryService')
+   (b/('atheer-'+name+'-registrars.json')).write_text(json.dumps({n.get(A+'name'):n.get(A+'value') for n in service},sort_keys=True)+'\n')
   host_names={n.get(A+'name') for n in hr};ids=public(m);rows=[]
   style_dump=subprocess.check_output(['java','-cp',str(a.android_jar),'com.sun.tools.javap.Main','-constants','android.R$style'],text=True)
   system_styles=dict(re.findall(r'public static final int (\w+) = (\d+);',style_dump))
@@ -57,6 +60,7 @@ def main():
   run('java','-jar',a.apktool,'d','--no-src','--no-assets','-f','-o',checked,b/('atheer-'+name+'-resources.apk'),log=b/('atheer-'+name+'-check.log'))
   old,new=public(decoded),public(checked)
   if any(new.get(k)!=v for k,v in old.items()):raise ValueError('Resource IDs changed in '+name)
+ run('python',ROOT/'tooling/verify_atheer_startup.py',b/'atheer-host-check/AndroidManifest.xml',b/'atheer-host-registrars.json',b/'atheer-module-registrars.json',log=b/'atheer-startup-check.json')
  feature=b/'atheer-sources.apk'
  repack(a.module,b/'atheer-module-resources.apk',b/'atheer-module-dex',feature)
  rows=rows_path.read_text().splitlines();default_theme=public(m)[('style','AppTheme')]

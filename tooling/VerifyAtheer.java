@@ -49,6 +49,18 @@ public final class VerifyAtheer {
   }
   for(ClassDef c:after.values())if(updateCaller(c))throw new IllegalStateException("Remaining host update request: "+c.getType());
   Map<String,ClassDef> module=classes(args[2]);int activities=0;
+  String firebase="Lcom/google/firebase/FirebaseApp;";
+  if(!Arrays.equals(serialized(before.get(firebase)),serialized(after.get(firebase))))throw new IllegalStateException("Host Firebase initializer changed");
+  String sourceDiscovery="Lcom/atheer/shell/SourceDiscoveryService;";
+  if(!after.containsKey(sourceDiscovery))throw new IllegalStateException("Missing isolated source service class");
+  int sourceDiscoveryRefs=0;
+  for(Method m:module.get(firebase).getMethods())if(m.getImplementation()!=null)for(Instruction i:m.getImplementation().getInstructions())
+   if(i instanceof ReferenceInstruction&&((ReferenceInstruction)i).getReference() instanceof TypeReference){
+    String type=((TypeReference)((ReferenceInstruction)i).getReference()).getType();
+    if(type.equals("Lcom/google/firebase/components/ComponentDiscoveryService;"))throw new IllegalStateException("Module still discovers host Firebase metadata");
+    if(type.equals(sourceDiscovery))sourceDiscoveryRefs++;
+   }
+  if(sourceDiscoveryRefs!=1)throw new IllegalStateException("Unexpected module discovery reference count: "+sourceDiscoveryRefs);
   for(String row:Files.readAllLines(Path.of(args[3]))) {
    String type="L"+row.split("=")[0].replace('.','/')+";";
    ClassDef c=module.get(type);if(c==null)throw new IllegalStateException("Missing module activity: "+type);
@@ -60,6 +72,6 @@ public final class VerifyAtheer {
    }
    activities++;
   }
-  System.out.println("{\"original_host_classes_present\":"+before.size()+",\"host_application_classes_compared\":"+checked+",\"changed_host_classes\":\""+changed+"\",\"host_update_calls_remaining\":0,\"module_classes\":"+module.size()+",\"module_activity_adapters_verified\":"+activities+",\"device_tested\":false}");
+  System.out.println("{\"original_host_classes_present\":"+before.size()+",\"host_application_classes_compared\":"+checked+",\"changed_host_classes\":\""+changed+"\",\"host_update_calls_remaining\":0,\"module_classes\":"+module.size()+",\"module_activity_adapters_verified\":"+activities+",\"module_discovery_refs\":"+sourceDiscoveryRefs+",\"host_firebase_initializer_unchanged\":true,\"device_tested\":false}");
  }
 }
