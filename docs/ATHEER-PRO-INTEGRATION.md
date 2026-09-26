@@ -30,3 +30,5 @@ Structural checks: 10,637 host classes retained without modifying original host 
 Limitations: no Android device/emulator execution was available. Static checks do not prove that all guest SDK initialization, original protected/native UI, resource loading, server access or playback works after integration. Existing optional background guest services have not been fully ported. The signer is new; this APK cannot update an existing installation signed with another key. The base already includes an arm64-only startup library; this integration does not add ABI support absent from that input.
 
 Output SHA-256: `5da2de485b3d202964c37d5b51dc529e2981daafad60d4f41ecea61032fb2fb1`; 64820218 bytes.
+
+Persistence status: source, logo and build reports are committed to GitHub. Saving the APK and private signing backup as durable user files failed during upload preparation. The download artifacts remain local to this session; the user should retain both. Do not assume the private signing key or output APK can be restored from GitHub.
