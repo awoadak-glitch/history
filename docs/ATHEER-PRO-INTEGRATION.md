@@ -9,7 +9,7 @@ Recovered AWR feature from the user's `Atheer-startup-fix-1.apk` (57,941,471 byt
 
 The previous loader calls `ClassLoader.getClassLoadingLock`, a Java SE API absent from Android. Replace it with an Android-compatible synchronization mechanism and compile the shell against the real Android SDK boot classpath.
 
-New requested architecture: an internal DEX-only feature archive plus a separate non-executable resource archive. No second application installation or external application launch for Source World. Preserve all recovered feature DEX classes, original resource IDs and native binaries; adapt activity contexts and keep Firebase registrar discovery isolated.
+New requested architecture: an internal DEX-only feature archive plus a separate resource/asset archive (preserving the existing SDK assets). No second application installation or external application launch for Source World. Preserve all recovered feature DEX classes, original resource IDs and native binaries; adapt activity contexts and keep Firebase registrar discovery isolated.
 
 Brand: أثير / ATHEER, navy/gold cinema identity, redesigned home and navigation surfaces shared by host and source screens. Remove HiTV from navigation. Source World must return internally to the main host tabs.
 
