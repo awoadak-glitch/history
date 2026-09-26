@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Reproducible Pro integration. Does not alter any supplied host DEX or native code."""
-import argparse, hashlib, importlib.util, json, pathlib, re, shutil, struct, subprocess, zipfile, xml.etree.ElementTree as E
+import os, argparse, hashlib, importlib.util, json, pathlib, re, shutil, struct, subprocess, zipfile, xml.etree.ElementTree as E
 from build_atheer import public, signature, OMITTED
 ROOT=pathlib.Path(__file__).resolve().parent.parent
 spec=importlib.util.spec_from_file_location('packing',ROOT/'build.py');packing=importlib.util.module_from_spec(spec);spec.loader.exec_module(packing)
@@ -55,7 +55,7 @@ def main():
  (generated/'ModuleConfig.java').write_text('package com.atheer.shell; public final class ModuleConfig { public static final String SHA256="'+sha(code)+'"; public static final String RESOURCE_SHA256="'+sha(resources)+'"; public static final int DEFAULT_THEME='+ids[('style','AppTheme')]+'; public static final String[] ACTIVITIES={'+','.join(json.dumps(r) for r in rows)+'};}\n')
  classes=b/'classes';shutil.rmtree(classes,ignore_errors=True);classes.mkdir()
  sources=sorted((ROOT/'pro/src').rglob('*.java'))+sorted((ROOT/'pro/stubs').rglob('*.java'))+list(generated.glob('*.java'))
- run('java','com.sun.tools.javac.Main','-source','8','-target','8','-encoding','UTF-8','-bootclasspath',a.android_jar,'-d',classes,*sources,log=b/'compile.log')
+ run('java','com.sun.tools.javac.Main','-source','8','-target','8','-encoding','UTF-8','-bootclasspath',str(a.android_jar.parent/'core-lambda-stubs.jar')+os.pathsep+str(a.android_jar),'-d',classes,*sources,log=b/'compile.log')
  jar=b/'shell.jar'
  with zipfile.ZipFile(jar,'w') as z:
   for f in classes.rglob('*.class'):
