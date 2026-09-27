@@ -1,0 +1,43 @@
+{
+  "checked_at_utc": "2026-09-27",
+  "gateway": "https://awr-stream-web.vercel.app/api/",
+  "home": {
+    "http": 200,
+    "hero": 6,
+    "recent": 14,
+    "popular": 12,
+    "best_mal": 12,
+    "animations": 12,
+    "latest": 12,
+    "news": 8
+  },
+  "catalogues": {
+    "series": 36,
+    "series_name_asc": 36,
+    "series_date_created": 36,
+    "series_fav_count_desc": 36,
+    "best_mal_ranked": 36,
+    "most_watched_animations": 36
+  },
+  "search_sample": {
+    "query": "Naruto",
+    "http": 200,
+    "items": 28
+  },
+  "playback_sample": {
+    "anime": "Mushoku Tensei III: Isekai Ittara Honki Dasu",
+    "episodes": 14,
+    "sample_episode": "001",
+    "servers": 15,
+    "qualities": ["1080p", "720p", "480p", "اخري"],
+    "providers": ["PD", "ST", "MF2", "KF", "S13", "S14", "S15"],
+    "resolved_samples": [
+      {"provider": "PD", "http": 200, "host": "pixeldrain.com"},
+      {"provider": "ST", "http": 200, "host": "streamtape.com"},
+      {"provider": "MF2", "http": 200, "host": "www.mediafire.com"},
+      {"provider": "KF", "http": 502, "note": "Provider currently requires CAPTCHA"}
+    ]
+  },
+  "device_runtime_tested": false,
+  "note": "The native client displays every server returned by the gateway. Individual third-party provider availability can change independently."
+}
