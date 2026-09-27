@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Reproducible Pro integration. Does not alter any supplied host DEX or native code."""
-import os, argparse, hashlib, importlib.util, json, pathlib, re, shutil, struct, subprocess, zipfile, xml.etree.ElementTree as E
+import os, argparse, hashlib, importlib.util, io, json, pathlib, re, shutil, struct, subprocess, zipfile, xml.etree.ElementTree as E
 from build_atheer import public, signature, OMITTED
 ROOT=pathlib.Path(__file__).resolve().parent.parent
 spec=importlib.util.spec_from_file_location('packing',ROOT/'build.py');packing=importlib.util.module_from_spec(spec);spec.loader.exec_module(packing)
@@ -16,9 +16,16 @@ def main():
  assert sha(a.host)=='2ca1fe7d3062f9fc5a3f95f2c8d3cc6ec199a2d052b6277f7d796ba9dc869a6c','Unexpected Pro base'
  assert sha(a.module)=='d7c47e5ac6df298db31fbc06f7f0477bc2b44efa79e3fe8a5cc1b9b08e9ec44d','Unexpected recovered AWR module'
  with zipfile.ZipFile(a.android_jar) as z:assert 'java/lang/ClassLoader.class' in z.namelist(),'Use official Android SDK boot classpath'
- b=ROOT/'build/pro';b.mkdir(parents=True,exist_ok=True);h=b/'host';m=b/'module';cp=str(a.compiler.parent/'*')
+ b=ROOT/'build/pro';b.mkdir(parents=True,exist_ok=True);h=b/'host';m=b/'module';inner=b/'inner';cp=str(a.compiler.parent/'*')
+ embedded_original=b/'base-original.apk'
+ with zipfile.ZipFile(a.host) as z:embedded_original.write_bytes(z.read('assets/base.apk'))
  for kind,inp,dest in [('host',a.host,h),('module',a.module,m)]:run('java','-jar',a.apktool,'d','--no-src','-f','-o',dest,inp,log=b/(kind+'-decode.log'))
- orig_resources={kind:public(dest) for kind,dest in [('host',h),('module',m)]}
+ run('java','-jar',a.apktool,'d','--no-src','-f','-o',inner,embedded_original,log=b/'inner-decode.log')
+ # apktool 2.11 decodes this single vector as an empty file from the compact
+ # inner payload. Its public table is identical to the outer copy, so restore
+ # the byte-equivalent named vector before recompiling the redirected resources.
+ if (inner/'res/drawable/ic_download.xml').stat().st_size==0:shutil.copyfile(h/'res/drawable/ic_download.xml',inner/'res/drawable/ic_download.xml')
+ orig_resources={kind:public(dest) for kind,dest in [('host',h),('module',m),('inner',inner)]}
  hr=E.parse(h/'AndroidManifest.xml').getroot().find('application');mr=E.parse(m/'AndroidManifest.xml').getroot().find('application')
  for kind,app in [('host',hr),('module',mr)]:
   service=next(n for n in app.findall('service') if n.get(A+'name')=='com.google.firebase.components.ComponentDiscoveryService')
@@ -34,10 +41,10 @@ def main():
   rows.append(name+'='+theme[2:])
  rows_path=b/'activities.txt';rows_path.write_text('\n'.join(rows)+'\n')
  assert len(rows)==117,len(rows)
- run('python3',ROOT/'tooling/pro_resources.py',h,m,ROOT/'branding/emmy-logo.webp',rows_path,log=b/'branding.json')
+ run('python3',ROOT/'tooling/pro_resources.py',h,m,inner,ROOT/'branding/emmy-logo.webp',rows_path,log=b/'branding.json')
  host_dex=b/'host-dex'
  run('java','-cp',cp,ROOT/'tooling/ProHostPolicy.java',a.host,host_dex,log=b/'host-policy.json')
- for kind,dest in [('host',h),('module',m)]:
+ for kind,dest in [('host',h),('module',m),('inner',inner)]:
   run('java','-jar',a.apktool,'b',dest,'-o',b/(kind+'-resources.apk'),log=b/(kind+'-resources.log'))
   checked=b/(kind+'-checked')
   run('java','-jar',a.apktool,'d','--no-src','--no-assets','-f','-o',checked,b/(kind+'-resources.apk'),log=b/(kind+'-checked.log'))
@@ -53,6 +60,23 @@ def main():
    if n=='resources.arsc' or n.startswith('res/'):rz.writestr(n,compiled.read(n))
  with zipfile.ZipFile(code) as z:assert all(re.fullmatch(r'classes\d*\.dex',n) for n in z.namelist());dex_count=len(z.namelist())
  with zipfile.ZipFile(resources) as z:assert 'AndroidManifest.xml' not in z.namelist() and not any(re.fullmatch(r'classes\d*\.dex',n) for n in z.namelist())
+
+ # The Pro shell redirects AssetManager to its extracted assets/base.apk. Put
+ # the DEX/resource feature archives in that actual runtime resource bundle.
+ # This is still a DEX layer, not an installable/launchable feature APK.
+ embedded_payload=b/'base-payload.apk';inner_extra={'assets/atheer/source-code.jar':code,'assets/atheer/source-resources.pack':resources}
+ with zipfile.ZipFile(embedded_original) as source,zipfile.ZipFile(b/'inner-resources.apk') as compiled,zipfile.ZipFile(embedded_payload,'w') as out:
+  replaced={n for n in compiled.namelist() if n.startswith('res/') or n=='resources.arsc'}
+  names=set(source.namelist())|replaced|set(inner_extra)
+  for n in sorted(names):
+   if n in inner_extra:data=inner_extra[n].read_bytes();compression=zipfile.ZIP_STORED
+   elif n in replaced:data=compiled.read(n);compression=compiled.getinfo(n).compress_type
+   else:data=source.read(n);compression=source.getinfo(n).compress_type
+   packing.write_aligned(out,n,data,compression)
+ with zipfile.ZipFile(embedded_payload) as payload:
+  assert payload.testzip() is None
+  assert payload.read('assets/atheer/source-code.jar')==code.read_bytes()
+  assert payload.read('assets/atheer/source-resources.pack')==resources.read_bytes()
  generated=b/'generated/com/atheer/shell';generated.mkdir(parents=True,exist_ok=True)
  (generated/'ModuleConfig.java').write_text('package com.atheer.shell; public final class ModuleConfig { public static final String SHA256="'+sha(code)+'"; public static final String RESOURCE_SHA256="'+sha(resources)+'"; public static final int DEFAULT_THEME='+ids[('style','AppTheme')]+'; public static final String[] ACTIVITIES={'+','.join(json.dumps(r) for r in rows)+'};}\n')
  classes=b/'classes';shutil.rmtree(classes,ignore_errors=True);classes.mkdir()
@@ -65,7 +89,7 @@ def main():
  dex=b/'dex';dex.mkdir(exist_ok=True)
  run('java','-cp',a.compiler,'com.android.tools.r8.D8','--min-api','28','--lib',a.android_jar,'--output',dex,jar,log=b/'d8.log')
  assert len(list(dex.glob('*.dex')))==1
- unsigned=b/'unsigned.apk';extra={'classes4.dex':dex/'classes.dex','assets/atheer/source-code.jar':code,'assets/atheer/source-resources.pack':resources}
+ unsigned=b/'unsigned.apk';extra={'classes4.dex':dex/'classes.dex','assets/base.apk':embedded_payload}
  with zipfile.ZipFile(a.host) as source,zipfile.ZipFile(b/'host-resources.apk') as compiled,zipfile.ZipFile(unsigned,'w') as out:
   replaced={n for n in compiled.namelist() if n.startswith('res/') or n in ['resources.arsc','AndroidManifest.xml']}
   names={n for n in source.namelist() if not signature(n)}|replaced|set(extra)
@@ -81,12 +105,18 @@ def main():
  with zipfile.ZipFile(a.host) as before,zipfile.ZipFile(a.output) as after, a.output.open('rb') as raw:
   assert after.testzip() is None
   for n in before.namelist():
-   if (re.fullmatch(r'classes\d*\.dex',n) and not (host_dex/n).is_file()) or n.startswith(('lib/','assets/')):
+   if (re.fullmatch(r'classes\d*\.dex',n) and not (host_dex/n).is_file()) or n.startswith('lib/') or (n.startswith('assets/') and n!='assets/base.apk'):
     assert before.read(n)==after.read(n),n;unchanged.append(n)
+  assert 'assets/atheer/source-code.jar' not in after.namelist()
+  assert 'assets/atheer/source-resources.pack' not in after.namelist()
+  with zipfile.ZipFile(io.BytesIO(after.read('assets/base.apk'))) as payload:
+   assert payload.testzip() is None
+   assert payload.read('assets/atheer/source-code.jar')==code.read_bytes()
+   assert payload.read('assets/atheer/source-resources.pack')==resources.read_bytes()
   for i in after.infolist():
    if i.compress_type==zipfile.ZIP_STORED:
     raw.seek(i.header_offset+26);nl,el=struct.unpack('<HH',raw.read(4));offset=i.header_offset+30+nl+el
     assert offset%(16384 if i.filename.startswith('lib/') and i.filename.endswith('.so') else 4)==0,i.filename
- report={'apk_sha256':sha(a.output),'apk_bytes':a.output.stat().st_size,'base_sha256':sha(a.host),'recovered_feature_sha256':sha(a.module),'unchanged_host_entries':unchanged,'source_activities':len(rows),'feature_dex_files':dex_count,'feature_code_sha256':sha(code),'feature_resources_sha256':sha(resources),'no_feature_apk':True,'preserved_resource_ids':True,'host_factory_superclass':'com.pandora.core.AppFactory','update_available_forced_false':True,'mandatory_update_forced_false':True,'outer_apk_feature_fallback':True,'signatures_v1_v2_v3_verified':True,'requires_android':9,'runtime_device_tested':False,'catalogue_playback_verified':False,'brand':'إيمي / EMMY'}
+ report={'apk_sha256':sha(a.output),'apk_bytes':a.output.stat().st_size,'base_sha256':sha(a.host),'embedded_base_original_sha256':sha(embedded_original),'embedded_base_payload_sha256':sha(embedded_payload),'recovered_feature_sha256':sha(a.module),'unchanged_host_entries':unchanged,'source_activities':len(rows),'feature_dex_files':dex_count,'feature_code_sha256':sha(code),'feature_resources_sha256':sha(resources),'no_feature_apk':True,'feature_archives_inside_redirected_payload':True,'outer_feature_archives':False,'preserved_resource_ids':True,'restyled_outer_and_redirected_inner_resources':True,'host_factory_superclass':'com.pandora.core.AppFactory','update_available_forced_false':True,'mandatory_update_forced_false':True,'signatures_v1_v2_v3_verified':True,'requires_android':9,'runtime_device_tested':False,'catalogue_playback_verified':False,'brand':'إيمي / EMMY','version_code':18,'version_name':'1.1.5-emmy.3'}
  (ROOT/'artifacts/atheer-pro-build.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');print(json.dumps(report,ensure_ascii=False,indent=2))
 if __name__=='__main__':main()

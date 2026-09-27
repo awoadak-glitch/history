@@ -85,11 +85,7 @@ public final class ModuleRuntime {
         }
         return dest;
     }
-    /**
-     * The supplied Pro shell redirects the process AssetManager to assets/base.apk.
-     * Feature files belong to the installed outer package, so read that ZIP directly
-     * using the path captured by the owner's existing Pandora AppFactory.
-     */
+    /** The v3 build stores these archives in the redirected assets/base.apk itself. */
     private static InputStream openBundledFeature(String name)throws Exception{
         try{return host.getAssets().open("atheer/"+name);}
         catch(FileNotFoundException redirected){
