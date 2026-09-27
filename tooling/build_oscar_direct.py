@@ -49,13 +49,14 @@ def patch_manifest(decoded):
         raise ValueError("Missing application node")
     app.set(A+"appComponentFactory","com.atheer.shell.MergeFactory")
     names={node.get(A+"name") for node in app.findall("activity")}
-    if "awr.witcher.DramaActivity" not in names:
-        E.SubElement(app,"activity",{
-            A+"name":"awr.witcher.DramaActivity",
-            A+"exported":"false",
-            A+"theme":"@style/Theme.RamadanSeries",
-            A+"windowSoftInputMode":"adjustResize",
-        })
+    for activity in ["awr.witcher.DramaActivity","awr.witcher.AnimeActivity"]:
+        if activity not in names:
+            E.SubElement(app,"activity",{
+                A+"name":activity,
+                A+"exported":"false",
+                A+"theme":"@style/Theme.RamadanSeries",
+                A+"windowSoftInputMode":"adjustResize",
+            })
     queries=root.find("queries")
     if queries is None:
         queries=E.SubElement(root,"queries")
@@ -72,8 +73,8 @@ def patch_manifest(decoded):
     tree.write(manifest,encoding="utf-8",xml_declaration=True)
     yml=decoded/"apktool.yml"
     value=yml.read_text()
-    value=re.sub(r"(versionCode:\s*)\d+",r"\g<1>19",value)
-    value=re.sub(r"(versionName:\s*).+",r"\g<1>1.1.5-direct.1",value)
+    value=re.sub(r"(versionCode:\s*)\d+",r"\g<1>20",value)
+    value=re.sub(r"(versionName:\s*).+",r"\g<1>1.1.5-direct.2",value)
     yml.write_text(value)
 
 def generate_sources(build):
@@ -209,8 +210,8 @@ def main():
         "apk_sha256":sha(args.output),
         "apk_bytes":args.output.stat().st_size,
         "package":"com.drama.mp4",
-        "version_code":19,
-        "version_name":"1.1.5-direct.1",
+        "version_code":20,
+        "version_name":"1.1.5-direct.2",
         "architecture":"direct DEX/classes in the Oscar Pro process",
         "original_outer_dex_unchanged":["classes.dex","classes2.dex","classes3.dex"],
         "direct_ui_dex":"classes4.dex",
@@ -223,7 +224,10 @@ def main():
         "host_original_entries_unchanged":len(unchanged),
         "stored_entries_alignment_verified":aligned,
         "mx_player_package":"com.mxtech.videoplayer.ad",
-        "source_tabs":["التبويبات الرئيسية","المسلسلات","الأفلام","القنوات"],
+        "source_tabs":["الرئيسية","الأنمي","المسلسلات","الأفلام","القنوات"],
+        "anime_source":"Anime Witcher Firestore/Algolia gateway",
+        "anime_gateway":"https://awr-stream-web.vercel.app/api/",
+        "anime_features":["home","catalogues","search","details","episodes","quality groups","server resolution","MX Player","downloads","favorites","history","news"],
         "hitv_present":False,
         "signatures_v1_v2_v3_verified":True,
         "runtime_device_tested":False,

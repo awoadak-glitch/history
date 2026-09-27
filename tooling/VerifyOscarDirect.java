@@ -89,6 +89,8 @@ public class VerifyOscarDirect {
                 "Lcom/atheer/shell/MergeFactory;",
                 "Lcom/atheer/shell/DirectSources;",
                 "Lcom/atheer/shell/Host;",
+                "Lawr/witcher/AnimeActivity;",
+                "Lawr/witcher/AnimeApi;",
                 "Lawr/witcher/DramaActivity;",
                 "Lawr/witcher/Media;",
                 "Lawr/witcher/EmbedPlayer;",
@@ -107,7 +109,7 @@ public class VerifyOscarDirect {
         int legacy=0;
         for(String type:direct.classes.keySet())if(type.startsWith("Lawr/legacy/"))legacy++;
         if(legacy<1000)throw new IllegalStateException("AWR extractor graph is incomplete: "+legacy);
-        boolean mx=false;
+        boolean mx=false,animeGateway=false;
         Set<String> forbiddenTypes=new HashSet<>(List.of("Ldalvik/system/DexClassLoader;","Ldalvik/system/PathClassLoader;"));
         for(ClassDef item:direct.byEntry.get("classes4.dex")) {
             String lower=item.getType().toLowerCase();
@@ -126,12 +128,14 @@ public class VerifyOscarDirect {
                 if(reference instanceof StringReference) {
                     String value=((StringReference)reference).getString();
                     if(value.equals("com.mxtech.videoplayer.ad"))mx=true;
+                    if(value.equals("https://awr-stream-web.vercel.app/api/"))animeGateway=true;
                     if(value.endsWith(".apk")||value.contains("source-code.jar")||value.contains("source-resources.pack"))
                         throw new IllegalStateException("Runtime feature payload reference: "+value);
                 }
             }
         }
         if(!mx)throw new IllegalStateException("MX Player package is absent");
+        if(!animeGateway)throw new IllegalStateException("Anime Witcher gateway is absent");
         System.out.println("{\"outer_dex_files\":"+direct.byEntry.size()
                 +",\"original_host_classes\":"+original.classes.size()
                 +",\"direct_feature_classes\":"+direct.byEntry.get("classes4.dex").size()
@@ -139,6 +143,7 @@ public class VerifyOscarDirect {
                 +",\"assets_base_apk_unchanged\":true"
                 +",\"no_added_nested_apk\":true"
                 +",\"no_runtime_dex_loader\":true"
-                +",\"mx_player\":true}");
+                +",\"mx_player\":true"
+                +",\"anime_witcher_gateway\":true}");
     }
 }
