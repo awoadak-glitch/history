@@ -78,12 +78,31 @@ public final class ModuleRuntime {
         File dest=new File(root,name);
         if(!dest.isFile()||!digest(dest).equals(checksum)){
             if(dest.exists()&&!dest.delete())throw new IOException("Stale feature file");
-            try(InputStream in=host.getAssets().open("atheer/"+name);FileOutputStream out=new FileOutputStream(dest)){
+            try(InputStream in=openBundledFeature(name);FileOutputStream out=new FileOutputStream(dest)){
                 if(!dest.setReadOnly())throw new IOException("Read-only feature file");copy(in,out);
             }
             if(!digest(dest).equals(checksum)){dest.delete();throw new IOException("Feature checksum");}
         }
         return dest;
+    }
+    /**
+     * The supplied Pro shell redirects the process AssetManager to assets/base.apk.
+     * Feature files belong to the installed outer package, so read that ZIP directly
+     * using the path captured by the owner's existing Pandora AppFactory.
+     */
+    private static InputStream openBundledFeature(String name)throws Exception{
+        try{return host.getAssets().open("atheer/"+name);}
+        catch(FileNotFoundException redirected){
+            Class<?> data=Class.forName("com.pandora.core.AppFactory$DATA");
+            String outer=(String)data.getField("apkPath").get(null);
+            if(outer==null||outer.isEmpty())throw redirected;
+            final ZipFile zip=new ZipFile(outer);
+            ZipEntry entry=zip.getEntry("assets/atheer/"+name);
+            if(entry==null){zip.close();throw redirected;}
+            return new FilterInputStream(zip.getInputStream(entry)){
+                @Override public void close()throws IOException{try{super.close();}finally{zip.close();}}
+            };
+        }
     }
     static synchronized void boot()throws Exception{
         prepare();if(guest!=null||booting)return;booting=true;

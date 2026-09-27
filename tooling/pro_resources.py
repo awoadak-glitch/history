@@ -14,6 +14,14 @@ def prepare(host,module,logo,rows):
    for x in tree.getroot():
     if x.get('name') in palette:x.text=palette[x.get('name')]
    save(tree,p)
+  for p in root.glob('res/values*/strings.xml'):
+   tree=E.parse(p);edited=False
+   for x in tree.getroot():
+    if x.get('name')=='app_name':x.text='إيمي';edited=True
+    elif x.text:
+     value=x.text.replace('أثير','إيمي').replace('Atheer','EMMY').replace('Oscar TV','EMMY').replace('أوسكار تيفي','إيمي').replace('أوسكار تي في','إيمي').replace('أوسكار','إيمي')
+     if value!=x.text:x.text=value;edited=True
+   if edited:save(tree,p)
   for p in root.glob('res/layout*/*.xml'):
    tree=E.parse(p);edited=False
    for x in tree.iter():
@@ -28,7 +36,13 @@ def prepare(host,module,logo,rows):
  top.set(A+'background','#ef0d111b');top.set(A+'paddingTop','4dp')
  for i,x in enumerate(list(top)):
   if x.tag=='View' and x.get(A+'layout_weight')=='1.0':
-   top.remove(x);top.insert(i,E.Element('TextView',{A+'text':'أثير',A+'textSize':'24sp',A+'textStyle':'bold',A+'textColor':'@color/red_primary',A+'fontFamily':'@font/cairo',A+'gravity':'center',A+'layout_width':'0dp',A+'layout_height':'48dp',A+'layout_weight':'1'}));break
+   top.remove(x);top.insert(i,E.Element('TextView',{A+'text':'إيمي',A+'textSize':'24sp',A+'textStyle':'bold',A+'textColor':'@color/red_primary',A+'fontFamily':'@font/cairo',A+'gravity':'center',A+'layout_width':'0dp',A+'layout_height':'48dp',A+'layout_weight':'1'}));break
+ save(tree,p)
+ p=host/'res/layout/activity_splash.xml';tree=E.parse(p)
+ for x in tree.iter():
+  if x.get(A+'id')=='@id/tvAppName':x.set(A+'text','إيمي')
+  elif x.get(A+'id') in ['@id/tvSubtitle','@id/tvBadge']:
+   x.set(A+'text','');x.set(A+'visibility','gone')
  save(tree,p)
  p=host/'res/layout/item_home_banner.xml';tree=E.parse(p);root=tree.getroot()
  root.set(A+'layout_marginStart','14dp');root.set(A+'layout_marginEnd','14dp');root.set(A+'layout_marginTop','72dp');root.set(A+'layout_marginBottom','10dp')
@@ -50,7 +64,7 @@ def prepare(host,module,logo,rows):
  # Add the isolated activities with system themes; the guest overrides translate them.
  t=E.parse(host/'AndroidManifest.xml');r=t.getroot();app=r.find('application');g=E.parse(module/'AndroidManifest.xml').getroot();ga=g.find('application')
  assert app.get(A+'appComponentFactory')=='com.pandora.core.AppFactory'
- app.set(A+'appComponentFactory','com.atheer.shell.MergeFactory');app.set(A+'label','أثير');app.set(A+'usesCleartextTraffic','true')
+ app.set(A+'appComponentFactory','com.atheer.shell.MergeFactory');app.set(A+'label','إيمي');app.set(A+'usesCleartextTraffic','true')
  known={n.get(A+'name') for n in app};theme_map=dict(line.split('=') for line in rows.read_text().splitlines())
  for n in ga.findall('activity'):
   if n.get(A+'name') not in theme_map or n.get(A+'name') in known:continue
@@ -72,6 +86,6 @@ def prepare(host,module,logo,rows):
  service=E.SubElement(app,'service',{A+'name':'com.atheer.shell.SourceDiscoveryService',A+'exported':'false',A+'directBootAware':'true'})
  for n in gs:service.append(copy.deepcopy(n))
  save(t,host/'AndroidManifest.xml')
- y=host/'apktool.yml';s=y.read_text();s=re.sub(r'minSdkVersion: [^\n]+','minSdkVersion: 28',s);s=re.sub(r'versionCode: [^\n]+','versionCode: 16',s);s=re.sub(r'versionName: [^\n]+','versionName: 1.1.5-atheer.1',s);y.write_text(s)
- print(json.dumps({'activities':len(theme_map),'host_factory_superclass_preserved':True,'brand':'Atheer'},ensure_ascii=False))
+ y=host/'apktool.yml';s=y.read_text();s=re.sub(r'minSdkVersion: [^\n]+','minSdkVersion: 28',s);s=re.sub(r'versionCode: [^\n]+','versionCode: 17',s);s=re.sub(r'versionName: [^\n]+','versionName: 1.1.5-emmy.2',s);y.write_text(s)
+ print(json.dumps({'activities':len(theme_map),'host_factory_superclass_preserved':True,'brand':'EMMY'},ensure_ascii=False))
 if __name__=='__main__':prepare(*[pathlib.Path(p) for p in sys.argv[1:]])

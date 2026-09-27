@@ -19,11 +19,21 @@ public class VerifyPro {
  static byte[] dump(ClassDef c)throws Exception{MemoryDataStore o=new MemoryDataStore();DexPool.writeTo(o,new ImmutableDexFile(Opcodes.getDefault(),List.of(c)));return o.getData();}
  public static void main(String[] a)throws Exception{
   Map<String,ClassDef> before=read(a[0]),after=read(a[1]),guest=read(a[2]),feature=read(a[3]);
+  int unchangedHostDex=0,policyDex=0;
   try(ZipFile old=new ZipFile(a[0]);ZipFile next=new ZipFile(a[1])){
-   for(ZipEntry e:Collections.list(old.entries()))if(e.getName().matches("classes\\d*\\.dex"))
-    if(!Arrays.equals(old.getInputStream(e).readAllBytes(),next.getInputStream(next.getEntry(e.getName())).readAllBytes()))throw new IllegalStateException("Host DEX changed");
+   for(ZipEntry e:Collections.list(old.entries()))if(e.getName().matches("classes\\d*\\.dex")){
+    boolean same=Arrays.equals(old.getInputStream(e).readAllBytes(),next.getInputStream(next.getEntry(e.getName())).readAllBytes());
+    if(same)unchangedHostDex++;else if(e.getName().equals("classes.dex"))policyDex++;else throw new IllegalStateException("Unexpected host DEX change "+e.getName());
+   }
   }
   if(!after.keySet().containsAll(before.keySet()))throw new IllegalStateException("Missing host classes");
+  if(policyDex!=1)throw new IllegalStateException("Missing isolated update-policy DEX change");
+  ClassDef update=after.get("Lcom/drama/mp4/data/model/AppUpdate;");int disabled=0;
+  for(Method method:update.getMethods())if(method.getName().equals("getUpdateAvailable")||method.getName().equals("isMandatory")){
+   List<Instruction> instructions=new ArrayList<>();for(Instruction instruction:method.getImplementation().getInstructions())instructions.add(instruction);
+   if(instructions.size()==2&&instructions.get(0).getOpcode()==Opcode.CONST_4&&instructions.get(1).getOpcode()==Opcode.RETURN)disabled++;
+  }
+  if(disabled!=2)throw new IllegalStateException("Update policy is not disabled");
   Set<String> changedDexClasses=new HashSet<>();int identicalDex=0;
   try(ZipFile old=new ZipFile(a[2]);ZipFile next=new ZipFile(a[3])){
    for(ZipEntry e:Collections.list(old.entries()))if(e.getName().matches("classes\\d*\\.dex")){
@@ -69,6 +79,6 @@ public class VerifyPro {
    if(r.getDefiningClass().equals("Lawr/witcher/OscarExperience;")&&r.getName().equals("open"))throw new IllegalStateException("Old Oscar bridge still linked");
   }
   if(!returns)throw new IllegalStateException("No internal return route");
-  System.out.println("{\"host_classes_unchanged\":"+before.size()+",\"feature_classes_preserved\":"+feature.size()+",\"feature_dex_unchanged\":"+identicalDex+",\"presentation_classes_changed\":"+brandChanged+",\"original_feature_native_methods\":"+natives+",\"activity_adapters\":"+adapters+",\"shell_classes\":"+shell+",\"internal_return_route\":true,\"android_runtime_tested\":false}");
+  System.out.println("{\"host_classes_preserved\":"+before.size()+",\"unchanged_host_dex_files\":"+unchangedHostDex+",\"update_policy_methods_disabled\":"+disabled+",\"feature_classes_preserved\":"+feature.size()+",\"feature_dex_unchanged\":"+identicalDex+",\"presentation_classes_changed\":"+brandChanged+",\"original_feature_native_methods\":"+natives+",\"activity_adapters\":"+adapters+",\"shell_classes\":"+shell+",\"internal_return_route\":true,\"android_runtime_tested\":false}");
  }
 }

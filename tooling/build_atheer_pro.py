@@ -34,7 +34,9 @@ def main():
   rows.append(name+'='+theme[2:])
  rows_path=b/'activities.txt';rows_path.write_text('\n'.join(rows)+'\n')
  assert len(rows)==117,len(rows)
- run('python3',ROOT/'tooling/pro_resources.py',h,m,ROOT/'branding/atheer-pro-logo.webp',rows_path,log=b/'branding.json')
+ run('python3',ROOT/'tooling/pro_resources.py',h,m,ROOT/'branding/emmy-logo.webp',rows_path,log=b/'branding.json')
+ host_dex=b/'host-dex'
+ run('java','-cp',cp,ROOT/'tooling/ProHostPolicy.java',a.host,host_dex,log=b/'host-policy.json')
  for kind,dest in [('host',h),('module',m)]:
   run('java','-jar',a.apktool,'b',dest,'-o',b/(kind+'-resources.apk'),log=b/(kind+'-resources.log'))
   checked=b/(kind+'-checked')
@@ -69,6 +71,7 @@ def main():
   names={n for n in source.namelist() if not signature(n)}|replaced|set(extra)
   for n in sorted(names):
    if n in extra:data=extra[n].read_bytes();compression=zipfile.ZIP_STORED
+   elif (host_dex/n).is_file():data=(host_dex/n).read_bytes();compression=zipfile.ZIP_DEFLATED
    elif n in replaced:data=compiled.read(n);compression=compiled.getinfo(n).compress_type
    else:data=source.read(n);compression=source.getinfo(n).compress_type
    packing.write_aligned(out,n,data,compression)
@@ -78,12 +81,12 @@ def main():
  with zipfile.ZipFile(a.host) as before,zipfile.ZipFile(a.output) as after, a.output.open('rb') as raw:
   assert after.testzip() is None
   for n in before.namelist():
-   if re.fullmatch(r'classes\d*\.dex',n) or n.startswith(('lib/','assets/')):
+   if (re.fullmatch(r'classes\d*\.dex',n) and not (host_dex/n).is_file()) or n.startswith(('lib/','assets/')):
     assert before.read(n)==after.read(n),n;unchanged.append(n)
   for i in after.infolist():
    if i.compress_type==zipfile.ZIP_STORED:
     raw.seek(i.header_offset+26);nl,el=struct.unpack('<HH',raw.read(4));offset=i.header_offset+30+nl+el
     assert offset%(16384 if i.filename.startswith('lib/') and i.filename.endswith('.so') else 4)==0,i.filename
- report={'apk_sha256':sha(a.output),'apk_bytes':a.output.stat().st_size,'base_sha256':sha(a.host),'recovered_feature_sha256':sha(a.module),'unchanged_host_entries':unchanged,'source_activities':len(rows),'feature_dex_files':dex_count,'feature_code_sha256':sha(code),'feature_resources_sha256':sha(resources),'no_feature_apk':True,'preserved_resource_ids':True,'host_factory_superclass':'com.pandora.core.AppFactory','signatures_v1_v2_v3_verified':True,'requires_android':9,'runtime_device_tested':False,'catalogue_playback_verified':False,'brand':'أثير / ATHEER'}
+ report={'apk_sha256':sha(a.output),'apk_bytes':a.output.stat().st_size,'base_sha256':sha(a.host),'recovered_feature_sha256':sha(a.module),'unchanged_host_entries':unchanged,'source_activities':len(rows),'feature_dex_files':dex_count,'feature_code_sha256':sha(code),'feature_resources_sha256':sha(resources),'no_feature_apk':True,'preserved_resource_ids':True,'host_factory_superclass':'com.pandora.core.AppFactory','update_available_forced_false':True,'mandatory_update_forced_false':True,'outer_apk_feature_fallback':True,'signatures_v1_v2_v3_verified':True,'requires_android':9,'runtime_device_tested':False,'catalogue_playback_verified':False,'brand':'إيمي / EMMY'}
  (ROOT/'artifacts/atheer-pro-build.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');print(json.dumps(report,ensure_ascii=False,indent=2))
 if __name__=='__main__':main()

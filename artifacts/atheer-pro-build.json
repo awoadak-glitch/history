@@ -1,6 +1,6 @@
 {
-  "apk_sha256": "5da2de485b3d202964c37d5b51dc529e2981daafad60d4f41ecea61032fb2fb1",
-  "apk_bytes": 64820218,
+  "apk_sha256": "e7f0976fc69a2f2c56b4b28ecf9675258203dd31beae4ce0da9fe7541ba08180",
+  "apk_bytes": 64849406,
   "base_sha256": "2ca1fe7d3062f9fc5a3f95f2c8d3cc6ec199a2d052b6277f7d796ba9dc869a6c",
   "recovered_feature_sha256": "d7c47e5ac6df298db31fbc06f7f0477bc2b44efa79e3fe8a5cc1b9b08e9ec44d",
   "unchanged_host_entries": [
@@ -13,7 +13,6 @@
     "lib/armeabi-v7a/libiron_fingerprint.so",
     "lib/x86_64/libiron_fingerprint.so",
     "lib/arm64-v8a/libiron_fingerprint.so",
-    "classes.dex",
     "classes2.dex",
     "lib/arm64-v8a/libTheeInvisibleMan.so",
     "lib/x86_64/libTheeInvisibleMan.so",
@@ -24,14 +23,17 @@
   ],
   "source_activities": 117,
   "feature_dex_files": 29,
-  "feature_code_sha256": "6ab1f1104add722503ae09e8c907645c3b944eebf00a08bd3c44f105f33065bd",
-  "feature_resources_sha256": "57bf7f3a6b8ce1a9d1f9303dd3f5c3626e82fa9c3946a3cf1fe393f2549c34df",
+  "feature_code_sha256": "2e93ee3f4f5f4ce771cc15efed0f19a0b10cae11a377a4e378420575e3c5c307",
+  "feature_resources_sha256": "489cfe986c4bb20dfa150c77c254bc3cdebd83eed1205dad0375e5c83e14180b",
   "no_feature_apk": true,
   "preserved_resource_ids": true,
   "host_factory_superclass": "com.pandora.core.AppFactory",
+  "update_available_forced_false": true,
+  "mandatory_update_forced_false": true,
+  "outer_apk_feature_fallback": true,
   "signatures_v1_v2_v3_verified": true,
   "requires_android": 9,
   "runtime_device_tested": false,
   "catalogue_playback_verified": false,
-  "brand": "أثير / ATHEER"
+  "brand": "إيمي / EMMY"
 }
