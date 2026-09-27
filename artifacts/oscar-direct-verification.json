@@ -1,0 +1,17 @@
+{
+  "apk_sha256": "d9eff93e7fd9a820afc9d2d0adfb76ebdc83796a3facc4c0b27368dbc5e2c46c",
+  "outer_dex_files": 10,
+  "original_host_classes": 10637,
+  "direct_feature_classes": 112,
+  "relocated_awr_classes": 31706,
+  "original_outer_dex_byte_identical": true,
+  "assets_base_apk_byte_identical": true,
+  "no_added_nested_apk": true,
+  "no_runtime_dex_loader": true,
+  "mx_player_package_verified": true,
+  "zip_integrity_verified": true,
+  "zipalign_verified": true,
+  "signatures_v1_v2_v3_verified": true,
+  "signing_certificate_matches_previous_atheer_pro_build": true,
+  "runtime_device_tested": false
+}

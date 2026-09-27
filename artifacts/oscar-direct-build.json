@@ -1,0 +1,40 @@
+{
+  "input_sha256": "2ca1fe7d3062f9fc5a3f95f2c8d3cc6ec199a2d052b6277f7d796ba9dc869a6c",
+  "apk_sha256": "d9eff93e7fd9a820afc9d2d0adfb76ebdc83796a3facc4c0b27368dbc5e2c46c",
+  "apk_bytes": 31003190,
+  "package": "com.drama.mp4",
+  "version_code": 19,
+  "version_name": "1.1.5-direct.1",
+  "architecture": "direct DEX/classes in the Oscar Pro process",
+  "original_outer_dex_unchanged": [
+    "classes.dex",
+    "classes2.dex",
+    "classes3.dex"
+  ],
+  "direct_ui_dex": "classes4.dex",
+  "relocated_awr_extractor_dex": [
+    "classes5.dex",
+    "classes6.dex",
+    "classes7.dex",
+    "classes8.dex",
+    "classes9.dex",
+    "classes10.dex"
+  ],
+  "assets_base_apk_sha256": "e15d2de82257e55a5ea7ffef7a78ec205caf0c02ddfa7b80673dba68006226d7",
+  "assets_base_apk_byte_identical": true,
+  "no_added_nested_apk": true,
+  "no_feature_archive_or_runtime_loader": true,
+  "host_resources_unchanged": true,
+  "host_original_entries_unchanged": 1308,
+  "stored_entries_alignment_verified": 229,
+  "mx_player_package": "com.mxtech.videoplayer.ad",
+  "source_tabs": [
+    "التبويبات الرئيسية",
+    "المسلسلات",
+    "الأفلام",
+    "القنوات"
+  ],
+  "hitv_present": false,
+  "signatures_v1_v2_v3_verified": true,
+  "runtime_device_tested": false
+}
