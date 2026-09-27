@@ -26,6 +26,17 @@ EXPECTED_EXTRACTORS="8d8fa81d9255060ca6a38a74806114ca272ca036fc29af21d2017aadf2f
 API_BASE="https://dwapp.arabypros.com/api/"
 API_SUFFIX="4F5A9C3D9A86FA54EACEDDD635185/d506abfd-9fe2-4b71-b979-feff21bcad13/"
 EXTRACTOR_ENTRIES=[f"classes{i}.dex" for i in range(23,29)]
+APP_NAME="PALMA"
+VERSION_CODE=21
+VERSION_NAME="1.1.5-direct.3"
+BRAND_FILES=[
+    "res/drawable/splash_logo.png",
+    *[
+        f"res/mipmap-{density}/{name}"
+        for density in ["mdpi","hdpi","xhdpi","xxhdpi","xxxhdpi"]
+        for name in ["ic_launcher.png","ic_launcher_round.png"]
+    ],
+]
 
 def sha_bytes(value):
     return hashlib.sha256(value).hexdigest()
@@ -73,9 +84,29 @@ def patch_manifest(decoded):
     tree.write(manifest,encoding="utf-8",xml_declaration=True)
     yml=decoded/"apktool.yml"
     value=yml.read_text()
-    value=re.sub(r"(versionCode:\s*)\d+",r"\g<1>20",value)
-    value=re.sub(r"(versionName:\s*).+",r"\g<1>1.1.5-direct.2",value)
+    value=re.sub(r"(versionCode:\s*)\d+",rf"\g<1>{VERSION_CODE}",value)
+    value=re.sub(r"(versionName:\s*).+",rf"\g<1>{VERSION_NAME}",value)
     yml.write_text(value)
+
+def patch_brand(decoded):
+    strings=decoded/"res/values/strings.xml"
+    value=strings.read_text()
+    value,count=re.subn(
+        r'(<string name="app_name">).*?(</string>)',
+        rf'\g<1>{APP_NAME}\g<2>',
+        value,
+        count=1,
+    )
+    if count!=1:
+        raise ValueError("Unable to replace app_name")
+    strings.write_text(value)
+    source=ROOT/"branding/palma/android"
+    for relative in BRAND_FILES:
+        target=decoded/relative
+        replacement=source/pathlib.Path(relative).relative_to("res")
+        if not target.exists() or not replacement.exists():
+            raise ValueError(f"Missing brand target: {relative}")
+        shutil.copyfile(replacement,target)
 
 def generate_sources(build):
     generated=build/"generated/awr/witcher"
@@ -122,6 +153,7 @@ def main():
     decoded=build/"host"
     run("java","-jar",args.apktool,"d","--no-src","-f","-o",decoded,args.host,log=build/"decode.log")
     patch_manifest(decoded)
+    patch_brand(decoded)
     manifest_apk=build/"manifest.apk"
     run("java","-jar",args.apktool,"b",decoded,"-o",manifest_apk,log=build/"manifest-build.log")
 
@@ -151,9 +183,15 @@ def main():
     if len(compiled)!=1:
         raise ValueError("Direct feature must compile to exactly one DEX")
 
+    resource_overlays={"resources.arsc",*BRAND_FILES}
     with zipfile.ZipFile(manifest_apk) as rebuilt:
         manifest=rebuilt.read("AndroidManifest.xml")
         manifest_compression=rebuilt.getinfo("AndroidManifest.xml").compress_type
+        missing=[name for name in resource_overlays if name not in rebuilt.namelist()]
+        if missing:
+            raise ValueError("Missing rebuilt brand resources: "+",".join(sorted(missing)))
+        overlay_data={name:rebuilt.read(name) for name in resource_overlays}
+        overlay_compression={name:rebuilt.getinfo(name).compress_type for name in resource_overlays}
     additions={"classes4.dex":compiled[0].read_bytes()}
     with zipfile.ZipFile(args.extractors) as source:
         for target,entry in zip([f"classes{i}.dex" for i in range(5,11)],EXTRACTOR_ENTRIES):
@@ -164,8 +202,8 @@ def main():
         for info in original.infolist():
             if signature(info.filename):
                 continue
-            data=manifest if info.filename=="AndroidManifest.xml" else original.read(info.filename)
-            compression=manifest_compression if info.filename=="AndroidManifest.xml" else info.compress_type
+            data=manifest if info.filename=="AndroidManifest.xml" else overlay_data.get(info.filename,original.read(info.filename))
+            compression=manifest_compression if info.filename=="AndroidManifest.xml" else overlay_compression.get(info.filename,info.compress_type)
             packing.write_aligned(out,info.filename,data,compression)
         for name,data in additions.items():
             packing.write_aligned(out,name,data,zipfile.ZIP_DEFLATED)
@@ -183,13 +221,19 @@ def main():
             raise ValueError("Output ZIP is corrupt")
         if after.read("assets/base.apk")!=before.read("assets/base.apk"):
             raise ValueError("assets/base.apk changed")
+        changed=[]
         for info in before.infolist():
             name=info.filename
             if name=="AndroidManifest.xml" or signature(name):
                 continue
             if before.read(name)!=after.read(name):
-                raise ValueError("Original entry changed: "+name)
+                if name not in resource_overlays:
+                    raise ValueError("Original entry changed: "+name)
+                changed.append(name)
+                continue
             unchanged.append(name)
+        if set(changed)!=resource_overlays:
+            raise ValueError("Unexpected brand overlay set: "+",".join(sorted(changed)))
         added_apks=[name for name in after.namelist() if name.lower().endswith(".apk") and name!="assets/base.apk"]
         if added_apks:
             raise ValueError("Unexpected nested APK: "+",".join(added_apks))
@@ -210,8 +254,9 @@ def main():
         "apk_sha256":sha(args.output),
         "apk_bytes":args.output.stat().st_size,
         "package":"com.drama.mp4",
-        "version_code":20,
-        "version_name":"1.1.5-direct.2",
+        "app_name":APP_NAME,
+        "version_code":VERSION_CODE,
+        "version_name":VERSION_NAME,
         "architecture":"direct DEX/classes in the Oscar Pro process",
         "original_outer_dex_unchanged":["classes.dex","classes2.dex","classes3.dex"],
         "direct_ui_dex":"classes4.dex",
@@ -220,7 +265,8 @@ def main():
         "assets_base_apk_byte_identical":True,
         "no_added_nested_apk":True,
         "no_feature_archive_or_runtime_loader":True,
-        "host_resources_unchanged":True,
+        "host_resources_unchanged":False,
+        "host_resources_changed":sorted(resource_overlays),
         "host_original_entries_unchanged":len(unchanged),
         "stored_entries_alignment_verified":aligned,
         "mx_player_package":"com.mxtech.videoplayer.ad",
