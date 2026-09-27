@@ -10,6 +10,23 @@
 - البناء: `tooling/build_oscar_direct.py`؛ التحقق المستقل: `tooling/VerifyOscarDirect.java`؛ التقرير: `artifacts/oscar-direct-build.json`؛ التفاصيل: `docs/OSCAR-DIRECT-AWR.md`.
 - لا يتوفر هاتف/محاكي هنا، ولذلك لم يثبت اختبار الشبكة والتشغيل الحي على جهاز. لا تعُد إلى معماريات الوحدة المتداخلة أو تعدّل `assets/base.apk` في الجولات التالية.
 
+## سجل مستبدَل — إيمي v3 وإصلاح المسار الداخلي الحقيقي (2026-09-27)
+
+- أكدت صورة تجربة الهاتف أن إصلاح v2 لم يكن كافيًا: `AppFactory.DATA.apkPath` يشير بعد البدء إلى النسخة المستخرجة في مجلد البيانات، لا إلى APK المثبت. لذلك بقي `ModuleRuntime.openBundledFeature()` يفشل بـ`FileNotFoundException`.
+- حُل السبب بنيويًا وقتها: أصبح `source-code.jar` (29 DEX) و`source-resources.pack` داخل `assets/base.apk` نفسه؛ وهو ملف الموارد الذي يعيد غلاف Pro توجيه `AssetManager` إليه. لا تستخدم هذا المسار الآن لأن الطلب الحالي يشترط عدم لمس `assets/base.apk`.
+- أُعيد تصميم الموارد الداخلية الفعلية والخارجية معًا في تلك النسخة بهوية إيمي الليلية الذهبية. حُجبت عبارة/شارة البدء وبقي التحديث الإجباري معطلاً.
+- فحص النسخة: 10,637 صنف مضيف، 86,525 صنف ميزة، 117 نشاطًا مع محولات السياق، و408 طرق native.
+- الناتج السابق `Emmy-World-Sources-v3.apk`، الحجم 68,264,228 بايت، SHA-256 `9a89b046958ee54673d00dca0eb920ddbcc7420f942dfa8c2db0052563015dc1`، `versionCode=18`.
+- التفاصيل التاريخية: `docs/EMMY-V3-INNER-PAYLOAD-FIX.md` والتقارير `artifacts/atheer-pro-build.json` و`artifacts/emmy-v3-dex-audit.json` و`artifacts/emmy-v3-structure.json`.
+
+## سجل مستبدَل — إيمي v2 وإصلاح FileNotFoundException (2026-09-27)
+
+- أصلح `ModuleRuntime` قراءة `source-code.jar` و`source-resources.pack` من APK الخارجي عبر `AppFactory.DATA.apkPath` عندما يعيد غلاف Pro توجيه `AssetManager` إلى `assets/base.apk`.
+- كانت عالم المصادر طبقة DEX/موارد داخل العملية وليست تطبيقًا خارجيًا، لكن المسار اعتمد محمّلًا وقت التشغيل واستُبدل الآن بالـDEX المباشر.
+- عُطل قرارا توفر التحديث وإجباريته في `AppUpdate`، وحُذفت عبارات شاشة البدء. الاسم والشعار السابقان: **إيمي / EMMY**.
+- الناتج السابق `Emmy-World-Sources-v2.apk`، الحجم 64,849,406 بايت، SHA-256 `e7f0976fc69a2f2c56b4b28ecf9675258203dd31beae4ce0da9fe7541ba08180`.
+- شهادة التوقيع كانت مطابقة لنسخة أثير السابقة و`versionCode` كان 17. التفاصيل: `docs/EMMY-V2-FIX.md`.
+
 ## أحدث عمل — نسخة Pro وطبقة DEX داخلية (2026-09-26)
 
 - الأساس الذي أرسله المالك: `Oscar TV_v1.1.5 Pro.apk`؛ قال إنه أصلح قبول تغيير التوقيع فيه. SHA-256 مثبت في `artifacts/atheer-pro-build.json`.
