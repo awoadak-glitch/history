@@ -17,6 +17,18 @@ public final class Media {
     public static void cancelPending(Activity activity){Runnable cancel=PENDING.remove(activity);if(cancel!=null)cancel.run();}
 
     public static void open(Activity activity,JSONObject source,String title,boolean download){
+        openInternal(activity,source,title,download,false);
+    }
+
+    /** Oscar watch links always resolve to a real media URL and then leave through MX Player. */
+    public static void openExternal(Activity activity,String url,String type,String title){
+        JSONObject source=new JSONObject();
+        try{source.put("url",url);source.put("type",type==null?"":type);source.put("host",url);}
+        catch(JSONException error){alert(activity,"تعذر تجهيز بيانات السيرفر.");return;}
+        openInternal(activity,source,title,false,true);
+    }
+
+    private static void openInternal(Activity activity,JSONObject source,String title,boolean download,boolean forceExternal){
         if(!Api.publicAccess(source.optString("premium"))){alert(activity,"هذا المصدر يحتاج إلى حساب أو اشتراك.");return;}
         final String url;
         try{url=StreamCodec.sourceUrl(StreamCodec.unwrap(source.optString("url"),source.optBoolean("is_encoded")));}
@@ -25,11 +37,21 @@ public final class Media {
         // Verified from the supplied Drama World V4.2f DEX: EpisodesActivity.W1 sends type=embed
         // to EmbedActivity with extras url + size. EmbedActivity loads that URL in a JS WebView and
         // uses size as Referer. It never sends an embed page through Q0/S0 or DW Player.
-        if("embed".equals(type)&&!download){EmbedPlayer.open(activity,url,source.optString("size"),headers);return;}
+        if("embed".equals(type)&&!download&&!forceExternal){EmbedPlayer.open(activity,url,source.optString("size"),headers);return;}
+        if(forceExternal)type=directType(type,url);
         boolean declaredHls="m3u8".equals(type),declaredDash="mpd".equals(type);
         if(needsExtractionForSource(source,url,type,download)){extract(activity,url,headers,title,download,"webm".equals(type),declaredHls||declaredDash);return;}
         String path=Uri.parse(url).getPath();String lower=(path==null?"":path).toLowerCase(Locale.ROOT);
         launch(activity,url,headers,title,download,declaredHls||declaredDash||lower.endsWith(".m3u8")||lower.endsWith(".mpd"));
+    }
+
+    private static String directType(String declared,String url){
+        String path=Uri.parse(url).getPath();String lower=path==null?"":path.toLowerCase(Locale.ROOT);
+        if(lower.endsWith(".m3u8"))return "m3u8";
+        if(lower.endsWith(".mpd"))return "mpd";
+        if(lower.endsWith(".mp4"))return "mp4";
+        if(lower.endsWith(".mkv"))return "mkv";
+        return declared;
     }
 
     static boolean needsExtractionForSource(JSONObject source,String url,String type,boolean download){
@@ -115,5 +137,4 @@ public final class Media {
     }
     private static void alert(Activity a,String message){if(!a.isFinishing()&&!a.isDestroyed())new AlertDialog.Builder(a).setMessage(message).setPositiveButton("حسناً",null).show();}
 }
-
 

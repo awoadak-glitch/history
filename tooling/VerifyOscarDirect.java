@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -89,6 +90,7 @@ public class VerifyOscarDirect {
                 "Lcom/atheer/shell/MergeFactory;",
                 "Lcom/atheer/shell/DirectSources;",
                 "Lcom/atheer/shell/Host;",
+                "Lcom/atheer/shell/OscarPlayback;",
                 "Lawr/witcher/AnimeActivity;",
                 "Lawr/witcher/AnimeApi;",
                 "Lawr/witcher/DramaActivity;",
@@ -109,7 +111,9 @@ public class VerifyOscarDirect {
         int legacy=0;
         for(String type:direct.classes.keySet())if(type.startsWith("Lawr/legacy/"))legacy++;
         if(legacy<1000)throw new IllegalStateException("AWR extractor graph is incomplete: "+legacy);
-        boolean mx=false,animeGateway=false;
+        boolean mx=false,animeGateway=false,oscarMxCall=false,hostScan=false;
+        Set<String> oscarCalls=new TreeSet<>();
+        Set<String> oscarModels=new HashSet<>();
         Set<String> forbiddenTypes=new HashSet<>(List.of("Ldalvik/system/DexClassLoader;","Ldalvik/system/PathClassLoader;"));
         for(ClassDef item:direct.byEntry.get("classes4.dex")) {
             String lower=item.getType().toLowerCase();
@@ -120,7 +124,14 @@ public class VerifyOscarDirect {
                 if(reference instanceof TypeReference&&forbiddenTypes.contains(((TypeReference)reference).getType()))
                     throw new IllegalStateException("Runtime DEX loader reference in "+item.getType());
                 String owner=null;
-                if(reference instanceof MethodReference)owner=((MethodReference)reference).getDefiningClass();
+                if(reference instanceof MethodReference) {
+                    MethodReference called=(MethodReference)reference;
+                    owner=called.getDefiningClass();
+                    if(item.getType().startsWith("Lcom/atheer/shell/OscarPlayback")||item.getType().equals("Lcom/atheer/shell/Host;"))
+                        oscarCalls.add(item.getType()+" -> "+owner+"->"+called.getName());
+                    if(item.getType().startsWith("Lcom/atheer/shell/OscarPlayback")&&owner.equals("Lawr/witcher/Media;")&&called.getName().equals("openExternal"))oscarMxCall=true;
+                    if(item.getType().equals("Lcom/atheer/shell/Host;")&&owner.equals("Lcom/atheer/shell/OscarPlayback;")&&called.getName().equals("scan"))hostScan=true;
+                }
                 if(reference instanceof FieldReference)owner=((FieldReference)reference).getDefiningClass();
                 if(owner!=null&&(owner.startsWith("Lawr/")||owner.startsWith("Lcom/atheer/")||owner.startsWith("Lcom/pandora/"))
                         &&!direct.classes.containsKey(owner))
@@ -129,6 +140,7 @@ public class VerifyOscarDirect {
                     String value=((StringReference)reference).getString();
                     if(value.equals("com.mxtech.videoplayer.ad"))mx=true;
                     if(value.equals("https://awr-stream-web.vercel.app/api/"))animeGateway=true;
+                    if(value.startsWith("com.drama.mp4.data.model."))oscarModels.add(value);
                     if(value.endsWith(".apk")||value.contains("source-code.jar")||value.contains("source-resources.pack"))
                         throw new IllegalStateException("Runtime feature payload reference: "+value);
                 }
@@ -136,6 +148,9 @@ public class VerifyOscarDirect {
         }
         if(!mx)throw new IllegalStateException("MX Player package is absent");
         if(!animeGateway)throw new IllegalStateException("Anime Witcher gateway is absent");
+        if(!oscarMxCall||!hostScan)throw new IllegalStateException("Oscar MX watch handoff is not wired: "+oscarCalls);
+        for(String model:List.of("com.drama.mp4.data.model.WatchLink","com.drama.mp4.data.model.MovieLink","com.drama.mp4.data.model.ChannelStream"))
+            if(!oscarModels.contains(model))throw new IllegalStateException("Oscar watch model is not intercepted: "+model);
         System.out.println("{\"outer_dex_files\":"+direct.byEntry.size()
                 +",\"original_host_classes\":"+original.classes.size()
                 +",\"direct_feature_classes\":"+direct.byEntry.get("classes4.dex").size()
@@ -144,6 +159,7 @@ public class VerifyOscarDirect {
                 +",\"no_added_nested_apk\":true"
                 +",\"no_runtime_dex_loader\":true"
                 +",\"mx_player\":true"
+                +",\"oscar_watch_to_mx\":true"
                 +",\"anime_witcher_gateway\":true}");
     }
 }

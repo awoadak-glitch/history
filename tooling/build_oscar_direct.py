@@ -44,6 +44,12 @@ def sha_bytes(value):
 def sha(path):
     return sha_bytes(pathlib.Path(path).read_bytes())
 
+def public_ids(decoded):
+    return {
+        (node.get("type"),node.get("name")):node.get("id")
+        for node in E.parse(decoded/"res/values/public.xml").getroot()
+    }
+
 def signature(name):
     return name.startswith("META-INF/") and re.search(r"\.(RSA|DSA|EC|SF|MF)$",name,re.I)
 
@@ -152,10 +158,15 @@ def main():
     build.mkdir(parents=True)
     decoded=build/"host"
     run("java","-jar",args.apktool,"d","--no-src","-f","-o",decoded,args.host,log=build/"decode.log")
+    original_resource_ids=public_ids(decoded)
     patch_manifest(decoded)
     patch_brand(decoded)
     manifest_apk=build/"manifest.apk"
     run("java","-jar",args.apktool,"b",decoded,"-o",manifest_apk,log=build/"manifest-build.log")
+    resource_check=build/"resource-check"
+    run("java","-jar",args.apktool,"d","--no-src","--no-assets","-f","-o",resource_check,manifest_apk,log=build/"resource-check.log")
+    if public_ids(resource_check)!=original_resource_ids:
+        raise ValueError("Resource IDs moved during PALMA branding")
 
     generated=generate_sources(build)
     classes=build/"classes"
@@ -183,11 +194,11 @@ def main():
     if len(compiled)!=1:
         raise ValueError("Direct feature must compile to exactly one DEX")
 
-    resource_overlays={"resources.arsc",*BRAND_FILES}
     with zipfile.ZipFile(manifest_apk) as rebuilt:
+        resource_overlays={name for name in rebuilt.namelist() if name=="resources.arsc" or name.startswith("res/")}
         manifest=rebuilt.read("AndroidManifest.xml")
         manifest_compression=rebuilt.getinfo("AndroidManifest.xml").compress_type
-        missing=[name for name in resource_overlays if name not in rebuilt.namelist()]
+        missing=[name for name in BRAND_FILES if name not in resource_overlays]
         if missing:
             raise ValueError("Missing rebuilt brand resources: "+",".join(sorted(missing)))
         overlay_data={name:rebuilt.read(name) for name in resource_overlays}
@@ -199,12 +210,15 @@ def main():
 
     unsigned=build/"unsigned.apk"
     with zipfile.ZipFile(args.host) as original,zipfile.ZipFile(unsigned,"w") as out:
+        original_names=set(original.namelist())
         for info in original.infolist():
             if signature(info.filename):
                 continue
             data=manifest if info.filename=="AndroidManifest.xml" else overlay_data.get(info.filename,original.read(info.filename))
             compression=manifest_compression if info.filename=="AndroidManifest.xml" else overlay_compression.get(info.filename,info.compress_type)
             packing.write_aligned(out,info.filename,data,compression)
+        for name in sorted(resource_overlays-original_names):
+            packing.write_aligned(out,name,overlay_data[name],overlay_compression[name])
         for name,data in additions.items():
             packing.write_aligned(out,name,data,zipfile.ZIP_DEFLATED)
 
@@ -232,8 +246,11 @@ def main():
                 changed.append(name)
                 continue
             unchanged.append(name)
-        if set(changed)!=resource_overlays:
-            raise ValueError("Unexpected brand overlay set: "+",".join(sorted(changed)))
+        if "resources.arsc" not in changed:
+            raise ValueError("Compiled PALMA resource table was not installed")
+        for name in resource_overlays:
+            if after.read(name)!=overlay_data[name]:
+                raise ValueError("Brand overlay mismatch: "+name)
         added_apks=[name for name in after.namelist() if name.lower().endswith(".apk") and name!="assets/base.apk"]
         if added_apks:
             raise ValueError("Unexpected nested APK: "+",".join(added_apks))
@@ -266,10 +283,15 @@ def main():
         "no_added_nested_apk":True,
         "no_feature_archive_or_runtime_loader":True,
         "host_resources_unchanged":False,
-        "host_resources_changed":sorted(resource_overlays),
+        "host_resource_ids_preserved":True,
+        "host_rebuilt_resource_entries":len(resource_overlays),
+        "host_brand_entries":BRAND_FILES,
         "host_original_entries_unchanged":len(unchanged),
         "stored_entries_alignment_verified":aligned,
         "mx_player_package":"com.mxtech.videoplayer.ad",
+        "oscar_watch_server_handoff":"WatchLink/MovieLink/ChannelStream -> resolved URL -> MX Player",
+        "oscar_download_rows_untouched":True,
+        "oscar_embed_resolution_before_mx":True,
         "source_tabs":["الرئيسية","الأنمي","المسلسلات","الأفلام","القنوات"],
         "anime_source":"Anime Witcher Firestore/Algolia gateway",
         "anime_gateway":"https://awr-stream-web.vercel.app/api/",

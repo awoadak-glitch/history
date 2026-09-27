@@ -33,6 +33,7 @@ public final class Host {
 
     private static void integrate(Activity activity) {
         if(activity.isFinishing())return;
+        OscarPlayback.scan(activity);
         try {
             int id=activity.getResources().getIdentifier("bottomNav","id",activity.getPackageName());
             View bar=activity.findViewById(id);
