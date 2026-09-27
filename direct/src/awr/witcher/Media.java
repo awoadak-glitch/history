@@ -20,12 +20,9 @@ public final class Media {
         openInternal(activity,source,title,download,false);
     }
 
-    /** Oscar watch links always resolve to a real media URL and then leave through MX Player. */
-    public static void openExternal(Activity activity,String url,String type,String title){
-        JSONObject source=new JSONObject();
-        try{source.put("url",url);source.put("type",type==null?"":type);source.put("host",url);}
-        catch(JSONException error){alert(activity,"تعذر تجهيز بيانات السيرفر.");return;}
-        openInternal(activity,source,title,false,true);
+    /** Oscar watch links are probed/resolved before MX receives a URL. Downloads stay untouched. */
+    public static void openExternal(Activity activity,String raw,String deep,String type,String title){
+        OscarResolver.open(activity,raw,deep,type,title);
     }
 
     private static void openInternal(Activity activity,JSONObject source,String title,boolean download,boolean forceExternal){
@@ -127,6 +124,9 @@ public final class Media {
         ArrayList<String> flat=new ArrayList<>();for(Map.Entry<String,String> h:headers.entrySet())if(validHeader(h.getKey(),h.getValue())){flat.add(h.getKey());flat.add(h.getValue());}
         intent.putExtra("headers",flat.toArray(new String[0]));intent.putExtra("title",title);return intent;
     }
+    static void launchResolved(Activity a,String url,Map<String,String> h,String title,boolean segmented){
+        launch(a,url,h,title,false,segmented);
+    }
     private static void launch(Activity a,String url,Map<String,String> h,String title,boolean download,boolean segmented){
         if(a.isFinishing()||a.isDestroyed())return;
         final String finalUrl;try{finalUrl=StreamCodec.forExternalPlayer(url);}catch(Exception e){alert(a,"تعذر فك الرابط النهائي.");return;}
@@ -137,4 +137,3 @@ public final class Media {
     }
     private static void alert(Activity a,String message){if(!a.isFinishing()&&!a.isDestroyed())new AlertDialog.Builder(a).setMessage(message).setPositiveButton("حسناً",null).show();}
 }
-

@@ -2,8 +2,6 @@ package com.atheer.shell;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.net.Uri;
-import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,7 +10,6 @@ import awr.witcher.StreamCodec;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.WeakHashMap;
 
@@ -109,20 +106,25 @@ public final class OscarPlayback {
 
         boolean open(Activity activity) {
             try {
-                String url,type,title;
+                String raw,deep,type,title;
                 if("channel".equals(kind)) {
-                    url=firstWeb(call("getStreamUrl"),call("getDeepLink"));
+                    raw=call("getStreamUrl");
+                    deep=call("getDeepLink");
                     type=call("getStreamType");
                 } else {
-                    url=firstWeb(call("getUrl"),call("getDeepLink"));
+                    raw=call("getUrl");
+                    deep=call("getDeepLink");
                     type=call("getType");
                 }
                 title=join(call("getServerName"),"movie".equals(kind)?call("getQualityLabel"):call("getQuality"));
-                if(url==null) {
+                if(raw.isEmpty()&&deep.isEmpty()) {
                     alert(activity,"تعذر استخراج رابط صالح لهذا السيرفر. جرّب سيرفراً آخر.");
                     return true;
                 }
-                Media.openExternal(activity,url,type,title.isEmpty()?"PALMA":title);
+                // Oscar's own click path deliberately prefers deep_link. Keep both values here:
+                // OscarResolver can unwrap a player deep link, validate the raw fallback, carry the
+                // required Referer/Cookie headers, and only then hand a real media URL to MX.
+                Media.openExternal(activity,raw,deep,type,title.isEmpty()?"PALMA":title);
                 return true;
             } catch(ReflectiveOperationException|RuntimeException error) {
                 Log.e(TAG,"MX handoff failed",error);
@@ -140,40 +142,6 @@ public final class OscarPlayback {
     private static String join(String a,String b){
         if(a==null)a="";if(b==null)b="";a=a.trim();b=b.trim();
         return a.isEmpty()?b:(b.isEmpty()?a:a+" • "+b);
-    }
-
-    /** Prefer Oscar's raw URL over its player-specific deep link, then unwrap common deep-link forms. */
-    private static String firstWeb(String raw,String deep) {
-        for(String candidate:new String[]{raw,deep}) {
-            String resolved=web(candidate);
-            if(resolved!=null)return resolved;
-        }
-        return null;
-    }
-
-    private static String web(String value) {
-        if(value==null)return null;String clean=value.trim();if(clean.isEmpty())return null;
-        if(clean.startsWith("http://")||clean.startsWith("https://"))return clean;
-        try{return StreamCodec.forExternalPlayer(clean);}catch(RuntimeException ignored){}
-        try {
-            Uri uri=Uri.parse(clean);
-            for(String key:new String[]{"url","link","video","stream","src"}) {
-                String nested=uri.getQueryParameter(key);String result=webDecoded(nested);if(result!=null)return result;
-            }
-        } catch(RuntimeException ignored) {}
-        String decoded=webDecoded(clean);if(decoded!=null)return decoded;
-        int http=clean.indexOf("http");return http<0?null:webDecoded(clean.substring(http));
-    }
-
-    private static String webDecoded(String value) {
-        if(value==null||value.isEmpty())return null;
-        String decoded=Uri.decode(value).trim();
-        if(decoded.startsWith("http://")||decoded.startsWith("https://"))return decoded;
-        for(int flags:new int[]{Base64.DEFAULT,Base64.URL_SAFE|Base64.NO_WRAP})try {
-            String plain=new String(Base64.decode(decoded,flags),StandardCharsets.UTF_8).trim();
-            if(plain.startsWith("http://")||plain.startsWith("https://"))return plain;
-        } catch(IllegalArgumentException ignored) {}
-        return null;
     }
 
     private static void alert(Activity activity,String message) {

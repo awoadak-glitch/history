@@ -27,8 +27,8 @@ API_BASE="https://dwapp.arabypros.com/api/"
 API_SUFFIX="4F5A9C3D9A86FA54EACEDDD635185/d506abfd-9fe2-4b71-b979-feff21bcad13/"
 EXTRACTOR_ENTRIES=[f"classes{i}.dex" for i in range(23,29)]
 APP_NAME="PALMA"
-VERSION_CODE=21
-VERSION_NAME="1.1.5-direct.3"
+VERSION_CODE=22
+VERSION_NAME="1.1.5-direct.4"
 BRAND_FILES=[
     "res/drawable/splash_logo.png",
     *[
@@ -289,9 +289,11 @@ def main():
         "host_original_entries_unchanged":len(unchanged),
         "stored_entries_alignment_verified":aligned,
         "mx_player_package":"com.mxtech.videoplayer.ad",
-        "oscar_watch_server_handoff":"WatchLink/MovieLink/ChannelStream -> resolved URL -> MX Player",
+        "oscar_watch_server_handoff":"WatchLink/MovieLink/ChannelStream -> deep-link unwrap -> HTTP/redirect/page/HLS resolve -> MX Player",
         "oscar_download_rows_untouched":True,
         "oscar_embed_resolution_before_mx":True,
+        "oscar_deep_link_preferred_like_original":True,
+        "oscar_referer_cookie_user_agent_forwarded":True,
         "source_tabs":["الرئيسية","الأنمي","المسلسلات","الأفلام","القنوات"],
         "anime_source":"Anime Witcher Firestore/Algolia gateway",
         "anime_gateway":"https://awr-stream-web.vercel.app/api/",

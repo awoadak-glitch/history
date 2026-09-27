@@ -95,6 +95,7 @@ public class VerifyOscarDirect {
                 "Lawr/witcher/AnimeApi;",
                 "Lawr/witcher/DramaActivity;",
                 "Lawr/witcher/Media;",
+                "Lawr/witcher/OscarResolver;",
                 "Lawr/witcher/EmbedPlayer;",
                 "Lawr/witcher/DownloadFlow;",
                 "Lawr/legacy/a1/a;"
@@ -112,6 +113,7 @@ public class VerifyOscarDirect {
         for(String type:direct.classes.keySet())if(type.startsWith("Lawr/legacy/"))legacy++;
         if(legacy<1000)throw new IllegalStateException("AWR extractor graph is incomplete: "+legacy);
         boolean mx=false,animeGateway=false,oscarMxCall=false,hostScan=false;
+        boolean resolverHttp=false,resolverCookies=false,resolverPages=false,resolverLaunch=false,rawField=false,deepField=false;
         Set<String> oscarCalls=new TreeSet<>();
         Set<String> oscarModels=new HashSet<>();
         Set<String> forbiddenTypes=new HashSet<>(List.of("Ldalvik/system/DexClassLoader;","Ldalvik/system/PathClassLoader;"));
@@ -123,6 +125,11 @@ public class VerifyOscarDirect {
                 Reference reference=((ReferenceInstruction)instruction).getReference();
                 if(reference instanceof TypeReference&&forbiddenTypes.contains(((TypeReference)reference).getType()))
                     throw new IllegalStateException("Runtime DEX loader reference in "+item.getType());
+                if(reference instanceof TypeReference&&item.getType().startsWith("Lawr/witcher/OscarResolver")) {
+                    String type=((TypeReference)reference).getType();
+                    if(type.equals("Ljava/net/HttpURLConnection;"))resolverHttp=true;
+                    if(type.equals("Landroid/webkit/CookieManager;"))resolverCookies=true;
+                }
                 String owner=null;
                 if(reference instanceof MethodReference) {
                     MethodReference called=(MethodReference)reference;
@@ -131,6 +138,8 @@ public class VerifyOscarDirect {
                         oscarCalls.add(item.getType()+" -> "+owner+"->"+called.getName());
                     if(item.getType().startsWith("Lcom/atheer/shell/OscarPlayback")&&owner.equals("Lawr/witcher/Media;")&&called.getName().equals("openExternal"))oscarMxCall=true;
                     if(item.getType().equals("Lcom/atheer/shell/Host;")&&owner.equals("Lcom/atheer/shell/OscarPlayback;")&&called.getName().equals("scan"))hostScan=true;
+                    if(item.getType().startsWith("Lawr/witcher/OscarResolver")&&owner.equals("Lawr/witcher/PageStreams;")&&called.getName().equals("parse"))resolverPages=true;
+                    if(item.getType().startsWith("Lawr/witcher/OscarResolver")&&owner.equals("Lawr/witcher/Media;")&&called.getName().equals("launchResolved"))resolverLaunch=true;
                 }
                 if(reference instanceof FieldReference)owner=((FieldReference)reference).getDefiningClass();
                 if(owner!=null&&(owner.startsWith("Lawr/")||owner.startsWith("Lcom/atheer/")||owner.startsWith("Lcom/pandora/"))
@@ -141,6 +150,7 @@ public class VerifyOscarDirect {
                     if(value.equals("com.mxtech.videoplayer.ad"))mx=true;
                     if(value.equals("https://awr-stream-web.vercel.app/api/"))animeGateway=true;
                     if(value.startsWith("com.drama.mp4.data.model."))oscarModels.add(value);
+                    if(item.getType().startsWith("Lcom/atheer/shell/OscarPlayback")){if(value.equals("getUrl")||value.equals("getStreamUrl"))rawField=true;if(value.equals("getDeepLink"))deepField=true;}
                     if(value.endsWith(".apk")||value.contains("source-code.jar")||value.contains("source-resources.pack"))
                         throw new IllegalStateException("Runtime feature payload reference: "+value);
                 }
@@ -149,6 +159,8 @@ public class VerifyOscarDirect {
         if(!mx)throw new IllegalStateException("MX Player package is absent");
         if(!animeGateway)throw new IllegalStateException("Anime Witcher gateway is absent");
         if(!oscarMxCall||!hostScan)throw new IllegalStateException("Oscar MX watch handoff is not wired: "+oscarCalls);
+        if(!resolverHttp||!resolverCookies||!resolverPages||!resolverLaunch||!rawField||!deepField)
+            throw new IllegalStateException("Oscar resolver chain is incomplete: http="+resolverHttp+", cookies="+resolverCookies+", pages="+resolverPages+", launch="+resolverLaunch+", raw="+rawField+", deep="+deepField);
         for(String model:List.of("com.drama.mp4.data.model.WatchLink","com.drama.mp4.data.model.MovieLink","com.drama.mp4.data.model.ChannelStream"))
             if(!oscarModels.contains(model))throw new IllegalStateException("Oscar watch model is not intercepted: "+model);
         System.out.println("{\"outer_dex_files\":"+direct.byEntry.size()
@@ -160,6 +172,8 @@ public class VerifyOscarDirect {
                 +",\"no_runtime_dex_loader\":true"
                 +",\"mx_player\":true"
                 +",\"oscar_watch_to_mx\":true"
+                +",\"oscar_final_url_resolver\":true"
+                +",\"oscar_referer_cookie_handoff\":true"
                 +",\"anime_witcher_gateway\":true}");
     }
 }
