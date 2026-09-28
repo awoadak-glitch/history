@@ -1,0 +1,22 @@
+{
+  "input_sha256": "018e7bf00a25e1d3e99ec971fdaf98a0767d7bdfe79551be2a7d8a834ba4bea1",
+  "unsigned_sha256": "0c9ba53c15e535268813333fd92d1518649f3dc9fb0b2d3348c50985dfe40c6a",
+  "replacement_dex_sha256": "c8f02b16164119f091c4101aa94db850e4313874844b83e5241256a6ce594a27",
+  "replaced_entry": "classes4.dex",
+  "preserved_outer_dex": [
+    "classes.dex",
+    "classes2.dex",
+    "classes3.dex",
+    "classes5.dex",
+    "classes6.dex",
+    "classes7.dex",
+    "classes8.dex",
+    "classes9.dex",
+    "classes10.dex"
+  ],
+  "assets_base_apk_sha256": "e15d2de82257e55a5ea7ffef7a78ec205caf0c02ddfa7b80673dba68006226d7",
+  "assets_base_apk_byte_identical": true,
+  "download_rows_untouched": true,
+  "new_nested_apk": false,
+  "preserved_entry_count": 2379
+}
