@@ -1,0 +1,36 @@
+{
+  "input_sha256": "018e7bf00a25e1d3e99ec971fdaf98a0767d7bdfe79551be2a7d8a834ba4bea1",
+  "apk_sha256": "7a035e9771d4d2c3090bc63764293e96a4676157315440f322337521f9646a10",
+  "apk_bytes": 34189856,
+  "outer_dex_files": 10,
+  "replacement_dex_sha256": "4c5e715bcffe70f9d02a9a78d726a515d3320e31f9428b173afdba9831977fbd",
+  "preserved_original_dex": [
+    "classes.dex",
+    "classes2.dex",
+    "classes3.dex",
+    "classes5.dex",
+    "classes6.dex",
+    "classes7.dex",
+    "classes8.dex",
+    "classes9.dex",
+    "classes10.dex"
+  ],
+  "assets_base_apk_sha256": "e15d2de82257e55a5ea7ffef7a78ec205caf0c02ddfa7b80673dba68006226d7",
+  "assets_base_apk_byte_identical": true,
+  "all_other_payload_entries_byte_identical": true,
+  "no_added_nested_apk": true,
+  "stored_entries_alignment_verified": 449,
+  "mx_player_package": "com.mxtech.videoplayer.ad",
+  "oscar_resolver_chain_verified": true,
+  "headers_forwarded": [
+    "Cookie",
+    "Referer",
+    "Origin",
+    "User-Agent"
+  ],
+  "signatures_v1_v2_v3_verified": true,
+  "signing_certificate_sha256": "77f285ea30dd383d1cb7bdf2fc82039c146e378c0346d475f474917dceeef630",
+  "signing_certificate_matches_uploaded_direct_3": false,
+  "requires_uninstall_of_direct_3": true,
+  "runtime_device_tested": false
+}
