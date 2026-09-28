@@ -1,0 +1,34 @@
+{
+  "input": "MX Player_3.2.1.apks",
+  "input_sha256": "46cfe7008caa4e90f77cb1d16fcd5253fdb3767ece50003a57ff8ab4bd15ca81",
+  "package": "com.mxtech.videoplayer.ad",
+  "certificate_sha256": "0d9b4c778672e753d45aba4f10df31e1d10bf75b1245469131ef01b82f0f91b6",
+  "base_dex_count": 10,
+  "splits": [
+    {
+      "name": "base.apk",
+      "bytes": 91220146,
+      "sha256": "35ac0848a53b23cbce436326c8ffb411359390ef9bfd27c5916f47c8f1d619aa"
+    },
+    {
+      "name": "split_config.ar.apk",
+      "bytes": 463257,
+      "sha256": "4391a5f23fe0ceed8fe1bb9081640e9804026873e985fff64dbd0b0173d3e724"
+    },
+    {
+      "name": "split_config.arm64_v8a.apk",
+      "bytes": 13105688,
+      "sha256": "b06ae10fc16b2acfed7fd036b96ea08c80f2af88ea45d7471a6e07efb3c6ede4"
+    },
+    {
+      "name": "split_config.xxhdpi.apk",
+      "bytes": 4594521,
+      "sha256": "3a1fc383383c3991a1150d5f487c061b49cce7974c0fce480ff36ae9279701dd"
+    }
+  ],
+  "accepted_uri_schemes": ["content", "file", "http", "https", "httplive", "intent", "rtsp"],
+  "oscar_yntr_resolver_found": false,
+  "tdm_package_contract_found": false,
+  "mx_binary_modified": false,
+  "required_next_input": "APK/APKS of the working original link handler, expected package com.tdm.manager"
+}
