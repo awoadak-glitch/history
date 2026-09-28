@@ -44,7 +44,7 @@ final class OscarBrowserResolver {
     private static final String UA="Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0 Mobile Safari/537.36";
     private static final Pattern HTTP=Pattern.compile("https?:(?:\\\\/|/){2}[^\\s\\\"'<>]+",Pattern.CASE_INSENSITIVE);
     private static final Pattern MEDIA=Pattern.compile("(?:\\.(?:m3u8|mpd|mp4|m4v|mkv|mov|webm|ts)(?:[?#&]|$)|(?:[?&](?:url|file|src|stream|hls|video)=[^&]*(?:m3u8|mpd|mp4|m4v|mkv|mov|webm))|/(?:hls|dash|manifest|playlist)(?:/|[?.]))",Pattern.CASE_INSENSITIVE);
-    private static final String SCRIPT="(function(){var o=[],a=function(v){if(typeof v==='string'&&/^https?:/i.test(v)&&o.indexOf(v)<0)o.push(v);};try{document.querySelectorAll('video,source').forEach(function(e){a(e.currentSrc);a(e.src);});}catch(e){}try{performance.getEntriesByType('resource').forEach(function(e){a(e.name);});}catch(e){}try{var p=window.jwplayer&&window.jwplayer();if(p){var i=p.getPlaylistItem&&p.getPlaylistItem();if(i){a(i.file);(i.sources||[]).forEach(function(s){a(s.file||s.src);});}}}catch(e){}return JSON.stringify(o);})()";
+    private static final String SCRIPT="(function(){var o=[],r=/(?:\\.(?:m3u8|mpd|mp4|m4v|mkv|mov|webm|ts)(?:[?#&]|$)|\\/(?:hls|dash|manifest|playlist)(?:\\/|[?.]))/i,a=function(v,f){if(typeof v!=='string'||!/^https?:/i.test(v)||(!f&&!r.test(v)))return;v=(f?'!':'')+v;if(o.indexOf(v)<0)o.push(v);};try{document.querySelectorAll('video,source').forEach(function(e){a(e.currentSrc,true);a(e.src,true);});}catch(e){}try{performance.getEntriesByType('resource').forEach(function(e){a(e.name,e.initiatorType==='video');});}catch(e){}try{var p=window.jwplayer&&window.jwplayer();if(p){var i=p.getPlaylistItem&&p.getPlaylistItem();if(i){a(i.file,true);(i.sources||[]).forEach(function(s){a(s.file||s.src,true);});}}}catch(e){}return JSON.stringify(o);})()";
 
     private OscarBrowserResolver() {}
 
@@ -125,7 +125,11 @@ final class OscarBrowserResolver {
                 try{
                     Object first=new JSONTokener(value).nextValue();String json=first instanceof String?(String)first:value;
                     JSONArray urls=new JSONArray(json);
-                    for(int i=0;i<urls.length();i++)if(observe(urls.optString(i),null,true))break;
+                    for(int i=0;i<urls.length();i++){
+                        String found=urls.optString(i);boolean trusted=found.startsWith("!");
+                        if(trusted)found=found.substring(1);
+                        if(observe(found,null,trusted))break;
+                    }
                 }catch(Exception ignored){}
             });
         }
