@@ -19,8 +19,8 @@ public final class TestOscarResolver {
         else{exchange.sendResponseHeaders(status,bytes.length);exchange.getResponseBody().write(bytes);}exchange.close();
     }
     public static void main(String[] args)throws Exception{
-        deepFirst();cookieRedirect();hls();rawFallback();
-        System.out.println("{\"oscar_resolver_tests\":4,\"passed\":true}");
+        deepFirst();cookieRedirect();hls();rawFallback();tdmAttachmentRedirect();
+        System.out.println("{\"oscar_resolver_tests\":5,\"passed\":true}");
     }
     private static void deepFirst()throws Exception{
         HttpServer server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);AtomicInteger rawHits=new AtomicInteger();
@@ -48,6 +48,14 @@ public final class TestOscarResolver {
         HttpServer server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);String base="http://127.0.0.1:"+server.getAddress().getPort();
         server.createContext("/page",exchange->send(exchange,200,"text/html","<script>player.setup({file:'"+base+"/movie.mp4'});</script>"));server.createContext("/movie.mp4",exchange->send(exchange,200,"video/mp4",""));server.start();
         try{List<OscarResolver.Stream> streams=OscarResolver.resolve(base+"/page","tdm://opaque-token","embed");check((base+"/movie.mp4").equals(streams.get(0).url),"raw fallback");}
+        finally{server.stop(0);}
+    }
+    private static void tdmAttachmentRedirect()throws Exception{
+        HttpServer server=HttpServer.create(new InetSocketAddress("127.0.0.1",0),0);String base="http://127.0.0.1:"+server.getAddress().getPort();
+        String target=base+"/opaque-download?filename=episode-8";
+        server.createContext("/tdm-wrapper",exchange->{exchange.getResponseHeaders().add("Location",target);exchange.sendResponseHeaders(302,-1);exchange.close();});
+        server.createContext("/opaque-download",exchange->send(exchange,200,"application/octet-stream","not-read-by-the-resolver"));server.start();
+        try{List<OscarResolver.Stream> streams=OscarResolver.resolve(base+"/tdm-wrapper","","embed");check(streams.size()==1,"TDM redirect count");check(target.equals(streams.get(0).url),"TDM attachment redirect");}
         finally{server.stop(0);}
     }
 }
