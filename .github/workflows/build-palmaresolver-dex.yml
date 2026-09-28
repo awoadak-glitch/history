@@ -1,0 +1,81 @@
+name: Build PALMA resolver DEX
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'direct/**'
+      - 'pro/stubs/**'
+      - 'tooling/providers.tsv'
+      - '.github/workflows/build-palmaresolver-dex.yml'
+
+permissions:
+  contents: read
+
+env:
+  ANDROID_HOME: /usr/local/lib/android/sdk
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;35.0.0'
+
+      - name: Compile direct PALMA layer
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf build/palma-ci dist/palma-resolver
+          mkdir -p build/palma-ci/generated/awr/witcher build/palma-ci/classes build/palma-ci/dex dist/palma-resolver
+          python3 - <<'PY'
+          import json, pathlib
+          root=pathlib.Path('build/palma-ci/generated/awr/witcher')
+          root.joinpath('ApiConfig.java').write_text(
+              'package awr.witcher; final class ApiConfig {'
+              ' static final String BASE="https://dwapp.arabypros.com/api/";'
+              ' static final String SUFFIX="4F5A9C3D9A86FA54EACEDDD635185/d506abfd-9fe2-4b71-b979-feff21bcad13/";'
+              ' }\n')
+          rows=[line.split('\t') for line in pathlib.Path('tooling/providers.tsv').read_text().splitlines() if line.strip()]
+          table=','.join('{'+','.join(json.dumps(v) for v in row)+'}' for row in rows)
+          root.joinpath('Providers.java').write_text(
+              'package awr.witcher; final class Providers { static final String[][] TABLE={'+table+'}; }\n')
+          PY
+          ANDROID_JAR="$ANDROID_HOME/platforms/android-34/android.jar"
+          BOOT="$ANDROID_HOME/platforms/android-34/core-lambda-stubs.jar:$ANDROID_JAR"
+          mapfile -t SRC < <(find direct/src pro/stubs build/palma-ci/generated -name '*.java' -print | sort)
+          java com.sun.tools.javac.Main -source 8 -target 8 -encoding UTF-8 -bootclasspath "$BOOT" -d build/palma-ci/classes "${SRC[@]}"
+          python3 - <<'PY'
+          import pathlib, zipfile
+          root=pathlib.Path('build/palma-ci/classes')
+          with zipfile.ZipFile('build/palma-ci/direct.jar','w',zipfile.ZIP_DEFLATED) as z:
+              for f in root.rglob('*.class'):
+                  rel=f.relative_to(root).as_posix()
+                  if not rel.startswith('com/pandora/'):
+                      z.write(f,rel)
+          PY
+          "$ANDROID_HOME/build-tools/35.0.0/d8" --min-api 24 --lib "$ANDROID_JAR" --output build/palma-ci/dex build/palma-ci/direct.jar
+          test -s build/palma-ci/dex/classes.dex
+          cp build/palma-ci/dex/classes.dex dist/palma-resolver/classes4.dex
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" dist/palma-resolver/apksigner.jar
+          cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" dist/palma-resolver/zipalign
+          chmod +x dist/palma-resolver/zipalign
+          sha256sum dist/palma-resolver/* > dist/palma-resolver/SHA256SUMS.txt
+
+      - name: Upload resolver build
+        uses: actions/upload-artifact@v4
+        with:
+          name: palma-resolver-direct-4
+          path: dist/palma-resolver/
+          if-no-files-found: error
+          retention-days: 7
