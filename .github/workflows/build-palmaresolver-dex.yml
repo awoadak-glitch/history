@@ -52,9 +52,8 @@ jobs:
               'package awr.witcher; final class Providers { static final String[][] TABLE={'+table+'}; }\n')
           PY
           ANDROID_JAR="$ANDROID_HOME/platforms/android-34/android.jar"
-          BOOT="$ANDROID_HOME/platforms/android-34/core-lambda-stubs.jar:$ANDROID_JAR"
           mapfile -t SRC < <(find direct/src pro/stubs build/palma-ci/generated -name '*.java' -print | sort)
-          java com.sun.tools.javac.Main -source 8 -target 8 -encoding UTF-8 -bootclasspath "$BOOT" -d build/palma-ci/classes "${SRC[@]}"
+          javac --release 8 -encoding UTF-8 -cp "$ANDROID_JAR" -d build/palma-ci/classes "${SRC[@]}"
           python3 - <<'PY'
           import pathlib, zipfile
           root=pathlib.Path('build/palma-ci/classes')
