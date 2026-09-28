@@ -88,7 +88,10 @@ final class OscarResolver {
                 main.removeCallbacks(timeout);wait.dismiss();
                 if(activity.isFinishing()||activity.isDestroyed())return;
                 if(ready.isEmpty()){
-                    alert(activity,issue==null?"لم يُرجع السيرفر رابط فيديو صالحاً لـ MX. جرّب سيرفراً آخر.":issue);
+                    // Some Oscar/TDM links create their final HLS/MP4 request only after the
+                    // provider page runs JavaScript. Observe that request inside this process,
+                    // retain its cookies/referer, and only then hand it to MX.
+                    OscarBrowserResolver.open(activity,raw,deep,type,title,issue);
                     return;
                 }
                 android.content.DialogInterface.OnClickListener select=(dialog,index)->{
