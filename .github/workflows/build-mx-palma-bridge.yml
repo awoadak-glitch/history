@@ -34,6 +34,7 @@ jobs:
           cp build/mxbridge/dex/classes.dex dist/mxbridge/classes11.dex
           cp "$ANDROID_HOME/build-tools/35.0.0/lib/apksigner.jar" dist/mxbridge/apksigner.jar
           cp "$ANDROID_HOME/build-tools/35.0.0/zipalign" dist/mxbridge/zipalign
+          cp "$ANDROID_HOME/build-tools/35.0.0/lib64/libc++.so" dist/mxbridge/libc++.so
           chmod +x dist/mxbridge/zipalign
           sha256sum dist/mxbridge/* > dist/mxbridge/SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
