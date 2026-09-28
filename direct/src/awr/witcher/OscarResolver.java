@@ -14,6 +14,8 @@ import org.json.JSONTokener;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -41,6 +43,9 @@ final class OscarResolver {
     private static final int BODY_LIMIT=2*1024*1024;
     private static final int MAX_DEPTH=4;
     private static final int MAX_CANDIDATES=12;
+    private static final String TDM_UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+    private static final String[] TDM_DIRECT_HOSTS={"tmfiles.net","seriesmp4.com","traidmod.cloud","tmdown.net","tmdownload.com"};
+    private static final String[] TDM_DOWNLOAD_HOSTS={"yastatic.net","ya.ru","disk.yandex","downloader.disk.yandex","storage.yandexcloud","publicdisk.yandex.ru","dl.disk.yandex.ru","yandex.ru","yandex.net"};
     private static final String[] LINK_KEYS={"url","link","video","stream","src","source","file","media","play","playlist","hls","mp4","uri","data","browser_fallback_url"};
     private static final Pattern HTTP=Pattern.compile("https?:(?:\\\\/|/){2}[^\\s\\\"'<>]+",Pattern.CASE_INSENSITIVE);
     private static final Pattern LOCATION=Pattern.compile("(?:window\\.)?location(?:\\.href)?\\s*=\\s*([\\\"'])(.*?)\\1",Pattern.CASE_INSENSITIVE|Pattern.DOTALL);
@@ -119,9 +124,64 @@ final class OscarResolver {
                     if(!streams.isEmpty())return streams;
                 }catch(IOException error){last=error;}
             }
+            // TDM's working path deliberately accepts its known redirect/download hosts
+            // even when they answer as application/octet-stream without a media suffix.
+            // Keep this after the stricter probe, so ordinary links still receive full
+            // MIME/HLS validation first.
+            try{
+                Stream tdm=resolveLikeTdm(candidate);
+                if(tdm!=null)return Collections.singletonList(tdm);
+            }catch(IOException error){last=error;}
         }
         if(last!=null)throw last;
         return Collections.emptyList();
+    }
+
+    private static Stream resolveLikeTdm(Candidate candidate)throws IOException {
+        if(candidate==null||!http(candidate.url))return null;
+        if(hostContains(candidate.url,TDM_DIRECT_HOSTS))return tdmStream(candidate.url,candidate,candidate.headers);
+        HttpURLConnection connection=(HttpURLConnection)new URL(candidate.url).openConnection();
+        connection.setConnectTimeout(30000);connection.setReadTimeout(30000);connection.setInstanceFollowRedirects(false);
+        connection.setRequestMethod("GET");connection.setRequestProperty("User-Agent",TDM_UA);
+        try{
+            int status=connection.getResponseCode();Map<String,String> headers=copy(candidate.headers);mergeCookies(headers,connection);
+            String location=connection.getHeaderField("Location");
+            if(location!=null&&!location.trim().isEmpty()){
+                String target=new URL(new URL(candidate.url),location.trim()).toString();
+                if(tdmDownload(target))return tdmStream(target,candidate,headers);
+            }
+            if(status<200||status>=400)return null;
+            try(BufferedReader reader=new BufferedReader(new InputStreamReader(connection.getInputStream(),StandardCharsets.UTF_8))){
+                int total=0;String line;
+                while((line=reader.readLine())!=null){
+                    total+=line.length();if(total>BODY_LIMIT)break;
+                    Matcher links=HTTP.matcher(line);
+                    while(links.find()){
+                        String target=PageStreams.entities(PageStreams.jsUnescape(links.group())).replace("\\/","/").replace("&amp;","&");
+                        if(tdmDownload(target))return tdmStream(target,candidate,headers);
+                    }
+                }
+            }
+            return null;
+        }finally{connection.disconnect();}
+    }
+
+    private static Stream tdmStream(String url,Candidate candidate,Map<String,String> headers){
+        return new Stream(url,label(candidate.type),mime(candidate.type,url),headers);
+    }
+
+    private static boolean tdmDownload(String url){
+        if(!http(url))return false;
+        String low=url.toLowerCase(Locale.ROOT);
+        return hostContains(url,TDM_DOWNLOAD_HOSTS)||low.contains("disposition=attachment")||low.contains("filename=");
+    }
+
+    private static boolean hostContains(String url,String[] domains){
+        try{
+            String host=new URL(url).getHost().toLowerCase(Locale.ROOT);
+            for(String domain:domains)if(host.equals(domain)||host.endsWith("."+domain)||host.contains(domain))return true;
+        }catch(Exception ignored){}
+        return false;
     }
 
     private static List<Candidate> candidates(String raw,String deep,String type) {
