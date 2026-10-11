@@ -15,7 +15,8 @@ export function json(res, status, body) {
   res.end(JSON.stringify(body));
 }
 export function fail(res, error) {
-  json(res, error.status || 502, { error: error.message || 'تعذر الاتصال بالمصدر.', code: error.code || 'SOURCE_ERROR' });
+  const known=error instanceof SourceError;
+  json(res, known ? error.status : 502, { error: known ? error.message : 'تعذر الاتصال بالسيرفر. أعد المحاولة أو اختر سيرفرًا آخر.', code: known ? error.code : 'SOURCE_ERROR' });
 }
 export function params(req) { return new URL(req.url, 'http://localhost').searchParams; }
 export async function readLimited(response, limit = 8 * 1024 * 1024) {

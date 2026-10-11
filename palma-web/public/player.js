@@ -37,7 +37,7 @@ export function openPlayer(media,item,episode=''){
   dialog.querySelector('#player-return').onclick=closePlayer;
   dialog.querySelector('#restart-video')?.addEventListener('click',()=>{video.currentTime=0;dialog.querySelector('.resume-prompt').remove();});
   dialog.querySelector('#speed-select').onchange=e=>{video.playbackRate=Number(e.target.value);};
-  dialog.querySelector('#quality-select').onchange=e=>{const value=e.target.value;if(value.startsWith('q')){const q=qualities[Number(value.slice(1))];load({...media,...q},video.currentTime);}else if(hls)hls.currentLevel=value==='auto'?-1:Number(value);};
+  dialog.querySelector('#quality-select').onchange=e=>{const value=e.target.value;if(value.startsWith('q')){const q=qualities[Number(value.slice(1))];load({...media,...q},video.currentTime);}else if(value==='auto'&&qualities.length)load(media,video.currentTime);else if(hls)hls.currentLevel=value==='auto'?-1:Number(value);};
   dialog.querySelector('#fullscreen-button').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen?.();else dialog.requestFullscreen?.();};
   dialog.querySelector('#pip-button').onclick=async()=>{try{if(document.pictureInPictureElement)await document.exitPictureInPicture();else await video.requestPictureInPicture();}catch{toast('صورة داخل صورة غير متاحة في هذا المتصفح.');}};
   dialog.querySelector('#copy-video').onclick=async()=>{try{await navigator.clipboard.writeText(media.url);toast('تم نسخ رابط الفيديو.');}catch{toast('تعذر نسخ الرابط.');}};
