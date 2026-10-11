@@ -1,0 +1,510 @@
+{
+  "reference": "PALMA-VISION-1.1.7-NO-ADS-DOWNLOAD-FIX.apk",
+  "sha256": "e433d9e12233d7412cb624821ec29cc011b30a0bfb07eb84d18292db75eaabe1",
+  "routes": [
+    {
+      "name": "checkAppUpdate",
+      "route": "api/app/check-update.php",
+      "query": [
+        "version_code",
+        "platform"
+      ]
+    },
+    {
+      "name": "getActorDetail",
+      "route": "api/actors/show.php",
+      "query": [
+        "id"
+      ]
+    },
+    {
+      "name": "getActors",
+      "route": "api/actors/",
+      "query": [
+        "page",
+        "limit",
+        "search",
+        "nationality"
+      ]
+    },
+    {
+      "name": "getAnimeDetail",
+      "route": "api/anime/show.php",
+      "query": [
+        "id"
+      ]
+    },
+    {
+      "name": "getAnimeEpisodeDetail",
+      "route": "api/anime/episodes/show.php",
+      "query": [
+        "id"
+      ]
+    },
+    {
+      "name": "getAnimeEpisodes",
+      "route": "api/anime/episodes/",
+      "query": [
+        "season_id"
+      ]
+    },
+    {
+      "name": "getAnimeEpisodesPaged",
+      "route": "api/anime/episodes/",
+      "query": [
+        "season_id",
+        "page",
+        "per_page",
+        "sort",
+        "q"
+      ]
+    },
+    {
+      "name": "getAnimeFilters",
+      "route": "api/anime/filters.php",
+      "query": []
+    },
+    {
+      "name": "getAnimeGenres",
+      "route": "api/anime/genres/",
+      "query": []
+    },
+    {
+      "name": "getAnimeHome",
+      "route": "api/anime/home.php",
+      "query": [
+        "_t"
+      ]
+    },
+    {
+      "name": "getAnimeLatestEpisodes",
+      "route": "api/anime/episodes/latest.php",
+      "query": [
+        "limit"
+      ]
+    },
+    {
+      "name": "getAnimeList",
+      "route": "api/anime/",
+      "query": [
+        "page",
+        "limit",
+        "anime_type",
+        "studio_id",
+        "genre_id",
+        "status",
+        "season_period",
+        "season_year",
+        "year",
+        "content_type",
+        "age_rating",
+        "search",
+        "featured",
+        "sort_by"
+      ]
+    },
+    {
+      "name": "getAnimeSchedule",
+      "route": "api/anime/schedule.php",
+      "query": []
+    },
+    {
+      "name": "getAnimeStudios",
+      "route": "api/anime/studios/",
+      "query": []
+    },
+    {
+      "name": "getChannelCollections",
+      "route": "api/channels/collections.php",
+      "query": []
+    },
+    {
+      "name": "getChannelDetail",
+      "route": "api/channels/show.php",
+      "query": [
+        "id"
+      ]
+    },
+    {
+      "name": "getChannels",
+      "route": "api/channels/",
+      "query": [
+        "page",
+        "limit",
+        "search",
+        "category"
+      ]
+    },
+    {
+      "name": "getCollectionCategories",
+      "route": "api/movies/collection_categories.php",
+      "query": []
+    },
+    {
+      "name": "getComments",
+      "route": "api/comments/",
+      "query": [
+        "series_id",
+        "channel_id",
+        "match_event_id",
+        "match_video_id",
+        "match_id",
+        "wrestling_show_id",
+        "anime_id",
+        "movie_id",
+        "page",
+        "limit",
+        "device_id"
+      ]
+    },
+    {
+      "name": "getContentCategories",
+      "route": "api/content-categories.php",
+      "query": [
+        "app_version"
+      ]
+    },
+    {
+      "name": "getCountries",
+      "route": "api/countries/",
+      "query": []
+    },
+    {
+      "name": "getDownloadLinks",
+      "route": "api/download_links/",
+      "query": [
+        "episode_id"
+      ]
+    },
+    {
+      "name": "getEpisodeDetail",
+      "route": "api/episodes/show.php",
+      "query": [
+        "id"
+      ]
+    },
+    {
+      "name": "getEpisodes",
+      "route": "api/episodes/",
+      "query": [
+        "season_id"
+      ]
+    },
+    {
+      "name": "getEpisodesPaged",
+      "route": "api/episodes/",
+      "query": [
+        "season_id",
+        "page",
+        "per_page",
+        "sort",
+        "q"
+      ]
+    },
+    {
+      "name": "getEventVideos",
+      "route": "api/matches/event_videos.php",
+      "query": [
+        "event_id",
+        "match_id",
+        "category",
+        "search",
+        "page",
+        "limit",
+        "league_id",
+        "season"
+      ]
+    },
+    {
+      "name": "getFontConfig",
+      "route": "api/app/font-config.php",
+      "query": []
+    },
+    {
+      "name": "getFootballLeagues",
+      "route": "api/matches/leagues.php",
+      "query": [
+        "search"
+      ]
+    },
+    {
+      "name": "getFootballTeams",
+      "route": "api/matches/teams.php",
+      "query": [
+        "search",
+        "league_id"
+      ]
+    },
+    {
+      "name": "getGenres",
+      "route": "api/genres/",
+      "query": []
+    },
+    {
+      "name": "getHomeConfig",
+      "route": "api/v2/home.php",
+      "query": [
+        "app_version"
+      ]
+    },
+    {
+      "name": "getHomeMatches",
+      "route": "api/v2/matches.php",
+      "query": []
+    },
+    {
+      "name": "getLatestEpisodes",
+      "route": "api/episodes/latest.php",
+      "query": [
+        "limit"
+      ]
+    },
+    {
+      "name": "getMatchDetail",
+      "route": "api/matches/show.php",
+      "query": [
+        "id"
+      ]
+    },
+    {
+      "name": "getMatchDetailLive",
+      "route": "api/matches/show.php",
+      "query": [
+        "id",
+        "live"
+      ]
+    },
+    {
+      "name": "getMatchPredictions",
+      "route": "api/matches/predictions.php",
+      "query": [
+        "match_id",
+        "device_id"
+      ]
+    },
+    {
+      "name": "getMatchesConfig",
+      "route": "api/matches/config.php",
+      "query": []
+    },
+    {
+      "name": "getMovieCategories",
+      "route": "api/movies/request_categories.php",
+      "query": []
+    },
+    {
+      "name": "getMovieCollection",
+      "route": "api/movies/collection.php",
+      "query": [
+        "id"
+      ]
+    },
+    {
+      "name": "getMovieCollections",
+      "route": "api/movies/collections.php",
+      "query": [
+        "page",
+        "limit",
+        "search",
+        "category"
+      ]
+    },
+    {
+      "name": "getMovieDetail",
+      "route": "api/movies/show.php",
+      "query": [
+        "id"
+      ]
+    },
+    {
+      "name": "getMovies",
+      "route": "api/movies/",
+      "query": [
+        "page",
+        "limit",
+        "search",
+        "status",
+        "year",
+        "genre_id",
+        "language",
+        "category",
+        "content_type",
+        "age_rating",
+        "collection_id",
+        "quality_source",
+        "has_links",
+        "featured",
+        "awards",
+        "sort_by",
+        "app_version"
+      ]
+    },
+    {
+      "name": "getMoviesFilters",
+      "route": "api/movies/filters.php",
+      "query": []
+    },
+    {
+      "name": "getReplies",
+      "route": "api/comments/replies.php",
+      "query": [
+        "comment_id",
+        "page",
+        "limit"
+      ]
+    },
+    {
+      "name": "getSeasons",
+      "route": "api/seasons/",
+      "query": [
+        "series_id"
+      ]
+    },
+    {
+      "name": "getSeries",
+      "route": "api/series/",
+      "query": [
+        "page",
+        "limit",
+        "search",
+        "status",
+        "year",
+        "genre_id",
+        "language",
+        "is_colored",
+        "sort_by",
+        "age_rating",
+        "category",
+        "content_type",
+        "app_version"
+      ]
+    },
+    {
+      "name": "getSeriesDetail",
+      "route": "api/series/show.php",
+      "query": [
+        "id"
+      ]
+    },
+    {
+      "name": "getSeriesFilters",
+      "route": "api/series/filters.php",
+      "query": [
+        "app_version",
+        "category"
+      ]
+    },
+    {
+      "name": "getStandings",
+      "route": "api/matches/standings.php",
+      "query": [
+        "league_id",
+        "season"
+      ]
+    },
+    {
+      "name": "getSyncConfig",
+      "route": "api/app/sync-config.php",
+      "query": []
+    },
+    {
+      "name": "getTdmConfig",
+      "route": "api/app/tdm-config.php",
+      "query": []
+    },
+    {
+      "name": "getTodayMatches",
+      "route": "api/matches/",
+      "query": [
+        "date"
+      ]
+    },
+    {
+      "name": "getTopScorers",
+      "route": "api/matches/top_scorers.php",
+      "query": [
+        "league_id",
+        "season"
+      ]
+    },
+    {
+      "name": "getTournamentMatches",
+      "route": "api/matches/tournament_matches.php",
+      "query": [
+        "league_id",
+        "season",
+        "round"
+      ]
+    },
+    {
+      "name": "getTournaments",
+      "route": "api/matches/tournaments.php",
+      "query": []
+    },
+    {
+      "name": "getTvMatchDetail",
+      "route": "api/matches/tv.php",
+      "query": [
+        "id"
+      ]
+    },
+    {
+      "name": "getTvMatchDetailLive",
+      "route": "api/matches/tv.php",
+      "query": [
+        "id",
+        "live"
+      ]
+    },
+    {
+      "name": "getTvMatches",
+      "route": "api/matches/tv.php",
+      "query": [
+        "date"
+      ]
+    },
+    {
+      "name": "getUiConfig",
+      "route": "api/app/ui-config.php",
+      "query": []
+    },
+    {
+      "name": "getVideoCategories",
+      "route": "api/matches/video_categories.php",
+      "query": []
+    },
+    {
+      "name": "getWatchLinks",
+      "route": "api/watch_links/",
+      "query": [
+        "episode_id"
+      ]
+    },
+    {
+      "name": "getWrestlingCategories",
+      "route": "api/wrestling/categories.php",
+      "query": []
+    },
+    {
+      "name": "getWrestlingShowDetail",
+      "route": "api/wrestling/show.php",
+      "query": [
+        "id"
+      ]
+    },
+    {
+      "name": "getWrestlingShows",
+      "route": "api/wrestling/",
+      "query": [
+        "page",
+        "limit",
+        "category_id",
+        "content_type",
+        "year",
+        "search",
+        "featured",
+        "sort_by"
+      ]
+    }
+  ]
+}

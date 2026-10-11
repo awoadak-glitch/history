@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0c1422">
+  <meta name="description" content="PALMA VISION — الأفلام والمسلسلات والأنمي والقنوات وعالم المصادر.">
+  <title>PALMA VISION | بالما</title>
+  <link rel="icon" href="/assets/palma-logo.png" type="image/png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/style.css">
+  <script src="/assets/hls.min.js" defer></script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div id="app">
+    <header id="header" class="topbar"></header>
+    <aside id="sidebar" class="sidebar" aria-label="القائمة الرئيسية"></aside>
+    <button id="drawer-shade" class="drawer-shade" aria-label="إغلاق القائمة" hidden></button>
+    <main id="main" tabindex="-1"><div class="initial-loading"><img src="/assets/palma-logo.png" alt="PALMA VISION"><span class="spinner"></span></div></main>
+    <nav id="bottom-nav" class="bottom-nav" aria-label="التبويبات"></nav>
+  </div>
+  <dialog id="dialog" class="dialog"></dialog>
+  <dialog id="player-dialog" class="player-dialog"></dialog>
+  <div id="toast" class="toast" role="status"></div>
+</body>
+</html>

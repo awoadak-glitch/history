@@ -1,0 +1,12 @@
+{
+  "name": "PALMA VISION",
+  "short_name": "PALMA",
+  "description": "بالما — الأفلام والمسلسلات والأنمي وعالم المصادر",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0c1422",
+  "theme_color": "#0c1422"
+}
