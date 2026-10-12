@@ -64,7 +64,8 @@ export async function resolveServer(item,episode,index,download=false,signal){
     waiting.removeEventListener('close',abort);waiting.close();
     if(download){
       const values=readStore('downloads',[]);values.unshift({title:item.title,episode,date:Date.now(),item,index});writeStore('downloads',values.slice(0,100));
-      modal('الرابط جاهز',`<p>${esc(item.title)}${episode?' • الحلقة '+esc(episode):''}</p><a class="btn primary" href="${esc(media.playable+'&download=1')}" download>${icon('download')} تنزيل الملف</a> <a class="btn outline" href="${esc(media.url)}" target="_blank" rel="noopener noreferrer">فتح الرابط المباشر</a>`,[{text:'إغلاق',run:d=>d.close()}]);
+      const downloadURL=media.download||(media.playable?.startsWith('/api/media?')?media.playable+'&download=1':media.url);
+      modal('الرابط جاهز',`<p>${esc(item.title)}${episode?' • الحلقة '+esc(episode):''}</p><a class="btn primary" href="${esc(downloadURL)}" target="_blank" rel="noopener noreferrer" download>${icon('download')} تنزيل الملف</a> <a class="btn outline" href="${esc(media.url)}" target="_blank" rel="noopener noreferrer">فتح الرابط المباشر</a>`,[{text:'إغلاق',run:d=>d.close()}]);
     }else if(media.qualities?.length){modal('اختر الجودة',`<p>${esc(item.title)}</p>` ,[{text:'تلقائي',primary:true,run:d=>{d.close();openPlayer(media,item,episode);}},...media.qualities.map(q=>({text:q.quality,run:d=>{d.close();openPlayer({...media,...q,qualities:media.qualities},item,episode);}}))]);}
     else openPlayer(media,item,episode);
   }catch(e){waiting.removeEventListener('close',abort);waiting.close();if(e.name!=='AbortError')modal('تعذر تجهيز السيرفر',`<p>${esc(e.message)}</p>`,[{text:'حسناً',run:d=>d.close()}]);}

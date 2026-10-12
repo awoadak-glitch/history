@@ -1,6 +1,6 @@
 import { catalogue } from './catalog.js';
 import { params, json, fail, SourceError } from '../server/http.js';
-import { resolveMedia } from '../server/media.js';
+import { resolveMedia, witcherPlayback } from '../server/media.js';
 
 const array = o => Array.isArray(o) ? o : arrayFind(o);
 function arrayFind(o) { if(!o) return []; for(const k of ['items','data','sources','streams','links']) if(Array.isArray(o[k])) return o[k]; return []; }
@@ -14,10 +14,13 @@ export default async function handler(req,res) {
     if(provider==='witcher') {
       if(!episode || episode.length>80) throw new SourceError('الحلقة غير صالحة.',400);
       source=await catalogue('witcher',`anime/${encodeURIComponent(id)}/episodes/${encodeURIComponent(episode)}/servers`,{resolve:index});
+      // Anime Witcher's own web player consumes this already-resolved URL directly.
+      // Do not require PALMA's optional media-proxy secret or resolve the file twice.
+      return json(res,200,witcherPlayback(source));
     } else if(provider==='drama') {
       if(!/^\d+$/.test(episode||id)) throw new SourceError('العمل غير صالح.',400);
-      const value=await catalogue('drama',`${episode?'episode':'movie'}/source/by/${episode||id}/`);
-      source=array(value)[index];
+      const value=await catalogue('drama',kind==='channel'?`channel/by/${id}/`:`${episode?'episode':'movie'}/source/by/${episode||id}/`);
+      source=array(kind==='channel'?body(value)?.sources:value)[index];
     } else if(provider==='palma') {
       if(!/^\d+$/.test(id) || (episode&&!/^\d+$/.test(episode))) throw new SourceError('العمل غير صالح.',400);
       if(episode && kind!=='anime') source=array(await catalogue('palma',`api/${download?'download_links':'watch_links'}/`,{episode_id:episode}))[index];

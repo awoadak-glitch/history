@@ -1,10 +1,11 @@
 import {icon,esc,first,arabic,list,data,safeURL,card,keyOf,playbackKey,link,detailLink,api,readStore,writeStore,favorite,toggleFavorite,progressFor,timeText,toast,modal} from './lib.js';
 import {resolveServer} from './player.js';
+import {mainNavigation,drawerNavigation,navigationState} from './navigation.js';
 
 const main=document.getElementById('main'),seeds=new Map();
 let controller=new AbortController(),generation=0,heroTimer,searchTimer,actions=new Map(),actionId=0,activeView='home';
-const mainTabs=[['home','الرئيسية','home'],['series','المسلسلات','series'],['movies','الأفلام','movie'],['anime','الأنمي','anime'],['channels','القنوات','channel'],['matches','المباريات','matches']];
-const extraTabs=[['world','عالم المصادر','world'],['wrestling','المصارعة','wrestling'],['collections','سلاسل الأفلام','folder'],['actors','الممثلون','people'],['favorites','المفضلة','heart'],['history','سجل المشاهدة','clock'],['downloads','التنزيلات','download'],['search','البحث','search'],['settings','الإعدادات','settings']];
+const mainTabs=mainNavigation;
+const extraTabs=[['collections','السلاسل','folder'],['actors','الممثلين','people'],['history','سجل المشاهدة','clock'],['downloads','التنزيلات','download'],['notifications','الإشعارات','bell'],['request','طلب مسلسل/فيلم','download']];
 const labels=Object.fromEntries([...mainTabs,...extraTabs].map(([v,t])=>[v,t]));
 const nativeKinds={series:'series',movies:'movie',anime:'anime',channels:'channel',wrestling:'wrestling',collections:'collection',actors:'actor'};
 const nativeRoutes={series:'api/series/',movies:'api/movies/',anime:'api/anime/',channels:'api/channels/',wrestling:'api/wrestling/',collections:'api/movies/collections.php',actors:'api/actors/'};
@@ -15,9 +16,9 @@ function action(fn){const id=String(++actionId);actions.set(id,fn);return id;}
 function button(text,fn,cls='btn',ico=''){return `<button class="${cls}" data-action="${action(fn)}">${ico?icon(ico):''}${esc(text)}</button>`;}
 function heading(title,subtitle='',trailing=''){return `<div class="page-heading"><div><h1>${esc(title)}</h1>${subtitle?`<p>${esc(subtitle)}</p>`:''}</div>${trailing?`<div class="trailing">${trailing}</div>`:''}</div>`;}
 function empty(text='لا توجد نتائج متاحة حالياً.'){return `<div class="state"><div class="state-icon">${icon('folder')}</div><p>${esc(text)}</p></div>`;}
-function errorState(error,retry,extras=true){return `<div class="state"><div class="state-icon">${icon('error')}</div><h3>تعذر تحميل المحتوى</h3><p>${esc(error.message||error)}</p>${button('إعادة المحاولة',retry,'btn primary','refresh')}${extras?`<a class="btn outline" href="${link('world')}">${icon('world')} عالم المصادر</a>`:''}</div>`;}
+function errorState(error,retry,extras=false){return `<div class="state"><div class="state-icon">${icon('error')}</div><h3>تعذر تحميل المحتوى</h3><p>${esc(error.message||error)}</p>${button('إعادة المحاولة',retry,'btn primary','refresh')}${extras?`<a class="btn outline" href="${link('world')}">${icon('world')} عالم المصادر</a>`:''}</div>`;}
 function skeleton(){return `<div class="skeleton hero"></div><div class="rail">${Array.from({length:7},()=>'<div class="skeleton card"></div>').join('')}</div>`;}
-function storeSeed(item){if(item){seeds.set(keyOf(item),item);if(seeds.size>1200)seeds.delete(seeds.keys().next().value);}}
+function storeSeed(item){if(item){if(item.provider==='witcher'&&activeView==='anime')item.area='main';seeds.set(keyOf(item),item);if(seeds.size>1200)seeds.delete(seeds.keys().next().value);}}
 function badgeText(item){if(item.provider==='witcher')return item.type||'أنمي';return ({series:'مسلسل',movie:'فيلم',anime:'أنمي',channel:'قناة',wrestling:'مصارعة',actor:'ممثل',collection:'سلسلة أفلام'})[item.kind]||item.content_type||'';}
 function img(raw,alt='',cls='',lazy=true){const url=safeURL(raw);return url?`<img src="${esc(url)}" alt="${esc(alt)}" class="${cls}" ${lazy?'loading="lazy"':''} decoding="async" referrerpolicy="no-referrer">`:`<img src="/assets/palma-logo.png" alt="${esc(alt)}" class="${cls}" loading="lazy">`;}
 function mediaCard(item){if(!item?.id)return '';storeSeed(item);const progress=progressFor(item,item.episodeId||'');return `<article class="media-card"><a href="${detailLink(item)}"><div class="card-image">${img(item.poster,item.title)}${item.rating?`<span class="rating">★ ${esc(Number(item.rating)?Number(item.rating).toFixed(1):item.rating)}</span>`:''}<span class="card-type">${esc(badgeText(item))}</span><div class="play-overlay">${icon('play')}</div></div><h3 class="card-title" dir="auto">${esc(item.title)}</h3><div class="card-meta"><span>${esc(item.year||'')}</span><span>${esc(item.episodeName||item.status||'')}</span></div>${progress?.duration?`<div class="progress"><span style="width:${Math.min(100,Math.max(0,progress.time/progress.duration*100))}%"></span></div>`:''}</a></article>`;}
@@ -25,17 +26,29 @@ function rail(title,items,seeAll=''){const rendered=items.map(mediaCard).join(''
 function grid(items){return items.length?`<div class="grid">${items.map(mediaCard).join('')}</div>`:empty();}
 function tags(item){const names=(item.tags||[]).map(x=>typeof x==='string'?x:first(x,'name_ar','name','title')).filter(Boolean);return `<div class="chips">${names.slice(0,6).map(t=>`<span class="badge">${esc(t)}</span>`).join('')}</div>`;}
 function hero(items){items=items.filter(Boolean).slice(0,8);if(!items.length)return '';items.forEach(storeSeed);const item=items[0];return `<section class="hero" data-hero><img class="hero-cover" src="${esc(safeURL(item.cover)||safeURL(item.poster)||'/assets/palma-logo.png')}" alt="${esc(item.title)}" referrerpolicy="no-referrer"><div class="hero-content"><img class="hero-poster" src="${esc(safeURL(item.poster)||'/assets/palma-logo.png')}" alt="" referrerpolicy="no-referrer"><div class="hero-info"><span class="hero-tag">${esc(badgeText(item))} · PALMA VISION</span><h1 dir="auto">${esc(item.title)}</h1>${tags(item)}<div class="card-meta">${item.rating?'★ '+esc(item.rating)+' · ':''}${esc(item.year)}</div><a class="btn primary hero-open" href="${detailLink(item)}">${icon('play')} التفاصيل والمشاهدة</a></div></div><div class="hero-dots">${items.map((_,i)=>`<button class="${i===0?'active':''}" aria-label="عرض ${i+1}" data-hero-index="${i}"></button>`).join('')}</div><button class="hero-nav prev" aria-label="السابق">${icon('back')}</button><button class="hero-nav next" aria-label="التالي">${icon('forward')}</button></section>`;}
-function bindHero(items){clearInterval(heroTimer);const el=document.querySelector('[data-hero]');if(!el||items.length<2)return;let index=0;const swap=i=>{index=(i+items.length)%items.length;const item=items[index];el.querySelector('.hero-cover').src=safeURL(item.cover)||safeURL(item.poster)||'/assets/palma-logo.png';el.querySelector('.hero-cover').alt=item.title;el.querySelector('.hero-poster').src=safeURL(item.poster)||'/assets/palma-logo.png';el.querySelector('.hero-info').innerHTML=`<span class="hero-tag">${esc(badgeText(item))} · PALMA VISION</span><h1 dir="auto">${esc(item.title)}</h1>${tags(item)}<div class="card-meta">${item.rating?'★ '+esc(item.rating)+' · ':''}${esc(item.year)}</div><a class="btn primary" href="${detailLink(item)}">${icon('play')} التفاصيل والمشاهدة</a>`;el.querySelectorAll('[data-hero-index]').forEach((b,n)=>b.classList.toggle('active',n===index));};el.querySelectorAll('[data-hero-index]').forEach(b=>b.onclick=()=>swap(+b.dataset.heroIndex));el.querySelector('.prev').onclick=()=>swap(index-1);el.querySelector('.next').onclick=()=>swap(index+1);if(!matchMedia('(prefers-reduced-motion:reduce)').matches)heroTimer=setInterval(()=>{if(!document.hidden&&!document.querySelector('dialog[open]'))swap(index+1);},7000);}
-function worldTabs(selected='witcher'){return `<div class="world-tabs"><a href="${link('home')}">${icon('back')} العودة للأساسي</a>${[['witcher','الأنمي','anime'],['series','المسلسلات','series'],['movies','الأفلام','movie'],['channels','القنوات','channel']].map(([k,t,i])=>`<a class="${selected===k?'active':''}" href="${link('world',{tab:k})}">${icon(i)} ${t}</a>`).join('')}<a href="${link('search',{source:'witcher'})}">${icon('search')} البحث</a><a href="${link('news')}">${icon('news')} أخبار الأنمي</a></div>`;}
-function shell(view){
-  document.getElementById('header').innerHTML=`<button class="icon-btn menu-button" id="open-menu" aria-label="القائمة">${icon('menu')}</button><a class="brand" href="#/home"><img src="/assets/palma-logo.png" alt="بالما"><span class="brand-name">PALMA<small>VISION</small></span></a><form class="top-search" id="top-search">${icon('search')}<input name="q" type="search" placeholder="ابحث عن فيلم، مسلسل أو أنمي…" aria-label="البحث"></form><div class="top-actions"><a class="icon-btn" href="${link('search')}" aria-label="البحث">${icon('search')}</a><a class="icon-btn desktop-only" href="${link('news')}" aria-label="الأخبار">${icon('bell')}</a><a class="icon-btn" href="${link('favorites')}" aria-label="المفضلة">${icon('heart')}</a><a class="icon-btn" href="${link('settings')}" aria-label="الإعدادات">${icon('settings')}</a></div>`;
-  document.getElementById('sidebar').innerHTML=`<a class="brand drawer-brand" href="#/home"><img src="/assets/palma-logo.png" alt="بالما"><span class="brand-name">PALMA<small>VISION</small></span></a>${mainTabs.map(([v,t,i])=>`<a class="nav-item ${view===v?'active':''}" href="${link(v)}">${icon(i)}<span>${t}</span></a>`).join('')}<div class="nav-divider"></div><div class="nav-section">المزيد</div>${extraTabs.map(([v,t,i])=>`<a class="nav-item ${view===v?'active':''}" href="${link(v)}">${icon(i)}<span>${t}</span></a>`).join('')}<div class="sidebar-footer">PALMA VISION<br>إصدار الويب 1.1.7</div>`;
-  const tabs=view==='world'||(view==='detail'&&new URLSearchParams(location.hash.split('?')[1]).get('provider')!=='palma')?[['home','الأساسي','home'],['world','الأنمي','anime'],['world?tab=series','المسلسلات','series'],['world?tab=movies','الأفلام','movie'],['world?tab=channels','القنوات','channel']]:[['home','الرئيسية','home'],['series','مسلسلات','series'],['movies','أفلام','movie'],['world','عالم المصادر','world'],['channels','قنوات','channel'],['matches','مباريات','matches'],['search','بحث','search']];
-  document.getElementById('bottom-nav').innerHTML=tabs.map(([v,t,i])=>`<a href="#/${v}" class="${view===v?'active':''}">${icon(i)}${t}</a>`).join('');
-  document.getElementById('open-menu').onclick=()=>drawer(true);
-  document.getElementById('top-search').onsubmit=e=>{e.preventDefault();location.hash=link('search',{q:new FormData(e.target).get('q')});};
+function bindHero(items){items=items.filter(Boolean).slice(0,8);clearInterval(heroTimer);const el=document.querySelector('[data-hero]');if(!el||items.length<2)return;let index=0;const swap=i=>{index=(i+items.length)%items.length;const item=items[index];el.querySelector('.hero-cover').src=safeURL(item.cover)||safeURL(item.poster)||'/assets/palma-logo.png';el.querySelector('.hero-cover').alt=item.title;el.querySelector('.hero-poster').src=safeURL(item.poster)||'/assets/palma-logo.png';el.querySelector('.hero-info').innerHTML=`<span class="hero-tag">${esc(badgeText(item))} · PALMA VISION</span><h1 dir="auto">${esc(item.title)}</h1>${tags(item)}<div class="card-meta">${item.rating?'★ '+esc(item.rating)+' · ':''}${esc(item.year)}</div><a class="btn primary" href="${detailLink(item)}">${icon('play')} التفاصيل والمشاهدة</a>`;el.querySelectorAll('[data-hero-index]').forEach((b,n)=>b.classList.toggle('active',n===index));};el.querySelectorAll('[data-hero-index]').forEach(b=>b.onclick=()=>swap(+b.dataset.heroIndex));el.querySelector('.prev').onclick=()=>swap(index-1);el.querySelector('.next').onclick=()=>swap(index+1);if(readStore('auto-banner',true)&&!matchMedia('(prefers-reduced-motion:reduce)').matches)heroTimer=setInterval(()=>{if(!document.hidden&&!document.querySelector('dialog[open]'))swap(index+1);},7000);}
+function worldTabs(){return '';}
+function animeNavigation(mainArea=false){
+  const view=mainArea?'anime':'world', area=mainArea?'main':'world';
+  return `<nav class="source-shortcuts" aria-label="قوائم الأنمي">${[['series_name_asc','كل الأنمي'],['series_date_created','أحدث الأعمال'],['series_fav_count_desc','الأكثر شهرة'],['best_mal_ranked','الأفضل عالمياً'],['all_animation','الأنميشن']].map(([index,title])=>`<a class="chip" href="${link(view,{index})}">${title}</a>`).join('')}<a class="chip" href="${link('favorites',{area,source:'witcher'})}">المفضلة</a><a class="chip" href="${link('history',{area,source:'witcher'})}">السجل</a><a class="chip" href="${link('news',{area})}">الأخبار</a></nav>`;
 }
-function drawer(open){document.getElementById('sidebar').classList.toggle('open',open);document.getElementById('drawer-shade').hidden=!open;}
+function shell(view){
+  const p=new URLSearchParams(location.hash.split('?')[1]),nav=navigationState(view,p),world=nav.world;
+  document.body.dataset.area=world?'world':'main';document.body.dataset.view=view;
+  const title=world?(p.get('tab')==='series'?'المسلسلات':p.get('tab')==='movies'?'الأفلام':p.get('tab')==='channels'?'القنوات':view==='world'?'عالم الأنمي':labels[view]||'الأنمي'):view==='home'?'':labels[view]||'بالما';
+  const searchHref=link('search',{source:world?'witcher':'all',area:world?'world':'main'});
+  document.getElementById('header').innerHTML=`${world?`<a class="icon-btn" href="${link('home')}" aria-label="العودة إلى بالما">${icon('back')}</a>`:`<button class="icon-btn menu-button" id="open-menu" aria-label="القائمة" aria-controls="sidebar" aria-expanded="false">${icon('menu')}</button>`}<strong class="appbar-title">${esc(title)}</strong><div class="top-actions">${world||view!=='home'?`<a class="icon-btn" href="${searchHref}" aria-label="البحث">${icon('search')}</a>`:`<a class="icon-btn" href="${link('notifications')}" aria-label="الإشعارات">${icon('bell')}</a><a class="icon-btn" href="${link('favorites')}" aria-label="المفضلة">${icon('heart')}</a><a class="icon-btn" href="${link('settings')}" aria-label="الإعدادات">${icon('settings')}</a>`}</div>`;
+  document.getElementById('sidebar').innerHTML=`<a class="drawer-logo" href="#/home"><img src="/assets/palma-logo.png" alt="PALMA VISION"></a><div class="nav-divider"></div><nav>${drawerNavigation.map(([v,t,i],index)=>`${[8,11].includes(index)?'<div class="nav-divider"></div>':''}${v==='share'?button(t,shareApp,'nav-item',i):`<a class="nav-item ${nav.active===v?'active':''}" href="${link(v)}">${icon(i)}<span>${t}</span></a>`}`).join('')}</nav><button class="drawer-close icon-btn" aria-label="إغلاق القائمة">${icon('close')}</button>`;
+  const bottom=document.getElementById('bottom-nav');bottom.classList.toggle('world-bottom',world);
+  bottom.setAttribute('aria-label',world?'تبويبات عالم المصادر':'تبويبات بالما الرئيسية');
+  bottom.innerHTML=nav.tabs.map(([v,t,i])=>`<a href="#/${v}" class="${nav.active===v?'active':''}" ${nav.active===v?'aria-current="page"':''}>${icon(i)}<span>${t}</span></a>`).join('');
+  requestAnimationFrame(()=>bottom.querySelector('[aria-current]')?.scrollIntoView({block:'nearest',inline:'nearest'}));
+  document.getElementById('open-menu')?.addEventListener('click',()=>drawer(true));
+  document.querySelector('.drawer-close').onclick=()=>drawer(false);
+}
+function drawer(open){const sidebar=document.getElementById('sidebar');sidebar.classList.toggle('open',open);sidebar.inert=!open;document.getElementById('drawer-shade').hidden=!open;document.getElementById('open-menu')?.setAttribute('aria-expanded',String(open));document.body.classList.toggle('drawer-open',open);if(open)sidebar.querySelector('.nav-item')?.focus();}
+async function shareApp(){const url=location.origin+'/';if(navigator.share){try{await navigator.share({title:'PALMA VISION',url});}catch{}}else{try{await navigator.clipboard.writeText(url);toast('تم نسخ رابط بالما');}catch{modal('مشاركة التطبيق',`<input class="share-url" value="${esc(url)}" readonly aria-label="رابط بالما">`);}}drawer(false);}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')drawer(false);});
 document.getElementById('drawer-shade').onclick=()=>drawer(false);
 document.addEventListener('click',e=>{const node=e.target.closest('[data-action]');if(node){const fn=actions.get(node.dataset.action);if(fn)Promise.resolve(fn(e)).catch(err=>{if(err.name!=='AbortError')toast(err.message);});}if(e.target.closest('.nav-item,.bottom-nav a,.drawer-brand'))drawer(false);});
 document.addEventListener('error',e=>{if(e.target.tagName==='IMG'&&!e.target.src.endsWith('/assets/palma-logo.png')){e.target.src='/assets/palma-logo.png';e.target.style.objectFit='contain';}},true);
@@ -48,10 +61,11 @@ async function home(token){
   try{native=data(await api('palma','api/v2/home.php',{},controller.signal));}catch(e){if(e.name==='AbortError')return;native={error:e};}
   if(!active(token))return;
   if(native.error){
-    page(heading('الرئيسية','PALMA VISION')+`<div class="notice"><div><strong>الأقسام الرئيسية غير متاحة حاليًا</strong><p class="muted">${esc(native.error.message)}</p></div><div class="notice-actions">${button('إعادة المحاولة',()=>navigate(),'btn outline','refresh')}<a class="btn primary" href="${link('world')}">عالم المصادر</a></div></div><div id="working-world">${skeleton()}</div>`);
-    try{const j=await api('witcher','home',{},controller.signal);if(!active(token))return;const heroes=list(j.hero).map(x=>card(x,'witcher','anime'));document.getElementById('working-world').innerHTML=`<div class="section-head"><h2>أنمي ويتشر · عالم المصادر</h2><a href="${link('world')}">فتح القسم</a></div>`+hero(heroes)+animeSections.map(([key,title,index])=>rail(title,list(j[key]).map(x=>card(x,'witcher','anime')),link('world',{index}))).join('');bindHero(heroes);}catch(e){if(active(token)&&e.name!=='AbortError')document.getElementById('working-world').innerHTML=errorState(e,()=>navigate(),false);}
-    return;
-  }
+    const cached=readStore('home-cache',null);
+    if(cached?.data){native=cached.data;page(`<div class="offline-note">آخر محتوى محفوظ · تعذر تحديث المصدر الآن</div>`);}else{
+      page(`<section class="native-home-state">${errorState(native.error,()=>navigate())}</section>`);return;
+    }
+  }else writeStore('home-cache',{data:native,updated:Date.now()});
   const heroes=list(native.banners).map(x=>card(x,'palma',x.item_type||'series'));
   page(hero(heroes)+`<div id="native-sections"></div>`);bindHero(heroes);
   const container=document.getElementById('native-sections');
@@ -67,15 +81,15 @@ async function home(token){
 }
 
 async function world(p,token){
-  const tab=p.get('tab')||'witcher',index=p.get('index');
-  page(heading('عالم المصادر','المصادر الداخلية في بالما')+worldTabs(tab)+`<div id="world-body">${skeleton()}</div>`);
+  const tab=p.get('tab')||'witcher',index=p.get('index'),mainArea=activeView==='anime';
+  page((tab==='witcher'?animeNavigation(mainArea):'')+`<div id="world-body">${skeleton()}</div>`);
   const body=document.getElementById('world-body');
   if(tab!=='witcher'){await dramaCatalog(tab,body,token);return;}
   if(index){await witcherCatalogue(index,body,token);return;}
   try{
     const j=await api('witcher','home',{},controller.signal);if(!active(token))return;
     const heroes=list(j.hero).map(x=>card(x,'witcher','anime'));
-    body.innerHTML=`<div class="chips" style="margin-bottom:19px"><span class="badge gold">${esc(j.currentSeason||'الأنمي')}</span><a class="chip" href="${link('world',{index:'series_name_asc'})}">كل الأنمي</a><a class="chip" href="${link('world',{index:'all_animation'})}">الأنميشن</a><a class="chip" href="${link('search',{source:'witcher'})}">بحث</a></div>`+hero(heroes)+animeSections.map(([key,title,index])=>rail(title,list(j[key]).map(x=>card(x,'witcher','anime')),link('world',{index}))).join('')+newsHTML(list(j.news));bindHero(heroes);
+    body.innerHTML=hero(heroes)+animeSections.map(([key,title,index])=>rail(title,list(j[key]).map(x=>card(x,'witcher','anime')),link(mainArea?'anime':'world',{index}))).join('')+newsHTML(list(j.news));bindHero(heroes);
   }catch(e){if(active(token)&&e.name!=='AbortError')body.innerHTML=errorState(e,()=>navigate(),false);}
 }
 async function witcherCatalogue(index,body,token){
@@ -87,19 +101,23 @@ async function witcherCatalogue(index,body,token){
   };await fetchPage();
 }
 async function nativeCatalog(view,p,token){
-  let current=1;const query={limit:'30',sort_by:p.get('sort_by')||'created'};for(const [k,v]of p)if(!['provider','kind','id'].includes(k))query[k]=v;
+  let current=1,requestVersion=0;const query={limit:'30',sort_by:p.get('sort_by')||'created'};for(const [k,v]of p)if(!['provider','kind','id','area'].includes(k))query[k]=v;
   page(heading(labels[view])+`<div id="filters" class="filters"></div><div id="catalog-results">${skeleton()}</div><div id="catalog-more"></div>`);
   const load=async(reset=false)=>{
+    const version=++requestVersion;
     if(reset){current=1;document.getElementById('catalog-results').innerHTML=skeleton();}
     const target=document.getElementById('catalog-results'),more=document.getElementById('catalog-more');
-    try{const j=await api('palma',nativeRoutes[view],{...query,page:current},controller.signal);if(!active(token))return;const items=list(j).map(x=>card(x,'palma',nativeKinds[view]));if(current===1)target.innerHTML=grid(items);else target.querySelector('.grid')?.insertAdjacentHTML('beforeend',items.map(mediaCard).join(''));current++;const meta=j.pagination||j.meta||{},has=meta.total_pages?current<=meta.total_pages:meta.has_more??items.length>=30;more.innerHTML=has?button('تحميل المزيد',()=>load(),'btn outline load-more'):'';}catch(e){if(active(token)&&e.name!=='AbortError'){target.innerHTML=errorState(e,()=>load(true));more.innerHTML='';}}
+    try{const j=await api('palma',nativeRoutes[view],{...query,page:current},controller.signal);if(!active(token)||version!==requestVersion)return;const items=list(j).map(x=>card(x,'palma',nativeKinds[view]));if(current===1)target.innerHTML=grid(items);else target.querySelector('.grid')?.insertAdjacentHTML('beforeend',items.map(mediaCard).join(''));current++;const meta=j.pagination||j.meta||{},has=meta.total_pages?current<=meta.total_pages:meta.has_more??items.length>=30;more.innerHTML=has?button('تحميل المزيد',()=>load(),'btn outline load-more'):'';}catch(e){if(active(token)&&version===requestVersion&&e.name!=='AbortError'){target.innerHTML=errorState(e,()=>load(true));more.innerHTML='';}}
   };
   const filters=document.getElementById('filters');
   filters.innerHTML=`<select id="sort-select" aria-label="الترتيب">${[['created','الأحدث'],['rating','الأعلى تقييمًا'],['views','الأكثر مشاهدة'],['title','الاسم'],['year','السنة']].map(([v,t])=>`<option value="${v}" ${query.sort_by===v?'selected':''}>${t}</option>`).join('')}</select><input id="catalog-search" type="search" placeholder="بحث في ${esc(labels[view])}" aria-label="البحث في القسم">`;
   document.getElementById('sort-select').onchange=e=>{query.sort_by=e.target.value;load(true);};
   document.getElementById('catalog-search').addEventListener('input',e=>{clearTimeout(searchTimer);searchTimer=setTimeout(()=>{query.search=e.target.value.trim();load(true);},420);});
-  await load();if(!active(token)||!filterRoutes[view])return;
-  try{const options=data(await api('palma',filterRoutes[view],{},controller.signal));if(!active(token))return;const pairs=[['categories','category','التصنيفات'],['countries','country','الدول'],['genres','genre_id','الأنواع'],['years','year','السنة'],['statuses','status','الحالة'],['languages','language','اللغة']];for(const [key,param,label]of pairs){const values=list(options?.[key]);if(!values.length)continue;const select=document.createElement('select');select.setAttribute('aria-label',label);select.innerHTML=`<option value="">جميع ${label}</option>`+values.map(x=>`<option value="${esc(typeof x==='object'?first(x,'id','value','code'):x)}">${esc(typeof x==='object'?first(x,'name_ar','name','label','title','value'):x)}</option>`).join('');select.onchange=e=>{query[param]=e.target.value;load(true);};filters.append(select);}}catch{}
+  const loading=load();if(!filterRoutes[view]){await loading;return;}
+  const filterLabels=[['countries','البلد'],['genres','النوع'],['years','السنة'],['content_types','المحتوى'],['statuses','الحالة'],['age_ratings','التصنيف العمري']];
+  for(const [name,label]of filterLabels){const select=document.createElement('select');select.dataset.filter=name;select.setAttribute('aria-label',label);select.innerHTML=`<option value="">${label}</option>`;filters.append(select);}
+  await loading;if(!active(token))return;
+  try{const options=data(await api('palma',filterRoutes[view],{},controller.signal));if(!active(token))return;const pairs=[['categories','category','التصنيفات'],['countries','country','الدول'],['genres','genre_id','الأنواع'],['years','year','السنة'],['statuses','status','الحالة'],['languages','language','اللغة'],['content_types','content_type','المحتوى'],['age_ratings','age_rating','التصنيف العمري']];for(const [key,param,label]of pairs){const values=list(options?.[key]);if(!values.length)continue;const select=filters.querySelector(`[data-filter="${key}"]`)||document.createElement('select');select.setAttribute('aria-label',label);select.innerHTML=`<option value="">جميع ${label}</option>`+values.map(x=>`<option value="${esc(typeof x==='object'?first(x,'id','value','code'):x)}">${esc(typeof x==='object'?first(x,'name_ar','name','label','title','value'):x)}</option>`).join('');select.onchange=e=>{query[param]=e.target.value;load(true);};filters.append(select);}}catch{}
 }
 async function dramaCatalog(tab,body,token){
   const kind={series:'series',movies:'movie',channels:'channel'}[tab]||'series';let current=0;
@@ -121,7 +139,7 @@ async function detail(p,token){
     else if(provider==='drama')j=await api(provider,`${kind==='channel'?'channel':'movie'}/by/${id}/`,{},controller.signal);
     else j=await api(provider,detailRoutes[kind]||detailRoutes.series,{id},controller.signal);
     if(!active(token))return;
-    const raw=data(j)||{},item=card({...seed,...raw,id},provider,kind);storeSeed(item);renderDetail(item,raw,token);
+    const raw=data(j)||{},item=card({...seed,...raw,id,area:p.get('area')||seed?.area},provider,kind);storeSeed(item);renderDetail(item,raw,token);
   }catch(e){if(active(token)&&e.name!=='AbortError')page(heading(seed?.title||'التفاصيل')+errorState(e,()=>navigate()));}
 }
 function renderDetail(item,raw,token){
@@ -153,7 +171,7 @@ function renderEpisodes(item,episodes,el,token){
   if(!episodes.length){el.innerHTML=empty('لا توجد حلقات متاحة حاليًا.');return;}
   const render=(filter='')=>episodes.filter(e=>!filter||JSON.stringify([e.name,e.title,e.episode_number,e.doc_id]).toLowerCase().includes(filter.toLowerCase())).map((e,i)=>{
     const id=first(e,'doc_id','episode_id','id')||String(i+1),number=e.episode_number||parseInt(id)||i+1,progress=progressFor(item,id);
-    const fn=action(()=>{location.hash=link('servers',{provider:item.provider,kind:item.kind,id:item.id,episode:id,title:item.title});});
+    const fn=action(()=>{location.hash=link('servers',{provider:item.provider,kind:item.kind,id:item.id,episode:id,title:item.title,area:item.area});});
     return `<button class="episode-card" data-action="${fn}">${img(first(e,'thumb_uri','thumbnail','image')||item.cover,'')}<div class="episode-label"><div class="episode-title">${esc(first(e,'name','title')||'الحلقة '+number)}</div><small>${esc(first(e,'title_translated','air_date'))}${e.filler?' · فلر':''}</small>${progress?.time?`<small class="gold">متابعة من ${timeText(progress.time)}</small>`:''}${progress?.duration?`<div class="progress"><span style="width:${Math.min(100,progress.time/progress.duration*100)}%"></span></div>`:''}</div>${icon('play')}</button>`;
   }).join('');
   el.innerHTML=`<section class="section"><div class="section-head"><h2>الحلقات</h2><span class="badge">${episodes.length} حلقة</span></div><div class="episode-toolbar"><input type="search" placeholder="ابحث برقم الحلقة أو اسمها" aria-label="البحث في الحلقات"></div><div class="episodes-grid">${render()}</div></section>`;
@@ -161,7 +179,7 @@ function renderEpisodes(item,episodes,el,token){
 }
 async function serversPage(p,token){
   const provider=p.get('provider')||'palma',kind=p.get('kind')||'series',id=p.get('id'),episode=p.get('episode')||'';
-  const item=seeds.get(`${provider}:${kind}:${id}`)||{id,kind,provider,title:p.get('title')||'المشاهدة'};
+  const item=seeds.get(`${provider}:${kind}:${id}`)||{id,kind,provider,title:p.get('title')||'المشاهدة',area:p.get('area')};
   page(heading(item.title,episode?'الحلقة '+(parseInt(episode)||episode):'السيرفرات',`<a class="btn outline" href="${detailLink(item)}">${icon('back')} رجوع</a>`)+`<div id="detail-content"></div>`);await loadServers(item,episode,token);
 }
 async function loadServers(item,episode,token){
@@ -169,7 +187,7 @@ async function loadServers(item,episode,token){
   try{
     let watch=[],downloads=[];
     if(item.provider==='witcher'){const j=await api('witcher',`anime/${encodeURIComponent(item.id)}/episodes/${encodeURIComponent(episode)}/servers`,{},controller.signal);watch=list(j).map((x,i)=>({...x,_index:i}));downloads=watch;}
-    else if(item.provider==='drama'){const j=await api('drama',`${episode?'episode':'movie'}/source/by/${episode||item.id}/`,{},controller.signal);const items=list(j).map((x,i)=>({...x,_index:i}));watch=items.filter(x=>!x.kind||['both','play'].includes(x.kind));downloads=items.filter(x=>['both','download'].includes(x.kind));}
+    else if(item.provider==='drama'){const j=await api('drama',item.kind==='channel'?`channel/by/${item.id}/`:`${episode?'episode':'movie'}/source/by/${episode||item.id}/`,{},controller.signal);const items=list(item.kind==='channel'?data(j)?.sources:j).map((x,i)=>({...x,_index:i}));watch=items.filter(x=>!x.kind||['both','play'].includes(x.kind));downloads=items.filter(x=>['both','download'].includes(x.kind));}
     else if(episode&&item.kind!=='anime'){
       const values=await Promise.allSettled([api('palma','api/watch_links/',{episode_id:episode},controller.signal),api('palma','api/download_links/',{episode_id:episode},controller.signal)]);
       if(values.every(v=>v.status==='rejected'))throw values[0].reason;
@@ -198,10 +216,10 @@ async function search(p,token){
     if(reset)pageIndex=0;const seq=++searchVersion,target=document.getElementById('search-results'),more=document.getElementById('search-more');if(!query.trim()){target.innerHTML=empty('اكتب اسم العمل للبحث.');more.innerHTML='';return;}
     if(!pageIndex)target.innerHTML='<div class="state"><span class="spinner"></span></div>';more.innerHTML='';
     const selected=source==='all'?['palma','witcher','drama']:[source];
-    const results=await Promise.allSettled(selected.map(s=>s==='witcher'?api(s,'search',{q:query,index:'series_name_asc',page:pageIndex},controller.signal):s==='palma'?api(s,nativeRoutes[type],{search:query,page:pageIndex+1,limit:30},controller.signal):api(s,`search/${encodeURIComponent(query)}/${pageIndex}/`,{},controller.signal)));
+    const results=await Promise.allSettled(selected.map(s=>s==='witcher'?api(s,'search',{q:query,index:'series_name_asc',page:pageIndex},controller.signal):s==='palma'&&type==='anime'?api('witcher','search',{q:query,index:'series_name_asc',page:pageIndex},controller.signal):s==='palma'?api(s,nativeRoutes[type],{search:query,page:pageIndex+1,limit:30},controller.signal):api(s,`search/${encodeURIComponent(query)}/${pageIndex}/`,{},controller.signal)));
     if(!active(token)||seq!==searchVersion)return;
     let cards=[],failures=[],hasMore=false;
-    results.forEach((r,i)=>{if(r.status==='fulfilled'){const provider=selected[i];let values=provider==='drama'?[...list(r.value.posters),...list(r.value.channels)].filter(Boolean):list(r.value);if(!values.length)values=list(r.value);cards.push(...values.map(x=>card(x,provider,provider==='witcher'?'anime':nativeKinds[type]||'series')));hasMore ||= r.value.nbPages?pageIndex+1<r.value.nbPages:values.length>=30;}else if(r.reason.name!=='AbortError')failures.push(`${sources.find(x=>x[0]===selected[i])?.[1]}: ${r.reason.message}`);});
+    results.forEach((r,i)=>{if(r.status==='fulfilled'){const provider=selected[i]==='palma'&&type==='anime'?'witcher':selected[i];let values=provider==='drama'?[...list(r.value.posters),...list(r.value.channels)].filter(Boolean):list(r.value);if(!values.length)values=list(r.value);cards.push(...values.map(x=>card(x,provider,provider==='witcher'?'anime':nativeKinds[type]||'series')));hasMore ||= r.value.nbPages?pageIndex+1<r.value.nbPages:values.length>=30;}else if(r.reason.name!=='AbortError')failures.push(`${sources.find(x=>x[0]===selected[i])?.[1]}: ${r.reason.message}`);});
     if(pageIndex===0)target.innerHTML=(failures.length?`<div class="notice"><span>${failures.map(esc).join('<br>')}</span></div>`:'')+grid(cards);else target.querySelector('.grid')?.insertAdjacentHTML('beforeend',cards.map(mediaCard).join(''));
     pageIndex++;more.innerHTML=hasMore?button('تحميل المزيد',()=>run(),'btn outline load-more'):'';
   };
@@ -210,10 +228,11 @@ async function search(p,token){
 }
 
 function library(view){
-  if(view==='favorites'){const items=readStore('favorites',[]);page(heading('المفضلة','الأعمال المحفوظة على هذا المتصفح')+grid(items));return;}
+  const source=new URLSearchParams(location.hash.split('?')[1]).get('source');const libraryTabs=`<nav class="library-tabs chips"><a class="chip" href="${link('favorites',{source})}">المفضلة</a><a class="chip" href="${link('history',{source})}">سجل المشاهدة</a><a class="chip" href="${link('downloads',{source})}">التنزيلات</a></nav>`;
+  if(view==='favorites'){const items=readStore('favorites',[]).filter(x=>!source||x.provider===source);page(heading('المفضلة')+libraryTabs+grid(items));return;}
   if(view==='history'){
-    const entries=Object.values(readStore('progress',{})).sort((a,b)=>b.updated-a.updated);
-    page(heading('سجل المشاهدة','متابعة الحلقات من حيث توقفت',entries.length?button('مسح السجل',()=>confirmClear('progress',{}),'btn outline','trash'):'')+(entries.length?`<div class="episodes-grid">${entries.map(e=>{const item=e.item;storeSeed(item);return `<a class="episode-card" href="${e.episode?link('servers',{provider:item.provider,kind:item.kind,id:item.id,episode:e.episode,title:item.title}):detailLink(item)}">${img(item.poster,'')}<div class="episode-label"><strong>${esc(item.title)}</strong><small>${e.episode?'الحلقة '+esc(parseInt(e.episode)||e.episode)+' · ':''}متابعة من ${timeText(e.time)}</small>${e.duration?`<div class="progress"><span style="width:${Math.min(100,e.time/e.duration*100)}%"></span></div>`:''}</div>${icon('play')}</a>`;}).join('')}</div>`:empty('لم تبدأ مشاهدة أي عمل بعد.')));return;
+    const entries=Object.values(readStore('progress',{})).filter(x=>!source||x.item?.provider===source).sort((a,b)=>b.updated-a.updated);
+    page(heading('سجل المشاهدة','متابعة الحلقات من حيث توقفت',entries.length?button('مسح السجل',()=>confirmClear('progress',{}),'btn outline','trash'):'')+(entries.length?`<div class="episodes-grid">${entries.map(e=>{const item=e.item;storeSeed(item);return `<a class="episode-card" href="${e.episode?link('servers',{provider:item.provider,kind:item.kind,id:item.id,episode:e.episode,title:item.title,area:item.area}):detailLink(item)}">${img(item.poster,'')}<div class="episode-label"><strong>${esc(item.title)}</strong><small>${e.episode?'الحلقة '+esc(parseInt(e.episode)||e.episode)+' · ':''}متابعة من ${timeText(e.time)}</small>${e.duration?`<div class="progress"><span style="width:${Math.min(100,e.time/e.duration*100)}%"></span></div>`:''}</div>${icon('play')}</a>`;}).join('')}</div>`:empty('لم تبدأ مشاهدة أي عمل بعد.')));return;
   }
   const entries=readStore('downloads',[]);page(heading('التنزيلات','الروابط التي جهزتها للتنزيل')+(entries.length?entries.map(e=>`<div class="download-item">${icon('download')}<div class="download-title"><strong>${esc(e.title)}</strong><small>${e.episode?'الحلقة '+esc(e.episode)+' · ':''}${new Date(e.date).toLocaleDateString('ar')}</small></div>${button('تجهيز الرابط مجددًا',()=>resolveServer(e.item,e.episode,e.index,true,controller.signal),'btn outline')}</div>`).join(''):empty('تظهر هنا الروابط التي تجهزها للتنزيل. الملفات المنزلة تجدها في مجلد التنزيلات على جهازك.')));
 }
@@ -237,11 +256,20 @@ async function matchDetail(p,token){
   try{const raw=data(await api('palma','api/matches/show.php',{id:p.get('id')},controller.signal));if(!active(token))return;page(heading(first(raw,'title','name')||'تفاصيل المباراة')+`<div class="metadata-grid"><div><small>الحالة</small>${esc(raw.status)}</div><div><small>التاريخ</small>${esc(first(raw,'match_date','date'))}</div><div><small>الملعب</small>${esc(first(raw,'venue','stadium'))}</div></div><div id="match-streams"></div><div id="match-videos"></div>`);const channels=list(raw.channels);document.getElementById('match-streams').innerHTML=rail('القنوات الناقلة',channels.map(x=>card(x,'palma','channel')));const videos=list(await api('palma','api/matches/event_videos.php',{match_id:p.get('id'),page:1,limit:30},controller.signal));if(active(token))document.getElementById('match-videos').innerHTML=videos.length?`<section class="section"><h2>الملخص والأهداف</h2><p class="muted">${videos.map(v=>esc(v.title||v.name)).join(' · ')}</p></section>`:empty('لا توجد فيديوهات لهذه المباراة حاليًا.');}catch(e){if(active(token)&&e.name!=='AbortError')page(errorState(e,()=>navigate()));}
 }
 
+function notifications(){page(heading('الإشعارات')+empty('إشعارات التطبيق غير متصلة بنسخة الويب حالياً.'));}
+function telegramPage(){page(heading('تليجرام')+`<div class="info-panel"><p>القناة المرتبطة بالتطبيق.</p><a class="btn primary" href="https://dramaramadan.net/telegram" target="_blank" rel="noopener noreferrer">${icon('telegram')} فتح تليجرام</a></div>`);}
+function requestPage(){
+  const draft=readStore('request-draft',{});
+  page(heading('طلب مسلسل/فيلم')+`<form id="request-form" class="info-panel"><p>خدمة إرسال الطلبات غير متصلة حالياً. يمكنك تجهيز الطلب وحفظه على هذا الجهاز.</p><label>نوع العمل<select name="kind"><option value="series">مسلسل</option><option value="movie">فيلم</option></select></label><label>اسم العمل<input name="title" required maxlength="160" value="${esc(draft.title||'')}" placeholder="اسم المسلسل أو الفيلم"></label><label>ملاحظات<textarea name="notes" maxlength="2000" rows="4">${esc(draft.notes||'')}</textarea></label><button class="btn primary" type="submit">حفظ مسودة الطلب</button><span id="request-status" role="status"></span></form>`);
+  const form=document.getElementById('request-form');form.elements.kind.value=draft.kind||'series';form.onsubmit=e=>{e.preventDefault();writeStore('request-draft',Object.fromEntries(new FormData(form)));document.getElementById('request-status').textContent='حُفظت المسودة على هذا الجهاز؛ لم يُرسل الطلب.';};
+}
+
 async function navigate(){
   controller.abort();controller=new AbortController();generation++;const token=generation;clearInterval(heroTimer);clearTimeout(searchTimer);actions=new Map();
   const raw=location.hash.replace(/^#\/?/,'')||'home',name=raw.split('?')[0],p=new URLSearchParams(raw.split('?')[1]);activeView=name;shell(name);drawer(false);window.scrollTo(0,0);document.title=`${labels[name]||'PALMA VISION'} | PALMA VISION`;
   try{
     if(name==='home')await home(token);
+    else if(name==='anime')await world(p,token);
     else if(nativeRoutes[name])await nativeCatalog(name,p,token);
     else if(name==='world')await world(p,token);
     else if(name==='detail')await detail(p,token);
@@ -250,6 +278,9 @@ async function navigate(){
     else if(['favorites','history','downloads'].includes(name))library(name);
     else if(name==='settings')settings();
     else if(name==='news')await news(token);
+    else if(name==='notifications')await notifications(token);
+    else if(name==='request')requestPage();
+    else if(name==='telegram')telegramPage();
     else if(name==='matches')await matches(p,token);
     else if(name==='match')await matchDetail(p,token);
     else page(heading('الصفحة غير موجودة')+`<a class="btn primary" href="#/home">العودة للرئيسية</a>`);

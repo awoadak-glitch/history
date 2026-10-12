@@ -1,3 +1,4 @@
+import {nativeIcons} from './native-icons.js';
 const paths={
   home:'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z',
   series:'M3 6h18v14H3z M7 3h10 M7 10l6 4-6 4z',movie:'M3 4h18v16H3z M3 9h18 M7 4l4 5 M14 4l4 5',
@@ -20,7 +21,7 @@ const paths={
   fullscreen:'M3 9V3h6 M15 3h6v6 M21 15v6h-6 M9 21H3v-6',trash:'M4 6h16 M9 3h6 M6 6l1 15h10l1-15 M10 10v7 M14 10v7',
   news:'M3 4h18v17H3z M7 8h4v4H7z M14 8h3 M14 12h3 M7 16h10'
 };
-export const icon=(name)=>`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name]||paths.movie}"/></svg>`;
+export const icon=(name)=>nativeIcons[name]?`<svg class="icon native-icon" viewBox="${nativeIcons[name].viewBox}" aria-hidden="true">${nativeIcons[name].paths}</svg>`:`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name]||paths.movie}"/></svg>`;
 export const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export const str=value=>typeof value==='string'?value:typeof value==='number'?String(value):'';
 export const first=(o,...keys)=>keys.map(k=>str(o?.[k])).find(Boolean)||'';
@@ -46,7 +47,7 @@ export function card(raw,provider='palma',kind='series'){
 export const keyOf=item=>`${item.provider}:${item.kind}:${item.id}`;
 export const playbackKey=(item,episode='')=>`${keyOf(item)}:${episode||'movie'}`;
 export function link(view,params={}){const q=new URLSearchParams();for(const [k,v]of Object.entries(params))if(v!==undefined&&v!==null&&v!=='')q.set(k,String(v));return `#/${view}${q.size?'?'+q:''}`;}
-export const detailLink=item=>link('detail',{provider:item.provider,kind:item.kind,id:item.id});
+export const detailLink=item=>link('detail',{provider:item.provider,kind:item.kind,id:item.id,area:item.area});
 export async function api(provider,route,query={},signal){const p=new URLSearchParams({provider,route,...query});const r=await fetch(`/api/catalog?${p}`,{signal});let j;try{j=await r.json();}catch{throw Error('تعذر قراءة المصدر. أعد المحاولة.');}if(!r.ok||j?.error){const e=Error(j?.error||'تعذر الاتصال بالمصدر.');e.code=j?.code;e.status=r.status;throw e;}return j;}
 export function readStore(name,fallback){try{return JSON.parse(localStorage.getItem('palma.'+name))??fallback;}catch{return fallback;}}
 export function writeStore(name,value){try{localStorage.setItem('palma.'+name,JSON.stringify(value));return true;}catch{return false;}}
