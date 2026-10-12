@@ -37,7 +37,7 @@ export default async function handler(req,res) {
     const url=source.url||source.stream_url||source.video_url||source.download_url||source.link||source.deep_link;
     const headers={};
     for(const [k,v] of Object.entries(source.headers||{})) if(['referer','origin','user-agent'].includes(k.toLowerCase()) && typeof v==='string' && v.length<1000 && !/[\r\n]/.test(v)) headers[k]=v;
-    const media=await resolveMedia(url,headers,source.quality||'');
+    const media=await resolveMedia(url,headers,source.quality||'',p.get('target')==='external'&&!download);
     json(res,200,media);
   } catch(e) { fail(res,e); }
 }

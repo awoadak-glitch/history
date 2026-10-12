@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AWR MX · PALMA</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<header class="topbar">
+ <a class="brand" href="https://palma-web-lac.vercel.app/" target="_blank" rel="noopener noreferrer"><span class="brand-icon" aria-hidden="true">▶</span><span><strong>AWR MX</strong><small>مشغّل بالما للكمبيوتر <b>V7</b></small></span></a>
+ <div class="top-actions"><span class="engine-status"><i id="engineDot"></i><span id="engineText">جارٍ فحص المشغّل…</span></span><button id="helpButton" class="icon-button" aria-label="المساعدة">؟</button><button id="exitButton" class="icon-button" aria-label="إنهاء التطبيق">×</button></div>
+</header>
+<div class="layout">
+ <aside class="sidebar" aria-label="مكتبة المشاهدة">
+  <div class="sidebar-heading"><h2>مكتبتك</h2><span id="count">0</span></div>
+  <button id="newVideo" class="btn primary wide">＋ فتح فيديو</button>
+  <label class="search-label" for="historySearch">سجل المشاهدة</label><input id="historySearch" type="search" placeholder="ابحث في السجل…">
+  <div id="history" class="history"><p class="empty">الأفلام والحلقات التي تشاهدها تظهر هنا.</p></div>
+  <div class="sidebar-footer"><span class="tiny-dot"></span> تقدّمك محفوظ على هذا الكمبيوتر</div>
+ </aside>
+ <main>
+  <section class="connection-strip"><div><span class="eyebrow">PALMA VISION</span><strong id="connectionText">الموقع والمشغّل، تجربة متصلة.</strong><p>اختر حلقتك في بالما؛ افتحها هنا بجودتها واسمها.</p></div><a class="btn outline" href="https://palma-web-lac.vercel.app/" target="_blank" rel="noopener noreferrer">تصفّح بالما ↗</a></section>
+  <section class="card now-playing" id="playingBox" aria-label="التحكم بالمشغّل">
+   <div class="card-heading"><h1>المشاهدة الآن</h1><span id="state" class="state-pill">جاهز للتشغيل</span></div>
+   <div class="current"><div class="cover-placeholder" aria-hidden="true">▶</div><div class="current-info"><strong id="playingTitle">كل حلقة… من حيث توقفت.</strong><p id="playingInfo">افتح فيديو من بالما أو اختر ملفًا من جهازك.</p></div><span id="speedReadout" class="speed-readout" dir="ltr">1×</span></div>
+   <div class="timeline" dir="ltr"><span id="currentTime">00:00</span><input id="timeline" type="range" min="0" max="100" value="0" aria-label="موضع المشاهدة" disabled><span id="duration">00:00</span></div>
+   <div class="controls">
+    <div class="transport" dir="ltr"><button id="back" class="control" aria-label="رجوع عشر ثوانٍ" disabled>↶ 10</button><button id="pause" class="control main-control" aria-label="تشغيل أو إيقاف مؤقت" disabled>▶</button><button id="forward" class="control" aria-label="تقديم عشر ثوانٍ" disabled>10 ↷</button><button id="stop" class="control" aria-label="إيقاف الفيديو" disabled>■</button></div>
+    <div class="extra-controls"><button id="full" class="control" aria-label="ملء الشاشة" disabled>⛶</button><button id="subtitle" class="control" aria-label="إضافة ترجمة" disabled>CC</button><button id="mute" class="control" aria-label="كتم الصوت" disabled>◖))</button><label>الصوت<input id="volume" type="range" min="0" max="100" value="100" aria-label="مستوى الصوت" disabled></label><label>السرعة<select id="speed" aria-label="سرعة التشغيل" disabled><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="1.5">1.5×</option><option value="2">2×</option><option value="2.5">2.5×</option><option value="3">3×</option><option value="3.5">3.5×</option><option value="4">4×</option></select></label></div>
+   </div>
+   <div class="gesture-strip"><span><kbd>Space</kbd> مطوّل: 2×</span><span>↔ سحب: درجات 0.5× حتى 4×</span><span>الإفلات يعيد السرعة السابقة</span></div>
+   <p class="muted small">يظهر الفيديو في نافذته المستقلة. تعمل إيماءات السرعة داخل نافذة الفيديو.</p>
+  </section>
+  <section class="card" id="openCard">
+   <div class="card-heading"><h2>فتح فيديو</h2><span class="muted small">ملف محلي أو رابط مشاهدة</span></div>
+   <form id="openForm"><label for="url">رابط الفيديو أو مسار الملف</label><div class="input-row"><input id="url" type="text" autocomplete="off" spellcheck="false" dir="ltr" placeholder="https://… أو C:\Videos\episode.mkv"><button id="pick" type="button" class="btn outline">اختر ملفًا</button></div>
+   <div class="form-grid"><div><label for="title">اسم الفيديو</label><input id="title" placeholder="اسم الفيلم أو الحلقة" maxlength="400"></div><div><label for="quality">الجودة</label><select id="quality"><option value="">تلقائي</option></select></div></div>
+   <div class="form-tools"><button id="checkQuality" class="text-button" type="button">اكتشاف جودات HLS</button><button id="headersToggle" class="text-button" type="button" aria-expanded="false" aria-controls="advanced">إعدادات الرابط ▾</button></div>
+   <div id="advanced" class="advanced" hidden><div class="form-grid"><div><label for="referer">Referer</label><input id="referer" dir="ltr" placeholder="https://…"></div><div><label for="userAgent">User-Agent</label><input id="userAgent" dir="ltr" placeholder="اختياري"></div></div><label for="cookie">Cookie — لا تُحفظ في السجل</label><textarea id="cookie" rows="2" dir="ltr" placeholder="اختياري"></textarea></div>
+   <div class="form-actions"><button id="play" class="btn primary" type="submit">▶ تشغيل الآن</button><button id="restart" class="btn outline" type="button" hidden>ابدأ من البداية</button><span id="resumeHint" class="muted small">استكمال تلقائي عند توفر موضع محفوظ</span></div></form>
+  </section>
+  <div id="alert" class="alert" role="status" hidden></div>
+  <footer>AWR MX V7 · محرك mpv · Windows 64-bit</footer>
+ </main>
+</div>
+<dialog id="helpDialog"><div class="dialog-heading"><h2>المساعدة</h2><button id="closeHelp" class="icon-button" aria-label="إغلاق">×</button></div><h3>المشاهدة من موقع بالما</h3><p>بعد فتح هذا الإصدار مرة واحدة، اختر «AWR MX للكمبيوتر» من إعدادات بالما. جهّز السيرفر واضغط «فتح AWR MX»، ثم وافق على طلب المتصفح.</p><h3>التحكم والحفظ</h3><p>داخل نافذة الفيديو: اضغط Space مطوّلًا لتسريع مؤقت إلى 2×. السحب يمينًا ويسارًا يغيّر السرعة بدرجات 0.5×، والإفلات يعيد سرعتك السابقة. السجل وموضع المشاهدة محفوظان محليًا، ولا يتأثران بإغلاق الموقع.</p><h3>إذا لم يعمل الفيديو</h3><p>جرّب سيرفرًا آخر. روابط صفحات MediaFire مدعومة عند إتاحة رابط التنزيل. روابط TDM المشفرة تحتاج محلّل المصدر الأصلي، وفتح المشغّل لا يفتح مصدرًا يرفض الاتصال.</p><p>إذا ظهرت رسالة «المحرك غير مثبت»، شغّل Setup-MPV.cmd المرفق أو انقل مجلد player من نسختك السابقة.</p><p class="muted small">هذا مشغّل AWR مستقل يعتمد mpv، وليس نسخة رسمية من تطبيق MX Player للأندرويد.</p></dialog>
+</body></html>

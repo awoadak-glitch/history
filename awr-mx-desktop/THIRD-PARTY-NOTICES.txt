@@ -1,0 +1,31 @@
+AWR MX Desktop uses mpv and its bundled dependencies without modification.
+
+The Windows engine is extracted from this first-party mpv release asset:
+https://github.com/mpv-player/mpv/releases/download/v0.41.0/mpv-v0.41.0-x86_64-w64-mingw32.zip
+SHA-256: a49811c0752c108b8260636f9c6f6fcb97406641c98b30f1e7b500dfb20177de
+The release asset contains a nested Windows build archive. Both layers are unpacked.
+
+mpv source, copyright, license, and build scripts:
+https://github.com/mpv-player/mpv
+https://github.com/mpv-player/mpv/blob/v0.41.0/Copyright
+https://github.com/mpv-player/mpv/tree/v0.41.0/ci
+https://github.com/mpv-player/mpv/tree/v0.41.0/TOOLS
+
+mpv is free software; see LICENSE-GPL-2.0.txt and upstream Copyright for the
+applicable terms. Bundled dependencies retain their respective licenses:
+FFmpeg (avcodec/avformat/avfilter/avdevice/avutil/swscale/swresample): https://ffmpeg.org/legal.html
+libass: https://github.com/libass/libass
+libdav1d: https://code.videolan.org/videolan/dav1d
+FreeType: https://freetype.org/license.html
+FriBidi: https://github.com/fribidi/fribidi
+HarfBuzz: https://github.com/harfbuzz/harfbuzz
+GNU runtimes/libiconv: https://www.gnu.org/software/gcc/ and https://www.gnu.org/software/libiconv/
+Little CMS: https://github.com/mm2/Little-CMS
+libplacebo: https://code.videolan.org/videolan/libplacebo
+shaderc: https://github.com/google/shaderc
+SPIRV-Cross: https://github.com/KhronosGroup/SPIRV-Cross
+Vulkan loader: https://github.com/KhronosGroup/Vulkan-Loader
+zlib: https://zlib.net/zlib_license.html
+
+No Android MX Player binary, mpv branding ownership, or source-server access rights
+are supplied by AWR MX. No warranty is provided by the upstream projects.

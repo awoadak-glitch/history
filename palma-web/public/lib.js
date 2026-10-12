@@ -28,7 +28,7 @@ export const first=(o,...keys)=>keys.map(k=>str(o?.[k])).find(Boolean)||'';
 export function arabic(value){if(typeof value==='string')return value;if(value&&typeof value==='object')return first(value,'ar','arabic','name','en');return str(value);}
 export function list(value){if(Array.isArray(value))return value;if(!value)return [];for(const k of ['items','data','results','sources','links','episodes','seasons','posters','channels','hits'])if(Array.isArray(value[k]))return value[k];if(value.data&&typeof value.data==='object')return list(value.data);return [];}
 export function data(value){return value?.data&&!Array.isArray(value.data)?value.data:value;}
-export function safeURL(value){const s=str(value);try{const u=new URL(s,location.origin);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}}
+export function safeURL(value){const s=str(value).trim();if(!s)return '';try{const u=new URL(s,location.origin);return ['https:','http:'].includes(u.protocol)&&!u.username&&!u.password?u.href:'';}catch{return '';}}
 function image(value){if(typeof value==='object'&&value)return first(value,'large','medium','url');return str(value);}
 export function card(raw,provider='palma',kind='series'){
   const d=raw?.details||{};

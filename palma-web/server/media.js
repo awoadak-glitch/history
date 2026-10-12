@@ -43,27 +43,31 @@ export function extractStreams(html, base) {
   }
   return [...found];
 }
-export async function resolveMedia(raw, headers = {}, quality = '') {
+export async function resolveMedia(raw, headers = {}, quality = '', external = false) {
   let url = unwrapURL(raw);
   await publicURL(url);
   if (/pixeldrain\.com$/.test(new URL(url).hostname) && /^\/u\/[^/]+$/.test(new URL(url).pathname)) url = `https://pixeldrain.com/api/file/${new URL(url).pathname.split('/').pop()}`;
+  // Native players fetch media from the user's device and accept request headers.
+  // Direct files do not need a Vercel proxy or a server-side playback probe.
+  const delivery=(url,h=headers)=>external?{playable:url,headers:h,delivery:'external'}:{playable:mediaURL(url,h)};
+  if(external && /\.(m3u8|mp4|mkv|webm|mpd)(\?|$)|\/api\/file\//i.test(url)) return {type:/\.m3u8(\?|$)/i.test(url)?'hls':'video',url,...delivery(url),quality,qualities:[]};
   const { response, url: finalURL } = await fetchPublic(url, { headers: { ...headers, Accept:'*/*' } });
   if (!response.ok) { await response.body?.cancel(); throw new SourceError('تعذر تجهيز هذا السيرفر. اختر سيرفرًا آخر.', response.status === 403 ? 403 : 502, 'MEDIA_DENIED'); }
   const contentType = response.headers.get('content-type') || '';
   if (/mpegurl/i.test(contentType) || /\.m3u8(\?|$)/i.test(finalURL)) {
     const text = await readLimited(response, 2*1024*1024);
     const variants = parseHLS(text,finalURL);
-    return { type:'hls', url:finalURL, playable:mediaURL(finalURL,headers), quality, qualities:variants.map(v=>({...v,playable:mediaURL(v.url,headers)})) };
+    return { type:'hls', url:finalURL, ...delivery(finalURL), quality, qualities:variants.map(v=>({...v,...delivery(v.url)})) };
   }
   if (/^(video\/|application\/octet-stream)/i.test(contentType) || /\.(mp4|mkv|webm)(\?|$)|\/api\/file\//i.test(finalURL)) {
     await response.body?.cancel();
-    return { type:'video',url:finalURL,playable:mediaURL(finalURL,headers),quality,qualities:[] };
+    return { type:'video',url:finalURL,...delivery(finalURL),quality,qualities:[] };
   }
   const text = await readLimited(response, 2*1024*1024);
   const urls = extractStreams(text, finalURL);
   if (!urls.length) throw new SourceError('لم يُرجع هذا السيرفر رابط فيديو صالحًا للويب. اختر سيرفرًا آخر.', 422, 'UNRESOLVED_MEDIA');
   const next = urls[0];
-  return { type:/\.m3u8(\?|$)/i.test(next)?'hls':'video',url:next,playable:mediaURL(next,{...headers,Referer:finalURL}),quality,qualities:[] };
+  return { type:/\.m3u8(\?|$)/i.test(next)?'hls':'video',url:next,...delivery(next,{...headers,Referer:finalURL}),quality,qualities:[] };
 }
 export function rewriteHLS(text, base, headers = {}) {
   return text.split(/\r?\n/).map(line => {

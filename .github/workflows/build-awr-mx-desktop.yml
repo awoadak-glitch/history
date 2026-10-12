@@ -1,0 +1,65 @@
+name: Build and verify AWR MX Desktop V7
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'awr-mx-desktop/**'
+      - '.github/workflows/build-awr-mx-desktop.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: awr-mx-desktop-v7
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      GOTOOLCHAIN: go1.27.2
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Test and build the Windows player
+        shell: pwsh
+        working-directory: awr-mx-desktop/source
+        run: |
+          go test ./...
+          if ($LASTEXITCODE -ne 0) { throw 'Go tests failed' }
+          node --check web/app.js
+          if ($LASTEXITCODE -ne 0) { throw 'JavaScript check failed' }
+          go build -trimpath -buildvcs=false -ldflags="-s -w -H=windowsgui" -o ../AWR-MX-Desktop.exe .
+          if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
+      - name: Verify and package the bundled playback engine
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build | Out-Null
+          Invoke-WebRequest -Uri 'https://github.com/mpv-player/mpv/releases/download/v0.41.0/mpv-v0.41.0-x86_64-w64-mingw32.zip' -OutFile build/mpv.zip -TimeoutSec 120
+          python awr-mx-desktop/scripts/package.py --exe awr-mx-desktop/AWR-MX-Desktop.exe --engine build/mpv.zip --output build/AWR-MX-Desktop-Windows-v7.zip
+          if ($LASTEXITCODE -ne 0) { throw 'Packaging or engine checksum failed' }
+          Expand-Archive -LiteralPath build/AWR-MX-Desktop-Windows-v7.zip -DestinationPath build/verify
+          python -c "from pathlib import Path; Path('build/smoke.y4m').write_bytes(b'YUV4MPEG2 W16 H16 F1:1 Ip A1:1 C420\n'+(b'FRAME\n'+bytes([80])*256+bytes([128])*128)*3)"
+          & ./build/verify/player/mpv.com --no-config --vo=null --ao=null --no-audio --frames=3 ./build/smoke.y4m
+          if ($LASTEXITCODE -ne 0) { throw 'mpv failed to decode the test video on Windows' }
+          $program = (Resolve-Path './build/verify/AWR-MX-Desktop.exe').Path
+          $process = Start-Process -FilePath $program -ArgumentList '--register-protocol' -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Protocol registration failed' }
+          $key = Get-Item 'HKCU:\Software\Classes\awrmx\shell\open\command'
+          $registered = $key.GetValue('')
+          if ($registered -ne ('"' + $program + '" "%1"')) { throw 'Incorrect protocol command registration' }
+          Remove-Item 'HKCU:\Software\Classes\awrmx' -Recurse -Force
+          (Get-FileHash 'build/AWR-MX-Desktop-Windows-v7.zip' -Algorithm SHA256).Hash.ToLower() | Set-Content 'build/AWR-MX-Desktop-Windows-v7.sha256'
+      - name: Publish the verified Windows package
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view awr-mx-v7 *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create awr-mx-v7 --target '${{ github.sha }}' --title 'AWR MX Desktop V7 — PALMA' --notes-file awr-mx-desktop/RELEASE.md
+            if ($LASTEXITCODE -ne 0) { throw 'Release creation failed' }
+          }
+          gh release upload awr-mx-v7 build/AWR-MX-Desktop-Windows-v7.zip build/AWR-MX-Desktop-Windows-v7.sha256 --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed' }
