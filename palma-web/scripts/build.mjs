@@ -1,5 +1,20 @@
-import { cp, rm, mkdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { cp, rm, mkdir, readFile, writeFile } from 'node:fs/promises';
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist', { recursive: true });
 await cp('public', 'dist', { recursive: true });
+
+// Serve the verified Windows release as a static download, never through a Function.
+const desktop = JSON.parse(await readFile(new URL('../desktop-release.json', import.meta.url), 'utf8'));
+const response = await fetch(desktop.url, { signal: AbortSignal.timeout(60_000) });
+if (!response.ok) throw new Error(`Desktop release download failed: HTTP ${response.status}`);
+const archive = Buffer.from(await response.arrayBuffer());
+const checksum = createHash('sha256').update(archive).digest('hex');
+if (archive.length !== desktop.size || checksum !== desktop.sha256) {
+  throw new Error('Desktop release does not match the verified Windows build.');
+}
+await mkdir('dist/downloads', { recursive: true });
+await writeFile(`dist/downloads/${desktop.filename}`, archive);
+await writeFile(`dist/downloads/${desktop.filename}.sha256`, `${checksum}  ${desktop.filename}\n`);
+console.log(`Verified desktop package: ${desktop.filename} (${archive.length} bytes).`);
 console.log('PALMA VISION static assets built. Vercel serves api/*.js separately.');
