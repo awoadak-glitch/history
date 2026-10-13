@@ -1,4 +1,4 @@
-PALMA Desktop 1.0 — Windows 10/11، ‏64-bit
+PALMA Desktop 1.0.1 — Windows 10/11، ‏64-bit
 
 هذه واجهة Windows لإعداد وتشغيل ملف بالما الأصلي داخل BlueStacks 5.
 واجهات المحتوى وقوائمه تأتي من نفس APK، وليست نسخة ويب أو إعادة رسم للقوائم.
@@ -9,7 +9,8 @@ PALMA Desktop 1.0 — Windows 10/11، ‏64-bit
 1. فك ضغط الحزمة كاملة في مجلد خاص بك، ثم افتح PALMA-Desktop.exe.
 2. نزّل BlueStacks 5 من https://www.bluestacks.com/download.html إذا لم يكن مثبتًا.
 3. افتح Multi-instance Manager وأنشئ Pie 64-bit أو Android 11.
-   من ABI اختر Custom، وفعّل ARM 64 bit. لا تستخدم Nougat أو نسخة x86 فقط.
+   من ABI اختر Custom، وفعّل ARM 64 bit، وكذلك ARM 32 bit لدعم الملحقات القديمة.
+   لا تستخدم Nougat أو نسخة x86 فقط.
 4. افتح النسخة الجديدة. من Settings > Advanced فعّل Android Debug Bridge،
    ثم اضغط Save changes. تحتاج الحزمة هذا الاتصال المحلي لتثبيت التطبيق وفتحه.
 5. عد إلى PALMA Desktop، اضغط تحديث، واختر نسختك ثم تشغيل بالما.

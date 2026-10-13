@@ -46,11 +46,13 @@
        <TextBlock Text="يعمل داخل BlueStacks مع دعم ARM64." Foreground="{StaticResource Muted}" FontSize="12" Margin="0,6,0,0"/>
       </StackPanel>
      </Border>
-     <TextBlock Text="WINDOWS  ·  1.0" FlowDirection="LeftToRight" TextAlignment="Center" Foreground="#68768D" FontSize="11" Margin="0,18,0,0"/>
+     <TextBlock Text="WINDOWS  ·  1.0.1" FlowDirection="LeftToRight" TextAlignment="Center" Foreground="#68768D" FontSize="11" Margin="0,18,0,0"/>
     </StackPanel>
    </Grid>
   </Border>
-  <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+  <Grid Grid.Column="1">
+   <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
    <StackPanel Margin="32,28,32,28">
     <Grid Margin="0,0,0,24"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
      <StackPanel><TextBlock Text="مساحتك للمشاهدة" FontSize="21" FontWeight="SemiBold"/><TextBlock Text="الإعداد والتشغيل" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/></StackPanel>
@@ -103,7 +105,10 @@
       </WrapPanel>
      </StackPanel>
     </Border>
-    <Border Background="#111B27" BorderBrush="#293D4E" BorderThickness="1" CornerRadius="12" Padding="18">
+   </StackPanel>
+  </ScrollViewer>
+   <StackPanel Grid.Row="1" Margin="32,10,32,18">
+    <Border Background="#111B27" BorderBrush="#293D4E" BorderThickness="1" CornerRadius="12" Padding="16">
      <StackPanel>
       <TextBlock x:Name="StatusTitle" Text="لنبدأ بخطوة واحدة" Foreground="#DEC999" FontWeight="SemiBold" Margin="0,0,0,5"/>
       <TextBlock x:Name="StatusText" Text="اختر نسخة BlueStacks، ثم اضغط تشغيل بالما. استخدم دليل الإعداد إذا كانت هذه المرة الأولى." Foreground="#AEBBCB" FontSize="13" LineHeight="22"/>
@@ -111,8 +116,8 @@
       <Button x:Name="CancelButton" Content="إلغاء العملية" Click="CancelClick" Visibility="Collapsed" HorizontalAlignment="Left" Padding="12,6" MinHeight="32" Margin="0,12,0,0"/>
      </StackPanel>
     </Border>
-    <TextBlock Text="يتم التأكد من ظهور القوائم وتشغيل الفيديو داخل بالما بعد فتحه. توفر المحتوى يتبع حالة خادم المصدر." Foreground="#78869C" FontSize="12" Margin="2,16,2,0"/>
+    <TextBlock Text="يتم التأكد من ظهور القوائم وتشغيل الفيديو داخل بالما بعد فتحه. توفر المحتوى يتبع حالة خادم المصدر." Foreground="#78869C" FontSize="12" Margin="2,10,2,0"/>
    </StackPanel>
-  </ScrollViewer>
+  </Grid>
  </Grid>
 </Window>

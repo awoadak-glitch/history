@@ -68,7 +68,13 @@ namespace PalmaDesktop
         { await Execute(async t => { string details = await ConnectAndCheck(false, t); SetStatus("اكتمل فحص بيئة التشغيل", details + " ظهور المحتوى يُفحص داخل بالما."); }); }
         async void LaunchClick(object sender, RoutedEventArgs e)
         {
-            if (!File.Exists(runtime.ApkPath))
+            if (closed || busy) return;
+            bool validApk = false;
+            try { await Task.Run(() => RuntimeService.VerifyApk(runtime.ApkPath)); validApk = true; }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+            if (closed || busy) return;
+            if (!validApk)
             {
                 var picker = new OpenFileDialog { Title = "اختر ملف بالما الأصلي 1.1.7", Filter = "Android APK|*.apk" };
                 if (picker.ShowDialog(this) != true) return; runtime.ApkPath = picker.FileName;
@@ -119,7 +125,7 @@ namespace PalmaDesktop
         void HelpClick(object sender, RoutedEventArgs e)
         {
             MessageBox.Show(this,
-                "١. ثبّت BlueStacks 5 من موقعه الرسمي.\n\n٢. من Multi-instance Manager أنشئ Pie 64-bit أو Android 11. في ABI اختر Custom ثم ARM 64 bit.\n\n٣. افتح النسخة، ثم Settings ← Advanced، وفعّل Android Debug Bridge واضغط Save changes.\n\n٤. ارجع إلى هذه النافذة واضغط تحديث، اختر النسخة ثم تشغيل بالما. يثبت ملف APK الأصلي دون تعديل.\n\n٥. لبعض المصادر، تحتاج TDM المعدّل وMX اللذين يعملان مع بالما على هاتفك. أضف ملفاتهما أو انقلهما بزر نسخ الملحقات من الهاتف.\n\n٦. اختبر الرئيسية وعالم المصادر ثم حلقة وفيلمًا. استخدم F11 داخل BlueStacks لملء الشاشة.\n\nتعمل واجهات بالما الأصلية داخل Android. توفر المصادر وتوافق التطبيق مع المحاكي لا يُثبتان بمجرد نجاح التثبيت؛ يلزم اختبار المشاهدة. لا تحذف بيئتك القديمة عند اختلاف توقيع تطبيق.",
+                "١. ثبّت BlueStacks 5 من موقعه الرسمي.\n\n٢. من Multi-instance Manager أنشئ Pie 64-bit أو Android 11. في ABI اختر Custom ثم ARM 64 bit. فعّل ARM 32 bit أيضًا لملحقات المشاهدة القديمة.\n\n٣. افتح النسخة، ثم Settings ← Advanced، وفعّل Android Debug Bridge واضغط Save changes.\n\n٤. ارجع إلى هذه النافذة واضغط تحديث، اختر النسخة ثم تشغيل بالما. يثبت ملف APK الأصلي دون تعديل.\n\n٥. لبعض المصادر، تحتاج TDM المعدّل وMX اللذين يعملان مع بالما على هاتفك. أضف ملفاتهما أو انقلهما بزر نسخ الملحقات من الهاتف.\n\n٦. اختبر الرئيسية وعالم المصادر ثم حلقة وفيلمًا. استخدم F11 داخل BlueStacks لملء الشاشة.\n\nتعمل واجهات بالما الأصلية داخل Android. توفر المصادر وتوافق التطبيق مع المحاكي لا يُثبتان بمجرد نجاح التثبيت؛ يلزم اختبار المشاهدة. لا تحذف بيئتك القديمة عند اختلاف توقيع تطبيق.",
                 "إعداد PALMA على Windows", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         void ReportClick(object sender, RoutedEventArgs e)

@@ -29,7 +29,7 @@ namespace PalmaDesktop
         public string Root { get; private set; }
         public AndroidInstance Selected;
         public string ApkPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app", "PALMA-VISION-1.1.7.apk");
-        public readonly List<string> Report = new List<string> { "PALMA Desktop 1.0 / Windows x64", "Catalog and video playback: not verified by this launcher." };
+        public readonly List<string> Report = new List<string> { "PALMA Desktop 1.0.1 / Windows x64", "Catalog and video playback: not verified by this launcher." };
         public Action<string, string> Progress = delegate { };
         string Adb => Path.Combine(Root ?? "", "HD-Adb.exe");
         string Player => Path.Combine(Root ?? "", "HD-Player.exe");
@@ -208,7 +208,7 @@ namespace PalmaDesktop
             RequireInstallSuccess(result);
             current = await PackageInfo(Package, c);
             if (!Installed(current) || !current.Output.Contains("primaryCpuAbi=arm64-v8a"))
-                throw new InvalidOperationException("لم يتم تأكيد تثبيت ARM64. استخدم نسخة BlueStacks مع ARM 64 bit فقط ثم أعد المحاولة.");
+                    throw new InvalidOperationException("لم يتم تأكيد تثبيت ARM64. استخدم نسخة BlueStacks تدعم ARM 64 bit ثم أعد المحاولة.");
             Directory.CreateDirectory(Path.GetDirectoryName(stamp)); File.WriteAllText(stamp, ApkSha);
             Report.Add("Original PALMA APK SHA256 verified; installed as arm64-v8a.");
         }
@@ -262,8 +262,11 @@ namespace PalmaDesktop
                     throw new InvalidDataException("اختر APK أو APKS واحدًا خاصًا بـ TDM أو MX Player. الحزمة يجب أن تحتوي نسخة أساسية واحدة وملحقاتها.");
                 var abis = new HashSet<string>(metadata.SelectMany(m => m.Abis));
                 var args = new List<string> { files.Count == 1 ? "install" : "install-multiple", "-r" };
-                if (abis.Contains("arm64-v8a")) args.AddRange(new[] { "--abi", "arm64-v8a" });
-                else if (abis.Contains("armeabi-v7a")) args.AddRange(new[] { "--abi", "armeabi-v7a" });
+                var supported = (await Device(c, 10, "shell", "getprop", "ro.product.cpu.abilist")).Output.Trim().Split(',');
+                string abi = new[] { "arm64-v8a", "armeabi-v7a", "x86_64", "x86" }.FirstOrDefault(a => abis.Contains(a) && supported.Contains(a));
+                if (abis.Count > 0 && abi == null)
+                    throw new InvalidOperationException("معمارية هذا الملحق غير متاحة في بيئة التشغيل. لملحقات ARM32، فعّل ARM 32 bit إلى جانب ARM 64 bit عند إنشاء نسخة BlueStacks.");
+                if (abi != null) args.AddRange(new[] { "--abi", abi });
                 args.AddRange(files);
                 Progress("جارٍ تثبيت ملحق المشاهدة", "يُثبّت التطبيق داخل النسخة المختارة من BlueStacks.");
                 RequireInstallSuccess(await Device(c, 240, args.ToArray()));

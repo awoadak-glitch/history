@@ -56,18 +56,18 @@ jobs:
           Copy-Item palma-desktop/docs/content-audit.md build/package/
           Copy-Item build/palma-desktop/self-test.txt build/package/Windows-test-results.txt
           'Place the original PALMA-VISION-1.1.7.apk here, or select it at launch. See README-AR.txt.' | Set-Content build/package/app/README.txt
-          Compress-Archive -Path build/package/* -DestinationPath build/PALMA-Desktop-Launcher-v1.zip
-          (Get-FileHash build/PALMA-Desktop-Launcher-v1.zip -Algorithm SHA256).Hash.ToLower() | Set-Content build/PALMA-Desktop-Launcher-v1.sha256
+          Compress-Archive -Path build/package/* -DestinationPath build/PALMA-Desktop-Launcher-v1.0.1.zip
+          (Get-FileHash build/PALMA-Desktop-Launcher-v1.0.1.zip -Algorithm SHA256).Hash.ToLower() | Set-Content build/PALMA-Desktop-Launcher-v1.0.1.sha256
       - name: Publish Windows test prerelease
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release view palma-desktop-v1 *> $null
+          gh release view palma-desktop-v1.0.1 *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create palma-desktop-v1 --target '${{ github.sha }}' --prerelease --title 'PALMA Desktop 1.0 — Windows launcher' --notes-file palma-desktop/RELEASE.md
+            gh release create palma-desktop-v1.0.1 --target '${{ github.sha }}' --prerelease --title 'PALMA Desktop 1.0.1 — Windows launcher' --notes-file palma-desktop/RELEASE.md
             if ($LASTEXITCODE -ne 0) { throw 'Prerelease creation failed' }
           }
-          gh release upload palma-desktop-v1 build/PALMA-Desktop-Launcher-v1.zip build/PALMA-Desktop-Launcher-v1.sha256 build/PALMA-Desktop-Preview.png --clobber
+          gh release upload palma-desktop-v1.0.1 build/PALMA-Desktop-Launcher-v1.0.1.zip build/PALMA-Desktop-Launcher-v1.0.1.sha256 build/PALMA-Desktop-Preview.png --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Release upload failed' }
