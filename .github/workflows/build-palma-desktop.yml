@@ -1,0 +1,73 @@
+name: Build PALMA Desktop for Windows
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'palma-desktop/**'
+      - '.github/workflows/build-palma-desktop.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Build Windows WPF launcher
+        shell: pwsh
+        run: |
+          dotnet build palma-desktop/PalmaDesktop.csproj --configuration Release --output build/palma-desktop
+          if ($LASTEXITCODE -ne 0) { throw 'Windows build failed' }
+          Copy-Item palma-desktop/test-fixtures build/palma-desktop/test-fixtures -Recurse
+      - name: Test argument handling, APK identity and runtime validation
+        shell: pwsh
+        run: |
+          $program = (Resolve-Path 'build/palma-desktop/PALMA-Desktop.exe').Path
+          $process = Start-Process -FilePath $program -ArgumentList '--self-test' -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            Get-Content "$env:LOCALAPPDATA/PALMA-Desktop/startup-error.txt" -ErrorAction SilentlyContinue
+            throw 'Launcher self-tests failed'
+          }
+          Get-Content build/palma-desktop/self-test.txt
+      - name: Render the actual Windows setup interface
+        shell: pwsh
+        run: |
+          $program = (Resolve-Path 'build/palma-desktop/PALMA-Desktop.exe').Path
+          $render = Join-Path $pwd 'build/PALMA-Desktop-Preview.png'
+          $process = Start-Process -FilePath $program -ArgumentList @('--render', ('"' + $render + '"')) -Wait -PassThru
+          if ($process.ExitCode -ne 0 -or !(Test-Path $render)) {
+            Get-Content "$env:LOCALAPPDATA/PALMA-Desktop/startup-error.txt" -ErrorAction SilentlyContinue
+            throw 'WPF rendering failed'
+          }
+      - name: Package the tested launcher
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force build/package/app | Out-Null
+          Copy-Item build/palma-desktop/PALMA-Desktop.exe build/package/
+          Copy-Item build/palma-desktop/PALMA-Desktop.exe.config build/package/
+          Copy-Item palma-desktop/README-AR.txt build/package/
+          Copy-Item palma-desktop/docs/content-audit.md build/package/
+          Copy-Item build/palma-desktop/self-test.txt build/package/Windows-test-results.txt
+          'Place the original PALMA-VISION-1.1.7.apk here, or select it at launch. See README-AR.txt.' | Set-Content build/package/app/README.txt
+          Compress-Archive -Path build/package/* -DestinationPath build/PALMA-Desktop-Launcher-v1.zip
+          (Get-FileHash build/PALMA-Desktop-Launcher-v1.zip -Algorithm SHA256).Hash.ToLower() | Set-Content build/PALMA-Desktop-Launcher-v1.sha256
+      - name: Publish Windows test prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view palma-desktop-v1 *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create palma-desktop-v1 --target '${{ github.sha }}' --prerelease --title 'PALMA Desktop 1.0 — Windows launcher' --notes-file palma-desktop/RELEASE.md
+            if ($LASTEXITCODE -ne 0) { throw 'Prerelease creation failed' }
+          }
+          gh release upload palma-desktop-v1 build/PALMA-Desktop-Launcher-v1.zip build/PALMA-Desktop-Launcher-v1.sha256 build/PALMA-Desktop-Preview.png --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed' }
