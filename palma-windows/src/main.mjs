@@ -38,6 +38,7 @@ if(!selfTest&&!app.requestSingleInstanceLock()){app.quit();}else{
       {label:'عرض',submenu:[{label:'تحديث',role:'reload'},{label:'ملء الشاشة',role:'togglefullscreen'},{label:'تكبير',role:'zoomin'},{label:'تصغير',role:'zoomout'},{label:'الحجم الأصلي',role:'resetzoom'}]}
     ]));
     if(selfTest){
+      window.webContents.setBackgroundThrottling(false);
       try{const {runSelfTest}=await import('./self-test.mjs');await runSelfTest({window,handler,setTestHandler:value=>{testHandler=value;}});app.exit(0);}
       catch(error){console.error('Desktop self-test failed:',error.message);app.exit(1);}
       return;

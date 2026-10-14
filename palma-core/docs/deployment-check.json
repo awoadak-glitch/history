@@ -1,0 +1,26 @@
+{
+  "checked_at": "2026-10-14T11:36:59Z",
+  "deployment": "https://palma-web-lac.vercel.app",
+  "commit": "0ddb2b4b611f76b858bee07c1af9aef63f164348",
+  "result": "Catalog response differs by runtime; Vercel response is empty.",
+  "checks": {
+    "correct_origin": true,
+    "correct_episode_id": true,
+    "default_public_certificate": true,
+    "request_clock_matches_response_date": true,
+    "upstream_status": 200,
+    "upstream_response_bytes": 30,
+    "upstream_data": []
+  },
+  "independent_desktop_adapter": {
+    "status": 200,
+    "series_id": 1667,
+    "episode_id": 43120,
+    "watch_links": 5,
+    "download_links": 4
+  },
+  "limits": [
+    "Exact upstream cause unresolved",
+    "Empty results must not be described as all sources working"
+  ]
+}
