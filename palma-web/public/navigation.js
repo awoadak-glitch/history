@@ -13,7 +13,7 @@ export const drawerNavigation = [
   ['channels','القنوات','channel'], ['matches','مباريات اليوم','matches'],
   ['wrestling','مصارعة حرة','wrestling'], ['search','البحث','search'],
   ['favorites','المفضلة','heart'], ['request','طلب مسلسل/فيلم','download'],
-  ['settings','الإعدادات','settings'], ['share','مشاركة التطبيق','share'], ['telegram','تليجرام','telegram'],
+  ['settings','الإعدادات','settings'], ['share','مشاركة التطبيق','share'],
 ];
 export const worldNavigation = [
   ['home','الرئيسية','back'], ['world','الأنمي','anime'],
@@ -22,7 +22,7 @@ export const worldNavigation = [
 ];
 export function navigationState(view, params=new URLSearchParams()) {
   const world=view==='world'||params.get('area')==='world'||(params.get('area')!=='main'&&(['witcher','drama'].includes(params.get('provider'))||params.get('source')==='witcher'||view==='news'));
-  if(!world)return {world:false,active:['detail','servers'].includes(view)?(params.get('provider')==='witcher'?'anime':{movie:'movies',channel:'channels',series:'series',anime:'anime',wrestling:'wrestling'}[params.get('kind')]||view):view,tabs:mainNavigation};
+  if(!world)return {world:false,active:view==='match'?'matches':['detail','servers'].includes(view)?(params.get('provider')==='witcher'?'anime':{movie:'movies',channel:'channels',series:'series',anime:'anime',wrestling:'wrestling'}[params.get('kind')]||view):view,tabs:mainNavigation};
   const kind=params.get('tab')||(params.get('provider')==='drama'?{series:'series',movie:'movies',channel:'channels'}[params.get('kind')]:'witcher');
   return {world:true,active:kind&&kind!=='witcher'?'world?tab='+kind:'world',tabs:worldNavigation};
 }

@@ -114,8 +114,8 @@ function secret() {
   if (process.env.VERCEL) throw new SourceError('إعداد تشغيل الفيديو غير مكتمل.', 503, 'MISSING_MEDIA_CONFIG');
   return devSecret;
 }
-export function ticket(url, headers = {}) {
-  const data = Buffer.from(JSON.stringify({ u: url, h: headers, e: Date.now() + 8 * 3600 * 1000 })).toString('base64url');
+export function ticket(url, headers = {}, options = {}) {
+  const data = Buffer.from(JSON.stringify({ u: url, h: headers, ...(options.variables?{v:options.variables}:{}), e: Date.now() + 8 * 3600 * 1000 })).toString('base64url');
   const signature = crypto.createHmac('sha256', secret()).update(data).digest('base64url');
   return `${data}.${signature}`;
 }
@@ -128,4 +128,4 @@ export function unticket(raw) {
   if (payload.e < Date.now()) throw new SourceError('انتهت صلاحية رابط المشاهدة. اختر السيرفر مرة أخرى.', 410);
   return payload;
 }
-export const mediaURL = (url, headers = {}) => `/api/media?t=${encodeURIComponent(ticket(url, headers))}`;
+export const mediaURL = (url, headers = {}, options = {}) => `/api/media?t=${encodeURIComponent(ticket(url, headers, options))}`;

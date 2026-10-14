@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import catalogue from '../api/catalog.js';
 import resolve from '../api/resolve.js';
 import media from '../api/media.js';
+import {prepareVendors} from './vendor.mjs';
+await prepareVendors();
 try { process.loadEnvFile('.env.local'); } catch {}
 const root=path.resolve(fileURLToPath(new URL('../public/',import.meta.url)));
 const handlers={'/api/catalog':catalogue,'/api/resolve':resolve,'/api/media':media};

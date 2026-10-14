@@ -1,6 +1,6 @@
 import {DEFAULT_BASE} from './client.mjs';
 
-const imageKeys = /^(?:poster|banner|thumbnail|logo|image|bg_image|logo_image|promo_bg_image|promo_char_image|series_poster|series_banner|anime_poster|anime_banner|federation_logo|league_logo|image_url)$/;
+const imageKeys = /^(?:poster|banner|thumbnail|logo|image|bg_image|logo_image|promo_bg_image|promo_char_image|series_poster|series_banner|anime_poster|anime_banner|federation_logo|league_logo|image_url|photo|file_path|profile_path|channel_logo|home_team_logo|away_team_logo)$/;
 
 export function normalizeImages(value, base = DEFAULT_BASE) {
   if (Array.isArray(value)) return value.map(item => normalizeImages(item, base));

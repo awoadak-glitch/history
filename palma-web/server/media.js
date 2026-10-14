@@ -1,5 +1,6 @@
 import { fetchPublic, readLimited, publicURL, SourceError, mediaURL, isPrivateIP } from './http.js';
 import net from 'node:net';
+import {inspectMedia} from './media-format.js';
 
 export function witcherPlayback(source) {
   let url;
@@ -36,38 +37,40 @@ export function parseHLS(text, url) {
   return out.sort((a,b) => b.height-a.height);
 }
 export function extractStreams(html, base) {
+  html=html.replaceAll('\\/','/').replaceAll('&quot;','"').replaceAll('&#39;',"'");
   const found = new Set();
-  const patterns = [/(?:file|src|source|video_url|contentUrl)\s*[=:]\s*["']([^"']+)["']/gi, /<source[^>]+src=["']([^"']+)["']/gi, /<a[^>]+(?:id=["']downloadButton["'][^>]*href|href)=["']([^"']+)["'][^>]*(?:download|downloadButton)/gi, /["'](https?:[^"'\s]+\.(?:m3u8|mp4|webm|mkv)(?:\?[^"'\s]*)?)["']/gi];
+  const patterns = [/(?:file|src|source|video_url|contentUrl|url)\s*[=:]\s*["']([^"']+)["']/gi, /<source[^>]+src=["']([^"']+)["']/gi, /<a[^>]+(?:id=["']downloadButton["'][^>]*href|href)=["']([^"']+)["'][^>]*(?:download|downloadButton)/gi, /["'](https?:[^"'\s]+\.(?:m3u8|mp4|webm|mkv|mpd|flv)(?:\?[^"'\s]*)?)["']/gi];
   for (const regex of patterns) for (const match of html.matchAll(regex)) {
-    try { const url = new URL(match[1].replaceAll('\\/','/').replaceAll('&amp;','&'),base).href; if (/\.(m3u8|mp4|webm|mkv)(\?|$)|\/api\/file\/|download\d+\.mediafire/.test(url)) found.add(url); } catch {}
+    try { const url = new URL(match[1].replaceAll('\\/','/').replaceAll('&amp;','&'),base).href; if (/\.(m3u8|mp4|webm|mkv|mpd|flv)(\?|$)|\/api\/file\/|download\d+\.mediafire/.test(url)) found.add(url); } catch {}
   }
   return [...found];
 }
-export async function resolveMedia(raw, headers = {}, quality = '', external = false) {
+export async function resolveMedia(raw, headers = {}, quality = '', external = false, state={seen:new Set(),depth:0}) {
   let url = unwrapURL(raw);
-  await publicURL(url);
+  if(state.depth>5||state.seen.has(url))throw new SourceError('تعذر العثور على الفيديو داخل صفحة السيرفر.',422,'UNRESOLVED_MEDIA');
+  state.seen.add(url);
   if (/pixeldrain\.com$/.test(new URL(url).hostname) && /^\/u\/[^/]+$/.test(new URL(url).pathname)) url = `https://pixeldrain.com/api/file/${new URL(url).pathname.split('/').pop()}`;
-  // Native players fetch media from the user's device and accept request headers.
-  // Direct files do not need a Vercel proxy or a server-side playback probe.
-  const delivery=(url,h=headers)=>external?{playable:url,headers:h,delivery:'external'}:{playable:mediaURL(url,h)};
-  if(external && /\.(m3u8|mp4|mkv|webm|mpd)(\?|$)|\/api\/file\//i.test(url)) return {type:/\.m3u8(\?|$)/i.test(url)?'hls':'video',url,...delivery(url),quality,qualities:[]};
-  const { response, url: finalURL } = await fetchPublic(url, { headers: { ...headers, Accept:'*/*' } });
-  if (!response.ok) { await response.body?.cancel(); throw new SourceError('تعذر تجهيز هذا السيرفر. اختر سيرفرًا آخر.', response.status === 403 ? 403 : 502, 'MEDIA_DENIED'); }
-  const contentType = response.headers.get('content-type') || '';
-  if (/mpegurl/i.test(contentType) || /\.m3u8(\?|$)/i.test(finalURL)) {
-    const text = await readLimited(response, 2*1024*1024);
-    const variants = parseHLS(text,finalURL);
-    return { type:'hls', url:finalURL, ...delivery(finalURL), quality, qualities:variants.map(v=>({...v,...delivery(v.url)})) };
+  const delivery=(url,h=headers)=>external?{playable:url,headers:h,delivery:'external'}:{playable:mediaURL(url,h),delivery:'proxy'};
+  const fetched=await fetchPublic(url,{headers:{...headers,Accept:'*/*'}});
+  if(!fetched.response.ok){await fetched.response.body?.cancel();throw new SourceError('تعذر الاتصال بهذا السيرفر. اختر سيرفرًا آخر.',fetched.response.status===403?403:502,'MEDIA_DENIED');}
+  const finalURL=fetched.url,{type,response}=await inspectMedia(fetched.response,finalURL);
+  if(type==='hls'){
+    const text=await readLimited(response,2*1024*1024),variants=parseHLS(text,finalURL);
+    return {type,url:finalURL,...delivery(finalURL),quality,live:!text.includes('#EXT-X-ENDLIST')&&!variants.length,qualities:variants.map(v=>({...v,...delivery(v.url)}))};
   }
-  if (/^(video\/|application\/octet-stream)/i.test(contentType) || /\.(mp4|mkv|webm)(\?|$)|\/api\/file\//i.test(finalURL)) {
-    await response.body?.cancel();
-    return { type:'video',url:finalURL,...delivery(finalURL),quality,qualities:[] };
+  if(['video','mpegts','flv','dash'].includes(type)){
+    await response.body?.cancel();return {type,url:finalURL,...delivery(finalURL),quality,qualities:[]};
   }
-  const text = await readLimited(response, 2*1024*1024);
-  const urls = extractStreams(text, finalURL);
-  if (!urls.length) throw new SourceError('لم يُرجع هذا السيرفر رابط فيديو صالحًا للويب. اختر سيرفرًا آخر.', 422, 'UNRESOLVED_MEDIA');
-  const next = urls[0];
-  return { type:/\.m3u8(\?|$)/i.test(next)?'hls':'video',url:next,...delivery(next,{...headers,Referer:finalURL}),quality,qualities:[] };
+  const text=await readLimited(response,2*1024*1024);
+  const urls=extractStreams(text,finalURL);
+  // Public embed pages often nest the video player. Never evaluate page scripts here.
+  for(const match of text.matchAll(/<iframe[^>]+src=["']([^"']+)["']/gi)){
+    try{const next=new URL(match[1].replaceAll('&amp;','&'),finalURL);if(['https:','http:'].includes(next.protocol))urls.push(next.href);}catch{}
+  }
+  for(const next of [...new Set(urls)].slice(0,5)){
+    try{return await resolveMedia(next,{...headers,Referer:finalURL},quality,external,{seen:state.seen,depth:state.depth+1});}catch(error){if(error.code==='INVALID_URL')throw error;}
+  }
+  throw new SourceError('لم يُرجع السيرفر ملف فيديو صالحًا. جرّب سيرفرًا آخر.',422,'UNRESOLVED_MEDIA');
 }
 export function rewriteHLS(text, base, headers = {}) {
   return text.split(/\r?\n/).map(line => {

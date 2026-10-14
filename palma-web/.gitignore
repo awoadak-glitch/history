@@ -3,3 +3,9 @@ node_modules/
 !.env.example
 .vercel/
 dist/
+
+.vendor-cache/
+public/assets/mpegts.min.js
+public/assets/mpegts.LICENSE
+public/assets/dash.all.min.js
+public/assets/dash.LICENSE

@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'palma-windows/**'
+      - 'palma-web/**'
       - '.github/workflows/build-palma-windows.yml'
   workflow_dispatch:
 permissions:
@@ -46,9 +47,9 @@ jobs:
           $env:PALMA_TEST_OUTPUT = Join-Path $pwd 'test-output'
           $app = Join-Path $pwd 'release/win-unpacked/PALMA VISION.exe'
           $process = Start-Process -FilePath $app -ArgumentList '--self-test' -Wait -PassThru
-          if ($process.ExitCode -ne 0) { throw 'Packaged app live playback check failed' }
           Get-Content test-output/verification.json
-          $archive = 'release/PALMA-VISION-Windows-2.1.0.zip'
+          if ($process.ExitCode -ne 0) { throw 'Packaged app live playback check failed' }
+          $archive = 'release/PALMA-VISION-Windows-2.2.0.zip'
           (Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() | Set-Content ($archive + '.sha256')
       - name: Preserve verification evidence
         if: always()
@@ -65,10 +66,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh release view palma-windows-v2.1.0 *> $null
+          gh release view palma-windows-v2.2.0 *> $null
           if ($LASTEXITCODE -ne 0) {
-            gh release create palma-windows-v2.1.0 --target '${{ github.sha }}' --title 'PALMA VISION Windows 2 — independent client' --notes-file palma-windows/README-AR.md
+            gh release create palma-windows-v2.2.0 --target '${{ github.sha }}' --title 'PALMA VISION Windows 2.2 — playback and details' --notes-file palma-windows/README-AR.md
             if ($LASTEXITCODE -ne 0) { throw 'Release creation failed' }
           }
-          gh release upload palma-windows-v2.1.0 palma-windows/release/PALMA-VISION-Windows-2.1.0.zip palma-windows/release/PALMA-VISION-Windows-2.1.0.zip.sha256 palma-windows/test-output/verification.json palma-windows/test-output/home.png palma-windows/test-output/player.png --clobber
+          gh release upload palma-windows-v2.2.0 palma-windows/release/PALMA-VISION-Windows-2.2.0.zip palma-windows/release/PALMA-VISION-Windows-2.2.0.zip.sha256 palma-windows/test-output/verification.json palma-windows/test-output/home.png palma-windows/test-output/player.png palma-windows/test-output/fullscreen.png palma-windows/test-output/match.png palma-windows/test-output/actor.png palma-windows/test-output/channel.png palma-windows/test-output/anime.png --clobber
           if ($LASTEXITCODE -ne 0) { throw 'Release upload failed' }

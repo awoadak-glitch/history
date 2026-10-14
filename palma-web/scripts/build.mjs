@@ -1,5 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { cp, rm, mkdir, readFile, writeFile } from 'node:fs/promises';
+import {prepareVendors} from './vendor.mjs';
+await prepareVendors();
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist', { recursive: true });
 await cp('public', 'dist', { recursive: true });

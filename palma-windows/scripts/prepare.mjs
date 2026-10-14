@@ -1,6 +1,8 @@
 import {cp,mkdir,readFile,rm,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {prepareVendors} from '../../palma-web/scripts/vendor.mjs';
+await prepareVendors();
 const root=fileURLToPath(new URL('../',import.meta.url));
 const output=path.join(root,'app');
 await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true});

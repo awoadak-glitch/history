@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,writeFile,readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {APP_ORIGIN} from './bridge.mjs';
 import {downloadVideo,runFFmpeg} from './download-core.mjs';
@@ -49,38 +49,30 @@ export async function runSelfTest({window,handler,setTestHandler,ffmpeg,fetchRes
     checks.push({step:'HLS downloaded, remuxed to MP4 and decoded',bytes:saved.bytes,sample_segments:2});
     let completed,failed;
     const rendered=new Promise((resolve,reject)=>{completed=resolve;failed=reject;});
-    const timer=setTimeout(()=>failed(Error('Player did not decode video within 60 seconds')),60000);
-    const script=`import {openPlayer} from '/player.js';
-const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-try {
- const downloads=await fetch('/api/desktop/downloads');if(!downloads.ok)throw Error('Desktop download manager unavailable');
- for(let i=0;i<100&&!document.querySelector('.media-card');i++)await wait(200);
- if(!document.querySelector('.media-card'))throw Error('Home did not render');
- await document.fonts.ready;
- const hero=document.querySelector('.hero-cover');
- if(hero)await Promise.race([hero.decode(),wait(12000).then(()=>{throw Error('Home cover did not load');})]);
- await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);
- await fetch('/__test/home-ready?'+new URLSearchParams({cards:String(document.querySelectorAll('.media-card').length),cover:hero?.naturalWidth>0?'1':'0'}));
- const {playback,item,episode}=await (await fetch('/__test/media')).json();
- openPlayer(playback,item,episode);const video=document.querySelector('#player-dialog video');video.muted=true;
- for(let i=0;i<250;i++){if(video.currentTime>3&&video.videoWidth>0){await new Promise(requestAnimationFrame);await fetch('/__test/result?'+new URLSearchParams({time:String(video.currentTime),width:String(video.videoWidth),height:String(video.videoHeight),frames:String(video.getVideoPlaybackQuality().totalVideoFrames)}));break;}await wait(200);}
-}catch(error){await fetch('/__test/failure?message='+encodeURIComponent(error.message));}`;
+    const timer=setTimeout(()=>failed(Error('Requested desktop flow exceeded eight minutes')),480000);
+    const script=await readFile(new URL('./self-test-driver.js',import.meta.url),'utf8');
     setTestHandler(request=>{
       const url=new URL(request.url);
       if(url.pathname==='/')return (async()=>{const response=await handler(request);const html=(await response.text()).replace('</body>','<script type="module" src="/__test/driver.js"></script></body>');return new Response(html,{headers:response.headers});})();
       if(url.pathname==='/__test/driver.js')return new Response(script,{headers:{'Content-Type':'text/javascript'}});
       if(url.pathname==='/__test/media')return Response.json({playback,item:{provider:'palma',kind:'series',id,title:detail.title_ar,episodeNumber:episodeData.episode_number},episode});
-      if(url.pathname==='/__test/home-ready')return (async()=>{checks.push({step:'home rendered with source images',cards:Number(url.searchParams.get('cards')),cover_loaded:url.searchParams.get('cover')==='1'});await writeFile(path.join(directory,'home.png'),(await window.capturePage()).toPNG());return new Response('ok');})();
-      if(url.pathname==='/__test/result'){const result=Object.fromEntries([...url.searchParams].map(([k,v])=>[k,Number(v)]));completed(result);return new Response('ok');}
+      if(url.pathname==='/__test/check')return (async()=>{const value=await request.json();checks.push(value);console.log(JSON.stringify(value));return new Response('ok');})();
+      if(url.pathname==='/__test/screenshot')return (async()=>{const name=url.searchParams.get('name');if(!/^[a-z]+$/.test(name))return new Response('invalid',{status:400});await writeFile(path.join(directory,name+'.png'),(await window.capturePage()).toPNG());return new Response('ok');})();
+      if(url.pathname==='/__test/fullscreen')return (async()=>{
+        await window.webContents.executeJavaScript("document.querySelector('#fullscreen-button').click()",true);
+        for(let i=0;i<30&&!window.isFullScreen();i++)await new Promise(resolve=>setTimeout(resolve,100));
+        const element=await window.webContents.executeJavaScript("!!document.fullscreenElement && document.fullscreenElement.classList.contains('player-wrap')");
+        return Response.json({native:window.isFullScreen(),element,bounds:window.getBounds()});
+      })();
+      if(url.pathname==='/__test/result'){completed(true);return new Response('ok');}
       if(url.pathname==='/__test/failure'){failed(Error(url.searchParams.get('message')));return new Response('ok');}
       return undefined;
     });
     window.show();
     await window.loadURL(APP_ORIGIN+'/#/home');
     let result;try{result=await rendered;}finally{clearTimeout(timer);}
-    assert.ok(result.frames>0);checks.push({step:'integrated player decoded live video',...result});
-    await writeFile(path.join(directory,'player.png'),(await window.capturePage()).toPNG());
+    assert.equal(result,true);
     report.success=true;
-  }catch(error){report.success=false;report.error=error.message;throw error;}
+  }catch(error){report.success=false;report.error=error.message;await writeFile(path.join(directory,'failure.png'),(await window.capturePage()).toPNG()).catch(()=>{});throw error;}
   finally{await writeFile(path.join(directory,'verification.json'),JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));}
 }

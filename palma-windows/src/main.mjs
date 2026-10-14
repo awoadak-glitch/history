@@ -7,6 +7,7 @@ import resolve from './web/api/resolve.js';
 import media from './web/api/media.js';
 import {fetchPublic,unticket} from './web/server/http.js';
 import {createDownloadManager} from './download-manager.mjs';
+import {allowAppPermission} from './permissions.mjs';
 
 const root=fileURLToPath(new URL('./web/public/',import.meta.url));
 const selfTest=process.argv.includes('--self-test');
@@ -16,8 +17,8 @@ if(!selfTest&&!app.requestSingleInstanceLock()){app.quit();}else{
   let window;
   app.on('second-instance',()=>{if(window){if(window.isMinimized())window.restore();window.focus();}});
   app.whenReady().then(async()=>{
-    session.defaultSession.setPermissionRequestHandler((_contents,_permission,callback)=>callback(false));
-    session.defaultSession.setPermissionCheckHandler(()=>false);
+    session.defaultSession.setPermissionRequestHandler((contents,permission,callback,details)=>callback(contents===window?.webContents&&allowAppPermission(permission,details.requestingUrl||contents.getURL(),details.isMainFrame)));
+    session.defaultSession.setPermissionCheckHandler((contents,permission,origin,details)=>contents===window?.webContents&&allowAppPermission(permission,details.requestingUrl||origin,details.isMainFrame));
     const handler=createAppHandler({root,handlers:{'/api/catalog':catalog,'/api/resolve':resolve,'/api/media':media}});
     let testHandler,downloads;
     protocol.handle('palma',request=>{
