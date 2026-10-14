@@ -52,6 +52,9 @@ export default async function handler(req, res) {
     if(provider==='palma') {
       res.setHeader('X-Palma-Origin',palmaClient?.base.origin||'');
       res.setHeader('X-Palma-Route',route);
+      res.setHeader('X-Palma-Upstream',palmaClient?.lastResponse?.url || '');
+      res.setHeader('X-Palma-Cache',palmaClient?.lastResponse?.cache || '');
+      res.setHeader('X-Palma-Bytes',String(palmaClient?.lastResponse?.bytes || 0));
       if (/^\d+$/.test(p.get('id')||'')) res.setHeader('X-Palma-Item',p.get('id'));
     }
     json(res,200,data);
