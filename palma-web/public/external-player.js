@@ -1,11 +1,9 @@
 // Shared, pure URL builders. Native applications receive only a prepared media
 // URL and display metadata, never the page URL or an arbitrary command.
-export const PLAYER_OPTIONS = [['auto','تلقائي حسب الجهاز'],['mx','MX Player للهاتف'],['awr','AWR MX للكمبيوتر'],['browser','داخل المتصفح']];
+export const PLAYER_OPTIONS = [['browser','مشغّل بالما المدمج'],['awr','AWR MX للكمبيوتر'],['mx','MX Player للهاتف'],['auto','تلقائي — المشغّل المدمج']];
 
 export function playbackTarget(preference='auto',userAgent='') {
   if (['mx','awr','browser'].includes(preference)) return preference;
-  if (/Android/i.test(userAgent)) return 'mx';
-  if (/Windows/i.test(userAgent)) return 'awr';
   return 'browser';
 }
 

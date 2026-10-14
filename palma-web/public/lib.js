@@ -35,14 +35,15 @@ export function card(raw,provider='palma',kind='series'){
   if(!raw)return null;
   const type=first(raw,'item_type','_kind')||kind;
   kind=({movies:'movie',channels:'channel',actor:'actor',wrestling_show:'wrestling',animes:'anime',series:'series'})[type]||type;
-  const id=first(raw,'item_id','animeId','objectID','series_id','id','doc_id');
-  let title=arabic(raw.title_ar)||arabic(raw.name)||first(raw,'title','title_en','original_title')||arabic(d.name)||'عمل';
-  let poster=image(raw.poster)||image(raw.poster_uri)||image(raw.aniList_poster)||image(raw.logo)||image(raw.image)||image(d.poster);
-  let cover=image(raw.cover)||image(raw.cover_uri)||image(raw.banner)||image(raw.thumb)||image(raw.thumb_uri)||poster;
-  if(poster && !/^(https?:|data:)/.test(poster))poster=new URL(poster,'https://dramaramadan.net/').href;
-  if(cover && !/^(https?:|data:)/.test(cover))cover=new URL(cover,'https://dramaramadan.net/').href;
-  if(!poster && provider==='palma'&&id&&kind==='series')poster=`https://dramaramadan.net/img/poster${id}.webp`;
-  return {...raw,id,title,poster,cover,provider,kind,year:first(raw,'release_year','year')||first(d,'year'),rating:first(raw,'rating','rate'),tags:raw.tags||raw.genres||[],story:arabic(raw.story)||arabic(d.story)||first(raw,'description','story_en')};
+  const id=first(raw,'item_id','animeId','objectID','id','series_id','doc_id');
+  let title=arabic(raw.title_ar)||arabic(raw.name)||first(raw,'series_title','anime_title','title','title_en','original_title')||arabic(d.name)||'عمل';
+  let poster=image(raw.poster)||image(raw.series_poster)||image(raw.anime_poster)||image(raw.poster_uri)||image(raw.aniList_poster)||image(raw.logo)||image(raw.image)||image(raw.bg_image)||image(d.poster);
+  let cover=image(raw.cover)||image(raw.cover_uri)||image(raw.banner)||image(raw.series_banner)||image(raw.anime_banner)||image(raw.bg_image)||image(raw.thumb)||image(raw.thumb_uri)||poster;
+  const imageBase=provider==='palma'?'https://poster.ostv-11-33.xyz/':'https://dramaramadan.net/';
+  if(poster && !/^(https?:|data:)/.test(poster))poster=new URL(poster,imageBase).href;
+  if(cover && !/^(https?:|data:)/.test(cover))cover=new URL(cover,imageBase).href;
+  const episodeName=kind==='episode'?`الحلقة ${raw.episode_number||''}`:raw.episodeName;
+  return {...raw,id,title,poster,cover,provider,kind,episodeName,year:first(raw,'release_year','series_year','year')||first(d,'year'),rating:first(raw,'rating','rate'),tags:raw.tags||raw.genres||[],story:arabic(raw.story)||arabic(d.story)||first(raw,'description','story_en')};
 }
 export const keyOf=item=>`${item.provider}:${item.kind}:${item.id}`;
 export const playbackKey=(item,episode='')=>`${keyOf(item)}:${episode||'movie'}`;

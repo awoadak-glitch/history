@@ -23,7 +23,12 @@ export default async function handler(req,res) {
       source=array(kind==='channel'?body(value)?.sources:value)[index];
     } else if(provider==='palma') {
       if(!/^\d+$/.test(id) || (episode&&!/^\d+$/.test(episode))) throw new SourceError('العمل غير صالح.',400);
-      if(episode && kind!=='anime') source=array(await catalogue('palma',`api/${download?'download_links':'watch_links'}/`,{episode_id:episode}))[index];
+      if(episode && kind!=='anime') {
+        // Episode detail issues fresh CDN URLs. The legacy watch_links endpoint
+        // returns storage-origin URLs that the original player no longer uses.
+        const value=body(await catalogue('palma','api/episodes/show.php',{id:episode}));
+        source=array(download?value.download_links:value.watch_links)[index];
+      }
       else {
         const route={movie:'api/movies/show.php',channel:'api/channels/show.php',anime:episode?'api/anime/episodes/show.php':'api/anime/show.php',wrestling:'api/wrestling/show.php',video:'api/matches/event_videos.php'}[kind];
         if(!route) throw new SourceError('مسار مشاهدة غير صالح.',400);
@@ -36,6 +41,15 @@ export default async function handler(req,res) {
     if(source.premium && !['0',0,'false',false,'no'].includes(source.premium)) throw new SourceError('هذا السيرفر يحتاج حسابًا لدى المصدر.',403,'PREMIUM_SOURCE');
     const url=source.url||source.stream_url||source.video_url||source.download_url||source.link||source.deep_link;
     const headers={};
+    if (source.deep_link) {
+      try {
+        const deep = new URL(source.deep_link);
+        for (const [parameter, header] of [['ua','User-Agent'],['referer','Referer'],['origin','Origin']]) {
+          const value = deep.searchParams.get(parameter);
+          if (value && value.length < 1000 && !/[\r\n]/.test(value)) headers[header]=value;
+        }
+      } catch {}
+    }
     for(const [k,v] of Object.entries(source.headers||{})) if(['referer','origin','user-agent'].includes(k.toLowerCase()) && typeof v==='string' && v.length<1000 && !/[\r\n]/.test(v)) headers[k]=v;
     const media=await resolveMedia(url,headers,source.quality||'',p.get('target')==='external'&&!download);
     json(res,200,media);

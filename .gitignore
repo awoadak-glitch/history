@@ -7,3 +7,4 @@ inputs/
 *.password
 __pycache__/
 .checkpoint.json
+palma-web/server/generated/

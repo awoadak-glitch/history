@@ -3,11 +3,13 @@ import assert from 'node:assert/strict';
 import {mxPlayerLink,awrPlayerLink,playbackIdentity,playbackTarget} from '../public/external-player.js';
 const item={provider:'witcher',kind:'anime',id:'Naruto',title:'ناروتو'};
 
-test('device selection routes Android to MX and Windows to AWR, explicit choice wins',()=>{
-  assert.equal(playbackTarget('auto','Mozilla Android 15'),'mx');
-  assert.equal(playbackTarget('auto','Mozilla Windows NT 10.0'),'awr');
+test('integrated player is the default on every device, explicit external choice wins',()=>{
+  assert.equal(playbackTarget('auto','Mozilla Android 15'),'browser');
+  assert.equal(playbackTarget('auto','Mozilla Windows NT 10.0'),'browser');
   assert.equal(playbackTarget('auto','iPhone'),'browser');
   assert.equal(playbackTarget('browser','Android'),'browser');
+  assert.equal(playbackTarget('awr','Windows'),'awr');
+  assert.equal(playbackTarget('mx','Android'),'mx');
 });
 test('Android intent preserves signed query, targets MX, and supplies Play Store fallback',()=>{
   const link=mxPlayerLink({url:'https://cdn.example.com/video.mp4?token=a%2Bb&expires=9'},item,'001');

@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import http from 'node:http';
 import https from 'node:https';
 import { Readable } from 'node:stream';
+import {readFileSync} from 'node:fs';
 
 export class SourceError extends Error {
   constructor(message, status = 502, code = 'SOURCE_ERROR') { super(message); this.status = status; this.code = code; }
@@ -100,8 +101,16 @@ export async function fetchPublic(raw, options = {}) {
   throw new SourceError('تجاوز السيرفر عدد إعادة التوجيه المسموح.');
 }
 const devSecret = crypto.randomBytes(32).toString('hex');
+let deploymentSecret;
 function secret() {
   if (process.env.MEDIA_TICKET_SECRET) return process.env.MEDIA_TICKET_SECRET;
+  if (!deploymentSecret) {
+    try {
+      const key=JSON.parse(readFileSync(new URL('./generated/media-key.json',import.meta.url),'utf8')).key;
+      if (/^[a-f0-9]{64}$/.test(key)) deploymentSecret=key;
+    } catch {}
+  }
+  if (deploymentSecret) return deploymentSecret;
   if (process.env.VERCEL) throw new SourceError('إعداد تشغيل الفيديو غير مكتمل.', 503, 'MISSING_MEDIA_CONFIG');
   return devSecret;
 }

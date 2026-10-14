@@ -8,8 +8,11 @@ No Android process, emulator, PALMA installation, TDM or MX Player was running.
 Only the three request headers from `src/iron.mjs` were needed. The Android
 diagnostic header was not supplied.
 
-This proves home-catalog access. Episode playback is a separate milestone;
-it is not claimed by this result.
+Additional live requests returned HTTP 200 for series details, seasons, episodes,
+episode details, film details and five content categories. Episode and film CDN
+playlists returned 200; following a variant and requesting the first 1,024 video
+bytes returned 206 (`video/mp4`). This verifies source access, before browser
+playback verification.
 
 ## Trace through the supplied application
 
@@ -39,6 +42,21 @@ and embedded APKs. The JS implementation was validated against the live server.
 
 The previous website used a stale default origin and optional bearer-token
 authentication. Neither reproduced the actual PALMA request protocol.
+
+## Playback finding
+
+The older `api/watch_links/` route returned storage-origin links (403 on the
+sample), whereas `api/episodes/show.php` returned fresh signed CDN links.
+The original episode screen also calls `getEpisodeDetail`. The web client now
+uses that detail response for both server display and playback, preserving
+source indices. The `ua` query field in the provided `deep_link` supplies the
+source's media User-Agent; no TDM application is needed to read those fields.
+
+The CDN did not send browser CORS headers in the tested responses. Web playback
+therefore uses the existing signed media proxy, including rewritten child HLS
+playlists, initialization segments and encryption-key references where present.
+The build generates a private deployment key shared by the Vercel Functions;
+it is not in Git, `public/`, `dist/` or an API response.
 
 Raw catalog/playback captures remain ignored; do not commit expiring links,
 session material, APKs or derived request keys.

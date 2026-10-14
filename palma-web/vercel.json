@@ -4,7 +4,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": null,
-  "functions": { "api/*.js": { "maxDuration": 60 } },
+  "functions": { "api/*.js": { "maxDuration": 60, "includeFiles": "server/generated/media-key.json" } },
   "rewrites": [{ "source": "/((?!api/|assets/|.*\\.).*)", "destination": "/index.html" }],
   "headers": [
     { "source": "/(.*)", "headers": [
