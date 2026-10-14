@@ -1,0 +1,108 @@
+{
+  "verified_at": "2026-10-14T18:30:45.417Z",
+  "checks": [
+    {
+      "route": "api/series/",
+      "status": 200,
+      "items": 10,
+      "first_item_fields": [
+        "id",
+        "title_ar",
+        "title_en",
+        "story",
+        "poster",
+        "banner",
+        "trailer_url",
+        "rating",
+        "rating_count",
+        "views_count"
+      ]
+    },
+    {
+      "route": "api/movies/",
+      "status": 200,
+      "items": 10,
+      "first_item_fields": [
+        "id",
+        "title_ar",
+        "title_en",
+        "original_title",
+        "poster",
+        "banner",
+        "release_year",
+        "release_date",
+        "rating",
+        "rating_count"
+      ]
+    },
+    {
+      "route": "api/channels/",
+      "status": 200,
+      "items": 10,
+      "first_item_fields": [
+        "id",
+        "name",
+        "logo",
+        "cover",
+        "country",
+        "category",
+        "frequency",
+        "display_order",
+        "country_name",
+        "flag_emoji"
+      ]
+    },
+    {
+      "route": "api/wrestling/",
+      "status": 200,
+      "items": 10,
+      "first_item_fields": [
+        "id",
+        "title_ar",
+        "title_en",
+        "poster",
+        "banner",
+        "duration",
+        "content_type",
+        "release_year",
+        "air_date",
+        "rating"
+      ]
+    },
+    {
+      "route": "api/movies/collections.php",
+      "status": 200,
+      "items": 10,
+      "first_item_fields": [
+        "id",
+        "name",
+        "name_ar",
+        "name_en",
+        "slug",
+        "overview",
+        "poster",
+        "backdrop",
+        "movie_count",
+        "total_views"
+      ]
+    },
+    {
+      "route": "api/actors/",
+      "status": 200,
+      "items": 10,
+      "first_item_fields": [
+        "id",
+        "name",
+        "photo",
+        "bio",
+        "birthdate",
+        "nationality",
+        "elcinema_url",
+        "tmdb_id",
+        "gender",
+        "deathday"
+      ]
+    }
+  ],
+  "scope": "List retrieval only; playback is separately verified for a series episode."
+}

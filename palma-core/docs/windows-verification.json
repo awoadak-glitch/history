@@ -1,0 +1,81 @@
+{
+  "platform": "win32",
+  "versions": {
+    "electron": "44.7.2",
+    "node": "24.21.0"
+  },
+  "verified_at": "2026-10-14T18:37:25.398Z",
+  "checks": [
+    {
+      "step": "api/v2/home.php",
+      "status": 200,
+      "sections": 28,
+      "banners": 32
+    },
+    {
+      "step": "api/series/show.php",
+      "status": 200
+    },
+    {
+      "step": "api/seasons/",
+      "status": 200
+    },
+    {
+      "step": "api/episodes/",
+      "status": 200
+    },
+    {
+      "step": "api/episodes/show.php",
+      "status": 200
+    },
+    {
+      "step": "/api/resolve",
+      "status": 200
+    },
+    {
+      "step": "HLS master",
+      "status": 200
+    },
+    {
+      "step": "HLS variant",
+      "status": 200
+    },
+    {
+      "step": "video bytes",
+      "status": 206,
+      "content_type": "video/mp4",
+      "bytes": 370
+    },
+    {
+      "step": "HLS downloaded, remuxed to MP4 and decoded",
+      "bytes": 4250646,
+      "sample_segments": 2
+    },
+    {
+      "step": "home rendered with source images",
+      "cards": 278,
+      "cover_loaded": true
+    },
+    {
+      "step": "integrated player decoded live video",
+      "time": 3.118402,
+      "width": 1920,
+      "height": 1080,
+      "frames": 79
+    }
+  ],
+  "series_id": "1667",
+  "episode_id": "43120",
+  "title": "سيدو وحورية",
+  "success": true,
+  "release": {
+    "tag": "palma-windows-v2.1.0",
+    "commit": "f39a9169b49b628ff84c42897c5165c255e07093",
+    "workflow_run": 38615613464,
+    "workflow_attempt": 2,
+    "job": 116032403374,
+    "archive_bytes": 181966316,
+    "archive_sha256": "24314e47693bc8a0acc09cde918b2fc455caaa2567c1af2cdfc0ee4f794c5f84"
+  },
+  "scope": "Live episode playback and a two-segment MP4 download sample; not all servers, complete-title downloads or all Source World providers."
+}
