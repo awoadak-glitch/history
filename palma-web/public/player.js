@@ -1,5 +1,6 @@
 import {icon,esc,modal,toast,progressFor,saveProgress,timeText,readStore,writeStore} from './lib.js';
 import {playbackTarget,mxPlayerLink,awrPlayerLink} from './external-player.js';
+import {startDesktopDownload} from './desktop-downloads.js';
 
 let hls,video,current,interval,spaceTimer,spaceHeld=false,originalRate=1;
 function persist(){if(video&&current)saveProgress(current.item,current.episode,video.currentTime,Number.isFinite(video.duration)?video.duration:0);}
@@ -55,6 +56,7 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{if(e.code!=='Space'||!video||!dialog.open)return;e.preventDefault();clearTimeout(spaceTimer);if(spaceHeld){video.playbackRate=originalRate;spaceHeld=false;}else if(video.paused)video.play().catch(()=>{});else video.pause();});
 
 export async function resolveServer(item,episode,index,download=false,signal){
+  if(download&&location.protocol==='palma:')return startDesktopDownload(item,episode,index);
   const waiting=modal(download?'تجهيز التنزيل':'تجهيز المشاهدة',`<p>جاري تجهيز رابط السيرفر…</p><span class="spinner"></span>`);
   const controller=new AbortController();const abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});
   waiting.addEventListener('close',abort,{once:true});

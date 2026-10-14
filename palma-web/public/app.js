@@ -1,6 +1,7 @@
 import {icon,esc,first,arabic,list,data,safeURL,card,keyOf,playbackKey,link,detailLink,api,readStore,writeStore,favorite,toggleFavorite,progressFor,timeText,toast,modal} from './lib.js';
 import {resolveServer} from './player.js';
 import {PLAYER_OPTIONS} from './external-player.js';
+import {renderDesktopDownloads} from './desktop-downloads.js';
 import {mainNavigation,drawerNavigation,navigationState} from './navigation.js';
 import {sectionKind,orderedSections,sectionQuery} from './palma-content.js';
 
@@ -32,6 +33,7 @@ function matchCard(m){
 }
 function promoSection(section){
   const title=first(section,'title_ar','title_en'),type=section.promo_action_type,value=section.promo_action_value;
+  if(type==='url')return '';
   const href=type==='url'?safeURL(value):type==='all_series_category'?link('series',{category:value}):link(({anime_home:'anime',wrestling:'wrestling',all_movies:'movies',all_series:'series',channels:'channels',matches:'matches'})[type]||'home');
   return `<section class="section native-promo"><a href="${esc(href||link('home'))}" ${type==='url'?'target="_blank" rel="noopener noreferrer"':''}>${section.promo_bg_image?img(section.promo_bg_image,'','promo-background'):''}${section.promo_char_image?img(section.promo_char_image,'','promo-character'):''}<div class="promo-copy"><h2>${esc(title)}</h2>${section.promo_description?`<p>${esc(section.promo_description)}</p>`:''}<span class="btn primary">${esc(section.promo_button_text||'تصفح الأعمال')} ${icon('forward')}</span></div></a></section>`;
 }
@@ -254,6 +256,7 @@ async function search(p,token){
 }
 
 function library(view){
+  if(view==='downloads'&&location.protocol==='palma:'){renderDesktopDownloads(document.getElementById('main'),controller.signal);return;}
   const source=new URLSearchParams(location.hash.split('?')[1]).get('source');const libraryTabs=`<nav class="library-tabs chips"><a class="chip" href="${link('favorites',{source})}">المفضلة</a><a class="chip" href="${link('history',{source})}">سجل المشاهدة</a><a class="chip" href="${link('downloads',{source})}">التنزيلات</a></nav>`;
   if(view==='favorites'){const items=readStore('favorites',[]).filter(x=>!source||x.provider===source);page(heading('المفضلة')+libraryTabs+grid(items));return;}
   if(view==='history'){
@@ -275,6 +278,8 @@ function settings(){
     document.querySelector('label[for="mx-edition"]')?.remove();
     document.getElementById('mx-edition').remove();
     document.querySelector('.settings-list a[href="#/player-setup"]')?.remove();
+    const about=[...document.querySelectorAll('.settings-list .setting-content')].find(x=>x.querySelector('h3')?.textContent==='حول بالما');
+    if(about)about.querySelector('p').textContent='PALMA VISION · Windows';
   }
   document.getElementById('import-library').onchange=async e=>{try{const file=e.target.files[0];if(!file||file.size>4*1024*1024)throw Error('ملف النسخة غير صالح.');const j=JSON.parse(await file.text());if(j.app!=='PALMA VISION WEB'||!Array.isArray(j.favorites)||!j.progress||typeof j.progress!=='object'||Array.isArray(j.progress))throw Error('اختر ملف بيانات بالما ويب.');const favorites=j.favorites.filter(x=>x&&['palma','witcher','drama'].includes(x.provider)&&typeof x.id==='string').slice(0,250);writeStore('favorites',favorites);const progress=Object.fromEntries(Object.entries(j.progress).filter(([k,v])=>v?.item&&Number.isFinite(v.time)&&typeof v.episode==='string').slice(0,250));writeStore('progress',progress);toast('تم استيراد البيانات.');}catch(err){toast(err.message);}};
 }

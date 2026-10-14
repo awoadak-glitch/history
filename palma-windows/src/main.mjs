@@ -5,6 +5,8 @@ import {APP_ORIGIN,createAppHandler} from './bridge.mjs';
 import catalog from './web/api/catalog.js';
 import resolve from './web/api/resolve.js';
 import media from './web/api/media.js';
+import {fetchPublic,unticket} from './web/server/http.js';
+import {createDownloadManager} from './download-manager.mjs';
 
 const root=fileURLToPath(new URL('./web/public/',import.meta.url));
 const selfTest=process.argv.includes('--self-test');
@@ -17,8 +19,11 @@ if(!selfTest&&!app.requestSingleInstanceLock()){app.quit();}else{
     session.defaultSession.setPermissionRequestHandler((_contents,_permission,callback)=>callback(false));
     session.defaultSession.setPermissionCheckHandler(()=>false);
     const handler=createAppHandler({root,handlers:{'/api/catalog':catalog,'/api/resolve':resolve,'/api/media':media}});
-    let testHandler;
-    protocol.handle('palma',request=>testHandler?.(request)||handler(request));
+    let testHandler,downloads;
+    protocol.handle('palma',request=>{
+      if(new URL(request.url).pathname==='/api/desktop/downloads')return downloads?.handle(request)||Response.json({error:'جاري بدء التطبيق.'},{status:503});
+      return testHandler?.(request)||handler(request);
+    });
     window=new BrowserWindow({width:1440,height:940,minWidth:900,minHeight:640,show:false,backgroundColor:'#0c1422',title:'PALMA VISION',icon:path.join(root,'assets/palma-logo.png'),autoHideMenuBar:true,webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
     const external=url=>{try{const u=new URL(url);if(u.protocol==='https:'&&!u.username&&!u.password)shell.openExternal(u.href).catch(()=>{});}catch{}};
     window.webContents.setWindowOpenHandler(({url})=>{
@@ -28,6 +33,19 @@ if(!selfTest&&!app.requestSingleInstanceLock()){app.quit();}else{
     });
     window.webContents.on('will-navigate',(event,url)=>{if(!url.startsWith(APP_ORIGIN+'/')){event.preventDefault();external(url);}});
     window.webContents.on('will-attach-webview',event=>event.preventDefault());
+    const executable=process.platform==='win32'?'ffmpeg.exe':'ffmpeg';
+    const ffmpeg=app.isPackaged?path.join(process.resourcesPath,'ffmpeg',executable):fileURLToPath(new URL('../node_modules/ffmpeg-static/'+executable,import.meta.url));
+    downloads=await createDownloadManager({app,window,dialog,shell,resolve,unticket,fetchResource:fetchPublic,ffmpeg});
+    let quitting=false;
+    window.on('close',event=>{if(downloads.active()&&!quitting){event.preventDefault();app.quit();}});
+    app.on('before-quit',async event=>{
+      if(quitting)return;event.preventDefault();
+      if(downloads.active()){
+        const answer=await dialog.showMessageBox(window,{type:'question',title:'تنزيلات جارية',message:'توجد تنزيلات جارية. هل تريد إلغاءها وإغلاق بالما؟',buttons:['متابعة التنزيل','إلغاء التنزيلات والخروج'],defaultId:0,cancelId:0});
+        if(answer.response===0)return;
+      }
+      quitting=true;await downloads.shutdown();app.quit();
+    });
     session.defaultSession.on('will-download',(_event,item,contents)=>{
       if(contents!==window.webContents){item.cancel();return;}
       item.on('updated',()=>{const total=item.getTotalBytes();window.setProgressBar(total>0?item.getReceivedBytes()/total:2);});
@@ -39,7 +57,7 @@ if(!selfTest&&!app.requestSingleInstanceLock()){app.quit();}else{
     ]));
     if(selfTest){
       window.webContents.setBackgroundThrottling(false);
-      try{const {runSelfTest}=await import('./self-test.mjs');await runSelfTest({window,handler,setTestHandler:value=>{testHandler=value;}});app.exit(0);}
+      try{const {runSelfTest}=await import('./self-test.mjs');await runSelfTest({window,handler,ffmpeg,fetchResource:fetchPublic,unticket,setTestHandler:value=>{testHandler=value;}});app.exit(0);}
       catch(error){console.error('Desktop self-test failed:',error.message);app.exit(1);}
       return;
     }

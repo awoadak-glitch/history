@@ -2,10 +2,11 @@ import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {APP_ORIGIN} from './bridge.mjs';
+import {downloadVideo,runFFmpeg} from './download-core.mjs';
 
 // Runs only with --self-test. Uses live catalogue and media, never canned content.
 // Reports contain counts/status, never signed source URLs or playback tickets.
-export async function runSelfTest({window,handler,setTestHandler}) {
+export async function runSelfTest({window,handler,setTestHandler,ffmpeg,fetchResource,unticket}) {
   const directory=path.resolve(process.env.PALMA_TEST_OUTPUT||'test-output');
   await mkdir(directory,{recursive:true});
   const checks=[];
@@ -40,12 +41,19 @@ export async function runSelfTest({window,handler,setTestHandler}) {
       if(level===2){const reader=response.body.getReader();const sample=await reader.read();await reader.cancel();assert.ok(sample.value.length>0);checks.push({step:'video bytes',status:response.status,content_type:response.headers.get('content-type'),bytes:sample.value.length});}
       else{const manifest=await response.text();assert.ok(manifest.startsWith('#EXTM3U'));const child=manifest.split(/\r?\n/).find(x=>x&&!x.startsWith('#'));assert.ok(child.startsWith('/api/media?'));next=new URL(child,APP_ORIGIN).href;checks.push({step:level?'HLS variant':'HLS master',status:response.status});}
     }
+    const payload=unticket(new URL(playback.playable,APP_ORIGIN).searchParams.get('t'));
+    const sample=path.join(directory,'download-sample.mp4');
+    const saved=await downloadVideo({url:payload.u,headers:payload.h,hls:true,output:sample,cacheRoot:path.join(directory,'cache'),ffmpeg,fetchResource,maxSegments:2});
+    assert.ok(saved.bytes>1024);
+    await runFFmpeg(ffmpeg,['-hide_banner','-loglevel','error','-nostdin','-i',sample,'-t','1','-f','null','-']);
+    checks.push({step:'HLS downloaded, remuxed to MP4 and decoded',bytes:saved.bytes,sample_segments:2});
     let completed,failed;
     const rendered=new Promise((resolve,reject)=>{completed=resolve;failed=reject;});
     const timer=setTimeout(()=>failed(Error('Player did not decode video within 60 seconds')),60000);
     const script=`import {openPlayer} from '/player.js';
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 try {
+ const downloads=await fetch('/api/desktop/downloads');if(!downloads.ok)throw Error('Desktop download manager unavailable');
  for(let i=0;i<100&&!document.querySelector('.media-card');i++)await wait(200);
  if(!document.querySelector('.media-card'))throw Error('Home did not render');
  await document.fonts.ready;
