@@ -20,7 +20,13 @@ export async function catalogue(provider, route, query = {}) {
       }});
       palmaConfig = config;
     }
-    try {return normalizeImages((await palmaClient.get(route, filtered)).body, process.env.PALMA_IMAGE_BASE || palmaClient.base.href);}
+    try {
+      const result=(await palmaClient.get(route, filtered)).body;
+      if ((route==='api/v2/home.php' || /show\.php$/.test(route)) && Array.isArray(result.data) && !result.data.length) {
+        throw new SourceError('لم يُرجع مصدر بالما بيانات لهذا الاتصال. أعد المحاولة لاحقًا.',502,'PALMA_EMPTY_RESPONSE');
+      }
+      return normalizeImages(result, process.env.PALMA_IMAGE_BASE || palmaClient.base.href);
+    }
     catch (error) {
       if (error instanceof PalmaAPIError) throw new SourceError(error.status===404?'المحتوى غير متاح حاليًا.':'تعذر تحديث محتوى بالما. أعد المحاولة.',error.status===404?404:502,error.code);
       throw error;
@@ -49,15 +55,6 @@ export default async function handler(req, res) {
     let data;
     if (!live && hit && hit.time > Date.now() - 45000) data = hit.data;
     else { data = await catalogue(provider,route,Object.fromEntries(p)); if (!live) { if(cache.size > 80) cache.clear(); cache.set(key,{ time:Date.now(),data }); } }
-    if(provider==='palma') {
-      res.setHeader('X-Palma-Origin',palmaClient?.base.origin||'');
-      res.setHeader('X-Palma-Route',route);
-      res.setHeader('X-Palma-Upstream',palmaClient?.lastResponse?.url || '');
-      res.setHeader('X-Palma-Cache',palmaClient?.lastResponse?.cache || '');
-      res.setHeader('X-Palma-Bytes',String(palmaClient?.lastResponse?.bytes || 0));
-      res.setHeader('X-Palma-Clock',JSON.stringify({sent:palmaClient?.lastResponse?.timestamp,date:palmaClient?.lastResponse?.date,profileDefault:palmaClient?.lastResponse?.profileDefault}));
-      if (/^\d+$/.test(p.get('id')||'')) res.setHeader('X-Palma-Item',p.get('id'));
-    }
     json(res,200,data);
   } catch (error) { fail(res,error); }
 }

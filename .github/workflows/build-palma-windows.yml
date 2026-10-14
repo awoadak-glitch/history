@@ -1,0 +1,72 @@
+name: Build independent PALMA Windows
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'palma-windows/**'
+      - '.github/workflows/build-palma-windows.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: palma-independent-windows-v2
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: palma-windows/package-lock.json
+      - name: Install locked build tools and test shared client
+        shell: pwsh
+        run: |
+          npm --prefix palma-windows ci
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
+          npm --prefix palma-web test
+          if ($LASTEXITCODE -ne 0) { throw 'Shared web tests failed' }
+          npm --prefix palma-windows test
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop tests failed' }
+      - name: Build self-contained Windows package
+        shell: pwsh
+        working-directory: palma-windows
+        run: |
+          npm run build:win
+          if ($LASTEXITCODE -ne 0) { throw 'Windows packaging failed' }
+      - name: Verify packaged app with real source and video decoding
+        shell: pwsh
+        working-directory: palma-windows
+        run: |
+          $env:PALMA_TEST_OUTPUT = Join-Path $pwd 'test-output'
+          $app = Join-Path $pwd 'release/win-unpacked/PALMA VISION.exe'
+          $process = Start-Process -FilePath $app -ArgumentList '--self-test' -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Packaged app live playback check failed' }
+          Get-Content test-output/verification.json
+          $archive = 'release/PALMA-VISION-Windows-2.0.0.zip'
+          (Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() | Set-Content ($archive + '.sha256')
+      - name: Preserve verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: palma-windows-verification
+          path: palma-windows/test-output/
+          if-no-files-found: warn
+      - name: Publish verified Windows app
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view palma-windows-v2 *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create palma-windows-v2 --target '${{ github.sha }}' --title 'PALMA VISION Windows 2 — independent client' --notes-file palma-windows/README-AR.md
+            if ($LASTEXITCODE -ne 0) { throw 'Release creation failed' }
+          }
+          gh release upload palma-windows-v2 palma-windows/release/PALMA-VISION-Windows-2.0.0.zip palma-windows/release/PALMA-VISION-Windows-2.0.0.zip.sha256 palma-windows/test-output/verification.json palma-windows/test-output/home.png palma-windows/test-output/player.png --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed' }

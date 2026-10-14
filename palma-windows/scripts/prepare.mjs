@@ -1,0 +1,12 @@
+import {cp,mkdir,readFile,rm,writeFile} from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('../',import.meta.url));
+const output=path.join(root,'app');
+await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true});
+await cp(path.join(root,'src'),output,{recursive:true});
+for(const name of ['public','api','server']) await cp(path.join(root,'../palma-web',name),path.join(output,'web',name),{recursive:true,filter:source=>!source.split(path.sep).includes('generated')});
+const build=JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
+await writeFile(path.join(output,'package.json'),JSON.stringify({name:'palma-vision',version:build.version,type:'module',main:'main.mjs',description:'PALMA VISION independent desktop client',author:'PALMA VISION',license:'UNLICENSED'},null,2));
+await cp(path.join(root,'README-AR.md'),path.join(output,'README-AR.md'));
+console.log('Prepared standalone application with the shared PALMA source client.');

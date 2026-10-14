@@ -1,0 +1,23 @@
+{
+  "name": "palma-vision-windows-build",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare-app": "node scripts/prepare.mjs",
+    "start": "npm run prepare-app && electron app",
+    "test": "node --test tests/*.test.mjs",
+    "build:win": "npm run prepare-app && electron-builder --win zip --x64 --publish never",
+    "smoke": "electron app --self-test"
+  },
+  "devDependencies": {"electron":"44.7.2","electron-builder":"26.15.3"},
+  "build": {
+    "appId":"com.palma.vision.desktop",
+    "productName":"PALMA VISION",
+    "directories":{"app":"app","output":"release"},
+    "files":["**/*"],
+    "asar":true,
+    "artifactName":"PALMA-VISION-Windows-${version}.${ext}",
+    "win":{"target":[{"target":"zip","arch":["x64"]}],"icon":"app/web/public/assets/palma-logo.png"}
+  }
+}

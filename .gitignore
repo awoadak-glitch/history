@@ -8,3 +8,7 @@ inputs/
 __pycache__/
 .checkpoint.json
 palma-web/server/generated/
+palma-windows/node_modules/
+palma-windows/app/
+palma-windows/release/
+palma-windows/test-output/

@@ -69,7 +69,6 @@ export class PalmaClient {
     });
     this.updateClock(response);
     const raw = await response.text();
-    this.lastResponse = {url:url.href, cache:response.headers.get('cf-cache-status') || response.headers.get('x-cache') || '', age:response.headers.get('age') || '', bytes:Buffer.byteLength(raw), timestamp, date:response.headers.get('date'), profileDefault:this.profile.certificate_sha256===APP_PROFILE.certificate_sha256};
     let body;
     try {body = JSON.parse(raw);} catch {throw new PalmaAPIError('PALMA returned a non-JSON response', response.status, 'INVALID_RESPONSE');}
     if (!response.ok || body.status === 'error') {
