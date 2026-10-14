@@ -1,0 +1,8 @@
+private/
+captures/
+.env
+.env.*
+__pycache__/
+*.apk
+*.so
+node_modules/
