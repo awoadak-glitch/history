@@ -55,6 +55,7 @@ export default async function handler(req, res) {
       res.setHeader('X-Palma-Upstream',palmaClient?.lastResponse?.url || '');
       res.setHeader('X-Palma-Cache',palmaClient?.lastResponse?.cache || '');
       res.setHeader('X-Palma-Bytes',String(palmaClient?.lastResponse?.bytes || 0));
+      res.setHeader('X-Palma-Clock',JSON.stringify({sent:palmaClient?.lastResponse?.timestamp,date:palmaClient?.lastResponse?.date,profileDefault:palmaClient?.lastResponse?.profileDefault}));
       if (/^\d+$/.test(p.get('id')||'')) res.setHeader('X-Palma-Item',p.get('id'));
     }
     json(res,200,data);
