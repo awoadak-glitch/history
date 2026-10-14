@@ -21,7 +21,7 @@ Vercel: اربط `awoadak-glitch/history`، وحدد Root Directory = `palma-web
 
 - `PALMA_API_BASE`: رابط خادم المحتوى الرئيسي؛ الافتراضي الحالي تحقق حيًا بعد قراءة Remote Config.
 - `PALMA_CERT_SHA256`: تعديل اختياري لبصمة شهادة APK العامة. لا يُستخدم مفتاح توقيع APK خاص.
-- `PALMA_POSTER_BASE`: خادم صور بالما الذي يحوّل مسارات الصور النسبية.
+- `PALMA_IMAGE_BASE`: تعديل اختياري لخادم الصور المرفوعة؛ افتراضيًا يتبع خادم API مثل التطبيق الأصلي. صور TMDB تستخدم مسارها الأصلي.
 - `PALMA_APP_VERSION`: قيمة `app_version` الرقمية؛ الافتراضي `17` كما في Manifest النسخة المقدمة.
 - `ANIME_API_BASE`: بوابة Anime Witcher المستعملة في النسخة الأصلية.
 - `DRAMA_API_BASE` و`DRAMA_API_SUFFIX`: إعدادات عالم الدراما، محفوظة في متغيرات Vercel السرية؛ اللاحقة ليست منشورة في هذه النسخة من الويب.

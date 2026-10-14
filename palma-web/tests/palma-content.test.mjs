@@ -11,7 +11,7 @@ test('latest-episode cards keep episode identity until detail resolves the paren
   assert.equal(episode.kind,'episode');
   assert.equal(episode.title,'مسلسل تجريبي');
   assert.match(detailLink(episode),/kind=episode&id=43000/);
-  assert.equal(episode.poster,'https://poster.ostv-11-33.xyz/uploads/test.webp');
+  assert.equal(episode.poster,'https://api.ossccaarr111.online/uploads/test.webp');
 });
 
 test('native section ordering and category links preserve the original home contract',()=>{
@@ -29,6 +29,8 @@ test('poster normalization traverses nested home data and never rewrites playbac
   assert.equal(result.data.sections[0].items[0].url,input.data.sections[0].items[0].url);
   assert.equal(result.data.sections[0].items[0].home_team.logo,'https://teams.example/1.png');
   assert.equal(input.data.sections[0].items[0].poster,'/uploads/a.webp');
+  assert.equal(normalizeImages({poster:'/tmdb-poster.jpg'}).poster,'https://image.tmdb.org/t/p/w780/tmdb-poster.jpg');
+  assert.equal(normalizeImages({poster:'https://admin.dramaramadan.net/uploads/a.webp'},'https://images.example/').poster,'https://images.example/uploads/a.webp');
 });
 
 test('independent client synchronizes once and signs API paths while preserving query parameters',async()=>{

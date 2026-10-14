@@ -20,7 +20,7 @@ export async function catalogue(provider, route, query = {}) {
       }});
       palmaConfig = config;
     }
-    try {return normalizeImages((await palmaClient.get(route, filtered)).body, process.env.PALMA_POSTER_BASE);}
+    try {return normalizeImages((await palmaClient.get(route, filtered)).body, process.env.PALMA_IMAGE_BASE || palmaClient.base.href);}
     catch (error) {
       if (error instanceof PalmaAPIError) throw new SourceError(error.status===404?'المحتوى غير متاح حاليًا.':'تعذر تحديث محتوى بالما. أعد المحاولة.',error.status===404?404:502,error.code);
       throw error;
@@ -49,6 +49,11 @@ export default async function handler(req, res) {
     let data;
     if (!live && hit && hit.time > Date.now() - 45000) data = hit.data;
     else { data = await catalogue(provider,route,Object.fromEntries(p)); if (!live) { if(cache.size > 80) cache.clear(); cache.set(key,{ time:Date.now(),data }); } }
+    if(provider==='palma') {
+      res.setHeader('X-Palma-Origin',palmaClient?.base.origin||'');
+      res.setHeader('X-Palma-Route',route);
+      if (/^\d+$/.test(p.get('id')||'')) res.setHeader('X-Palma-Item',p.get('id'));
+    }
     json(res,200,data);
   } catch (error) { fail(res,error); }
 }

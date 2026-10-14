@@ -39,7 +39,7 @@ export function card(raw,provider='palma',kind='series'){
   let title=arabic(raw.title_ar)||arabic(raw.name)||first(raw,'series_title','anime_title','title','title_en','original_title')||arabic(d.name)||'عمل';
   let poster=image(raw.poster)||image(raw.series_poster)||image(raw.anime_poster)||image(raw.poster_uri)||image(raw.aniList_poster)||image(raw.logo)||image(raw.image)||image(raw.bg_image)||image(d.poster);
   let cover=image(raw.cover)||image(raw.cover_uri)||image(raw.banner)||image(raw.series_banner)||image(raw.anime_banner)||image(raw.bg_image)||image(raw.thumb)||image(raw.thumb_uri)||poster;
-  const imageBase=provider==='palma'?'https://poster.ostv-11-33.xyz/':'https://dramaramadan.net/';
+  const imageBase=provider==='palma'?'https://api.ossccaarr111.online/':'https://dramaramadan.net/';
   if(poster && !/^(https?:|data:)/.test(poster))poster=new URL(poster,imageBase).href;
   if(cover && !/^(https?:|data:)/.test(cover))cover=new URL(cover,imageBase).href;
   const episodeName=kind==='episode'?`الحلقة ${raw.episode_number||''}`:raw.episodeName;
