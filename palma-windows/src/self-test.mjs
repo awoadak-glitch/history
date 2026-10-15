@@ -31,7 +31,9 @@ export async function runSelfTest({window,handler,setTestHandler,ffmpeg,fetchRes
     const episode=String(episodes[0].id);
     const episodeData=(await json('/api/catalog',{provider:'palma',route:'api/episodes/show.php',id:episode})).data;assert.ok(episodeData.watch_links.length);
     const index=Math.max(0,episodeData.watch_links.findIndex(x=>x.is_abr===1));
-    const playback=await json('/api/resolve',{provider:'palma',kind:'series',id,episode,index:String(index),target:'web'});
+    let playback=null,playbackError='';
+    try{
+    playback=await json('/api/resolve',{provider:'palma',kind:'series',id,episode,index:String(index),target:'web'});
     assert.equal(playback.type,'hls');
     report.series_id=id;report.episode_id=episode;report.title=detail.title_ar;
     let next=new URL(playback.playable,APP_ORIGIN).href;
@@ -47,6 +49,7 @@ export async function runSelfTest({window,handler,setTestHandler,ffmpeg,fetchRes
     assert.ok(saved.bytes>1024);
     await runFFmpeg(ffmpeg,['-hide_banner','-loglevel','error','-nostdin','-i',sample,'-t','1','-f','null','-']);
     checks.push({step:'HLS downloaded, remuxed to MP4 and decoded',bytes:saved.bytes,sample_segments:2});
+    }catch(error){playback=null;playbackError=error.message;checks.push({step:'native source unavailable',error:playbackError});}
     let completed,failed;
     const rendered=new Promise((resolve,reject)=>{completed=resolve;failed=reject;});
     const timer=setTimeout(()=>failed(Error('Requested desktop flow exceeded eight minutes')),480000);
@@ -55,7 +58,7 @@ export async function runSelfTest({window,handler,setTestHandler,ffmpeg,fetchRes
       const url=new URL(request.url);
       if(url.pathname==='/')return (async()=>{const response=await handler(request);const html=(await response.text()).replace('</body>','<script type="module" src="/__test/driver.js"></script></body>');return new Response(html,{headers:response.headers});})();
       if(url.pathname==='/__test/driver.js')return new Response(script,{headers:{'Content-Type':'text/javascript'}});
-      if(url.pathname==='/__test/media')return Response.json({playback,item:{provider:'palma',kind:'series',id,title:detail.title_ar,episodeNumber:episodeData.episode_number},episode});
+      if(url.pathname==='/__test/media')return Response.json({playback,playbackError,item:{provider:'palma',kind:'series',id,title:detail.title_ar,episodeNumber:episodeData.episode_number},episode});
       if(url.pathname==='/__test/check')return (async()=>{const value=await request.json();checks.push(value);console.log(JSON.stringify(value));return new Response('ok');})();
       if(url.pathname==='/__test/screenshot')return (async()=>{const name=url.searchParams.get('name');if(!/^[a-z-]+$/.test(name))return new Response('invalid',{status:400});await writeFile(path.join(directory,name+'.png'),(await window.capturePage()).toPNG());return new Response('ok');})();
       if(url.pathname==='/__test/fullscreen')return (async()=>{

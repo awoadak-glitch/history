@@ -2,13 +2,18 @@ import { fetchPublic, readLimited, publicURL, SourceError, mediaURL, isPrivateIP
 import net from 'node:net';
 import {inspectMedia} from './media-format.js';
 
-export function witcherPlayback(source) {
+export function witcherSource(source) {
   let url;
   try { url = new URL(source?.url); } catch { throw new SourceError('لم يُرجع مصدر الأنمي رابط فيديو صالحًا.',422); }
   const host=url.hostname.replace(/^\[|\]$/g,'');
-  if (source?.direct !== true || !['https:','http:'].includes(url.protocol) || url.username || url.password || (url.port && !['80','443'].includes(url.port)) || !host.includes('.') || /(^|\.)(localhost|local|internal)$/.test(host) || (net.isIP(host) && isPrivateIP(host))) {
+  if (!['https:','http:'].includes(url.protocol) || url.username || url.password || (url.port && !['80','443'].includes(url.port)) || !host.includes('.') || /(^|\.)(localhost|local|internal)$/.test(host) || (net.isIP(host) && isPrivateIP(host))) {
     throw new SourceError('لم يُرجع مصدر الأنمي رابط فيديو مباشرًا صالحًا.',422);
   }
+  return {url:url.href,quality:source.quality||'',name:source.name||''};
+}
+export function witcherPlayback(source) {
+  if(source?.direct!==true)throw new SourceError('لم يُرجع المصدر رابط فيديو مباشرًا.',422);
+  const {url:raw}=witcherSource(source),url=new URL(raw);
   return { type:/\.m3u8(?:\?|$)/i.test(url.href)?'hls':'video',url:url.href,playable:url.href,download:url.href,quality:source.quality||'',name:source.name||'',qualities:[],delivery:'direct' };
 }
 

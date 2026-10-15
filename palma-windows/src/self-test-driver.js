@@ -9,7 +9,7 @@ async function decoded(label){
  await check(label,{width:video.videoWidth,height:video.videoHeight,time:video.currentTime,duration:Number.isFinite(video.duration)?video.duration:'live',frames:video.getVideoPlaybackQuality().totalVideoFrames});return video;
 }
 try{
- const {playback,item,episode}=await (await fetch('/__test/media')).json();
+ const {playback,playbackError,item,episode}=await (await fetch('/__test/media')).json();
  await until(()=>document.querySelector('.media-card'),'Home did not render');await document.fonts.ready;
  const cover=document.querySelector('.hero-cover');if(cover)await Promise.race([cover.decode(),wait(12000)]);
  await check('home rendered with source images',{cards:document.querySelectorAll('.media-card').length,cover_loaded:cover?.naturalWidth>0});await shot('home');
@@ -28,13 +28,18 @@ try{
  const works=document.querySelectorAll('#detail-content .media-card').length;await check('cast portrait opens actor filmography',{actor_id:actorId,works});await shot('actor');
  const playbackFailures=[];
  try{
+  if(!playback)throw Error(playbackError);
   openPlayer(playback,item,episode);const video=await decoded('PALMA episode decoded');
   if(video.duration<300)throw Error('Episode source returned a short replacement video');
   video.currentTime=90;await until(()=>video.currentTime>=90&&video.readyState>=2,'Episode seek did not decode');
-  const fullscreen=await (await fetch('/__test/fullscreen')).json();await check('native fullscreen state',fullscreen);if(!fullscreen.native||!fullscreen.element)throw Error('Player failed native fullscreen');
-  await shot('fullscreen');document.querySelector('.player-wrap').focus();await wait(3500);if(!document.querySelector('.controls-hidden'))throw Error('Playback controls did not hide');
-  await document.exitFullscreen();await shot('player');
+  await shot('player');
  }catch(error){playbackFailures.push(error.message);await check('episode or player failure',{error:error.message});await shot('player-failure');}
+ closePlayer();
+ try{
+  openPlayer(playback||{type:'video'},item,episode);
+  const fullscreen=await (await fetch('/__test/fullscreen')).json();await check('native fullscreen state',fullscreen);if(!fullscreen.native||!fullscreen.element)throw Error('Player failed native fullscreen');
+  await shot('fullscreen');await document.exitFullscreen();
+ }catch(error){playbackFailures.push(error.message);await check('fullscreen failure',{error:error.message});}
  closePlayer();
  try{
   location.hash='#/detail?provider=palma&kind=channel&id=63';
@@ -48,12 +53,13 @@ try{
  // Exercise a real visible server choice. Report every attempted server by label only.
  let animePlayed=false;const buttons=[...document.querySelectorAll('#detail-content .server-row button')].filter(b=>b.textContent.includes('مشاهدة'));
  const candidates=buttons.length?buttons:[...document.querySelectorAll('#detail-content .server-row .btn')].filter(b=>b.tagName==='BUTTON').filter((_,i)=>i%2===0);
- for(const button of candidates.slice(0,4)){
+ const seen=new Set(),different=candidates.filter(button=>{const name=button.closest('.server-row').querySelector('.server-name strong')?.textContent;if(seen.has(name))return false;seen.add(name);return true;});
+ for(const button of different.slice(0,6)){
   const label=button.closest('.server-row').querySelector('.server-name')?.textContent.trim().slice(0,80);button.click();
   try{
    await until(()=>document.querySelector('#player-dialog[open] video')||document.querySelector('#dialog[open] h3')?.textContent.includes('تعذر'),'Anime resolver timeout',85000);
    if(!document.querySelector('#player-dialog[open] video')){const message=document.querySelector('#dialog p')?.textContent;await check('anime source attempt',{label,error:message});document.getElementById('dialog').close();continue;}
-   await decoded('Witcher anime episode decoded');await check('anime selected server',{label});await shot('anime');animePlayed=true;closePlayer();break;
+   const animeVideo=await decoded('Witcher anime episode decoded');if(animeVideo.duration<120)throw Error('Anime source returned a short replacement');document.querySelector('.player-wrap').focus();await wait(3500);if(!document.querySelector('.controls-hidden'))throw Error('Playback controls did not hide');await check('anime selected server',{label});await shot('anime');animePlayed=true;closePlayer();break;
   }catch(error){await check('anime source attempt',{label,error:error.message});closePlayer();document.getElementById('dialog').close();}
  }
  if(!animePlayed)playbackFailures.push('Witcher episode could not decode on the tested source servers');

@@ -40,6 +40,21 @@ jobs:
         run: |
           npm run build:win
           if ($LASTEXITCODE -ne 0) { throw 'Windows packaging failed' }
+      - name: Publish reviewable preview package
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $archive = 'palma-windows/release/PALMA-VISION-Windows-2.2.0.zip'
+          (Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() | Set-Content ($archive + '.sha256')
+          gh release view palma-windows-v2.2.0-preview *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create palma-windows-v2.2.0-preview --prerelease --target '${{ github.sha }}' --title 'PALMA VISION Windows 2.2 Preview' --notes-file palma-windows/PREVIEW-AR.md
+            if ($LASTEXITCODE -ne 0) { throw 'Preview creation failed' }
+          }
+          gh release upload palma-windows-v2.2.0-preview $archive ($archive + '.sha256') --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Preview upload failed' }
       - name: Verify packaged app with real source and video decoding
         shell: pwsh
         working-directory: palma-windows

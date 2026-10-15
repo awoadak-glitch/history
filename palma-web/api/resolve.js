@@ -1,6 +1,6 @@
 import { catalogue } from './catalog.js';
 import { params, json, fail, SourceError } from '../server/http.js';
-import { resolveMedia, witcherPlayback } from '../server/media.js';
+import { resolveMedia, witcherSource } from '../server/media.js';
 import {playbackSource} from '../server/source.js';
 
 const array = o => Array.isArray(o) ? o : arrayFind(o);
@@ -16,7 +16,7 @@ return async function handler(req,res) {
     if(provider==='witcher') {
       if(!episode || episode.length>80) throw new SourceError('الحلقة غير صالحة.',400);
       source=await getCatalogue('witcher',`anime/${encodeURIComponent(id)}/episodes/${encodeURIComponent(episode)}/servers`,{resolve:index});
-      const direct=witcherPlayback(source);
+      const direct=witcherSource(source);
       const media=await getMedia(direct.url,{},direct.quality,p.get('target')==='external'&&!download);
       const available=await getCatalogue('witcher',`anime/${encodeURIComponent(id)}/episodes/${encodeURIComponent(episode)}/servers`).catch(()=>({items:[]}));
       return json(res,200,{...media,name:direct.name,selection:{provider,kind,id,episode,index},servers:array(available).map((s,index)=>({index,name:s.name||'سيرفر '+(index+1),quality:s.quality||''}))});
