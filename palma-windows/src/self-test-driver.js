@@ -37,8 +37,8 @@ try{
  closePlayer();
  try{
   openPlayer(playback||{type:'video'},item,episode);
-  const fullscreen=await (await fetch('/__test/fullscreen')).json();await check('native fullscreen state',fullscreen);if(!fullscreen.native||!fullscreen.element)throw Error('Player failed native fullscreen');
-  await shot('fullscreen');await document.exitFullscreen();
+  const fullscreen=await (await fetch('/__test/fullscreen')).json();await check('native fullscreen state',fullscreen);if(!fullscreen.native||!fullscreen.element||!fullscreen.player_fills_window)throw Error('Player failed native fullscreen');
+  await shot('fullscreen');const exited=await (await fetch('/__test/fullscreen?exit=1')).json();await check('native fullscreen exited',exited);if(exited.native||exited.element)throw Error('Player did not exit native fullscreen');
  }catch(error){playbackFailures.push(error.message);await check('fullscreen failure',{error:error.message});}
  closePlayer();
  try{

@@ -63,9 +63,14 @@ export async function runSelfTest({window,handler,setTestHandler,ffmpeg,fetchRes
       if(url.pathname==='/__test/screenshot')return (async()=>{const name=url.searchParams.get('name');if(!/^[a-z-]+$/.test(name))return new Response('invalid',{status:400});await writeFile(path.join(directory,name+'.png'),(await window.capturePage()).toPNG());return new Response('ok');})();
       if(url.pathname==='/__test/fullscreen')return (async()=>{
         await window.webContents.executeJavaScript("document.querySelector('#fullscreen-button').click()",true);
-        for(let i=0;i<30&&!window.isFullScreen();i++)await new Promise(resolve=>setTimeout(resolve,100));
-        const element=await window.webContents.executeJavaScript("!!document.fullscreenElement && document.fullscreenElement.classList.contains('player-wrap')");
-        return Response.json({native:window.isFullScreen(),element,bounds:window.getBounds()});
+        const expected=url.searchParams.get('exit')!=='1';
+        let viewport;
+        for(let i=0;i<30;i++){
+          viewport=await window.webContents.executeJavaScript("(()=>{const e=document.querySelector('.player-wrap'),r=e?.getBoundingClientRect();return {state:e?.dataset.fullscreen==='true',fills:!!r&&Math.abs(r.width-innerWidth)<2&&Math.abs(r.height-innerHeight)<2}})()");
+          if(window.isFullScreen()===expected&&viewport.state===expected)break;
+          await new Promise(resolve=>setTimeout(resolve,100));
+        }
+        return Response.json({native:window.isFullScreen(),element:viewport.state,player_fills_window:viewport.fills,bounds:window.getBounds()});
       })();
       if(url.pathname==='/__test/result'){completed(true);return new Response('ok');}
       if(url.pathname==='/__test/failure'){failed(Error(url.searchParams.get('message')));return new Response('ok');}

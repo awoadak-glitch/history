@@ -1,15 +1,15 @@
 import {icon,esc,toast,progressFor,saveProgress,timeText,readStore,writeStore} from './lib.js';
 
 const dialog=document.getElementById('player-dialog');
-let video,current,hls,transport,dash,interval,hideTimer,holdTimer,holding=false,spaceDown=false,oldRate=1,loadId=0,request;
+let video,current,hls,transport,dash,interval,hideTimer,holdTimer,holding=false,spaceDown=false,oldRate=1,loadId=0,request,nativeFullscreen=false;
 const $=selector=>dialog.querySelector(selector);
 function persist(){if(video&&current&&!current.media.live)saveProgress(current.item,current.episode,video.currentTime,Number.isFinite(video.duration)?video.duration:0);}
 function stopEngine(){loadId++;hls?.destroy();hls=null;transport?.destroy();transport=null;dash?.reset();dash=null;if(video){video.pause();video.removeAttribute('src');video.load();}}
 function restoreRate(){clearTimeout(holdTimer);if(holding&&video)video.playbackRate=oldRate;holding=false;spaceDown=false;$('.speed-hold')?.setAttribute('hidden','');}
 function destroy(){persist();request?.abort();request=null;restoreRate();clearInterval(interval);clearTimeout(hideTimer);stopEngine();video=null;current=null;}
-export function closePlayer(){if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});dialog.close();destroy();}
+export function closePlayer(){if(nativeFullscreen)setNativeFullscreen(false).catch(()=>{});if(document.fullscreenElement)document.exitFullscreen().catch(()=>{});dialog.close();destroy();}
 dialog.addEventListener('close',destroy);
-dialog.addEventListener('cancel',event=>{if(document.fullscreenElement){event.preventDefault();document.exitFullscreen().catch(()=>{});}});
+dialog.addEventListener('cancel',event=>{if(nativeFullscreen){event.preventDefault();setNativeFullscreen(false).catch(()=>{});}else if(document.fullscreenElement){event.preventDefault();document.exitFullscreen().catch(()=>{});}});
 window.addEventListener('pagehide',persist);
 window.addEventListener('blur',restoreRate);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){persist();restoreRate();}});
@@ -18,7 +18,7 @@ function showControls(){
   hideTimer=setTimeout(()=>{if(video&&!video.paused&&!$('.player-settings').open&&!$('.player-controls').querySelector(':focus-visible')&&!$('.player-header').querySelector(':focus-visible'))$('.player-wrap').classList.add('controls-hidden');},3000);
 }
 function busy(value){$('.player-loading')?.toggleAttribute('hidden',!value);}
-function error(message){if(!video)return;busy(false);showControls();$('.player-error').hidden=false;$('.player-error p').textContent=message;}
+function error(message){if(!video)return;video.pause();busy(false);showControls();$('.player-error').hidden=false;$('.player-error p').textContent=message;}
 function timeline(){
   if(!video)return;
   const start=video.seekable.length?video.seekable.start(0):0,end=video.seekable.length?video.seekable.end(video.seekable.length-1):Number.isFinite(video.duration)?video.duration:0;
@@ -93,10 +93,22 @@ async function reconnect(index){
     if(current===selected)await load(media,position);
   }catch(e){if(e.name!=='AbortError'&&current===selected)error(e.message);}
 }
-async function fullscreen(){
-  try{if(document.fullscreenElement)await document.exitFullscreen();else await $('.player-wrap').requestFullscreen();}
-  catch{error('تعذر تفعيل ملء الشاشة. جرّب من قائمة عرض في التطبيق.');}
+async function setNativeFullscreen(value){
+  const response=await fetch('/api/desktop/fullscreen',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fullscreen:value})});
+  if(!response.ok)throw Error('تعذر تغيير وضع الشاشة.');
+  nativeFullscreen=(await response.json()).fullscreen;
+  $('.player-wrap')?.setAttribute('data-fullscreen',String(nativeFullscreen));
+  $('#fullscreen-button')?.setAttribute('aria-label',nativeFullscreen?'إنهاء ملء الشاشة':'ملء الشاشة');
+  showControls();
 }
+async function fullscreen(){
+  try{
+    if(location.protocol==='palma:'){
+      const response=await fetch('/api/desktop/fullscreen'),state=await response.json();await setNativeFullscreen(!state.fullscreen);
+    }else if(document.fullscreenElement)await document.exitFullscreen();else await $('.player-wrap').requestFullscreen();
+  }catch{error('تعذر تفعيل ملء الشاشة. جرّب من قائمة عرض في التطبيق.');}
+}
+
 function seek(delta){if(!video||!video.seekable.length)return;const start=video.seekable.start(0),end=video.seekable.end(video.seekable.length-1);video.currentTime=Math.max(start,Math.min(end-.1,video.currentTime+delta));showControls();}
 function toggle(){if(video?.paused)video.play().catch(()=>{});else video?.pause();}
 export function openPlayer(media,item,episode=''){

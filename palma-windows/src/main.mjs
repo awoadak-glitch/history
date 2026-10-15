@@ -8,6 +8,7 @@ import media from './web/api/media.js';
 import {fetchPublic,unticket} from './web/server/http.js';
 import {createDownloadManager} from './download-manager.mjs';
 import {allowAppPermission} from './permissions.mjs';
+import {createFullscreenHandler} from './fullscreen.mjs';
 
 const root=fileURLToPath(new URL('./web/public/',import.meta.url));
 const selfTest=process.argv.includes('--self-test');
@@ -20,15 +21,14 @@ if(!selfTest&&!app.requestSingleInstanceLock()){app.quit();}else{
     session.defaultSession.setPermissionRequestHandler((contents,permission,callback,details)=>callback(contents===window?.webContents&&allowAppPermission(permission,details.requestingUrl||contents.getURL(),details.isMainFrame)));
     session.defaultSession.setPermissionCheckHandler((contents,permission,origin,details)=>contents===window?.webContents&&allowAppPermission(permission,details.requestingUrl||origin,details.isMainFrame));
     const handler=createAppHandler({root,handlers:{'/api/catalog':catalog,'/api/resolve':resolve,'/api/media':media}});
-    let testHandler,downloads;
+    let testHandler,downloads,fullscreen;
     protocol.handle('palma',request=>{
+      if(new URL(request.url).pathname==='/api/desktop/fullscreen')return fullscreen?.(request)||Response.json({error:'Starting'},{status:503});
       if(new URL(request.url).pathname==='/api/desktop/downloads')return downloads?.handle(request)||Response.json({error:'جاري بدء التطبيق.'},{status:503});
       return testHandler?.(request)||handler(request);
     });
     window=new BrowserWindow({width:1440,height:940,minWidth:900,minHeight:640,show:false,backgroundColor:'#0c1422',title:'PALMA VISION',icon:path.join(root,'assets/palma-logo.png'),autoHideMenuBar:true,webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
-    // Keep the operating-system window state in sync with the HTML player.
-    window.on('enter-html-full-screen',()=>window.setFullScreen(true));
-    window.on('leave-html-full-screen',()=>window.setFullScreen(false));
+    fullscreen=createFullscreenHandler(window);
     const external=url=>{try{const u=new URL(url);if(u.protocol==='https:'&&!u.username&&!u.password)shell.openExternal(u.href).catch(()=>{});}catch{}};
     window.webContents.setWindowOpenHandler(({url})=>{
       if(url.startsWith(APP_ORIGIN+'/api/media?')&&new URL(url).searchParams.get('download')==='1')window.webContents.downloadURL(url);

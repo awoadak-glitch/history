@@ -58,7 +58,9 @@ export async function resolveMedia(raw, headers = {}, quality = '', external = f
   const delivery=(url,h=headers)=>external?{playable:url,headers:h,delivery:'external'}:{playable:mediaURL(url,h),delivery:'proxy'};
   const fetched=await fetchPublic(url,{headers:{...headers,Accept:'*/*'}});
   if(!fetched.response.ok){await fetched.response.body?.cancel();throw new SourceError('تعذر الاتصال بهذا السيرفر. اختر سيرفرًا آخر.',fetched.response.status===403?403:502,'MEDIA_DENIED');}
-  const finalURL=fetched.url,{type,response}=await inspectMedia(fetched.response,finalURL);
+  const finalURL=fetched.url;
+  if(new URL(finalURL).hostname==='notice.shahidtv.net'){await fetched.response.body?.cancel();throw new SourceError('المصدر أعاد رسالة رفض بدل البث. اختر سيرفرًا آخر.',403,'SOURCE_SESSION_REQUIRED');}
+  const {type,response}=await inspectMedia(fetched.response,finalURL);
   if(type==='hls'){
     const text=await readLimited(response,2*1024*1024),variants=parseHLS(text,finalURL);
     return {type,url:finalURL,...delivery(finalURL),quality,live:!text.includes('#EXT-X-ENDLIST')&&!variants.length,qualities:variants.map(v=>({...v,...delivery(v.url)}))};
