@@ -15,7 +15,7 @@ window.addEventListener('blur',restoreRate);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){persist();restoreRate();}});
 function showControls(){
   if(!video)return;$('.player-wrap').classList.remove('controls-hidden');clearTimeout(hideTimer);
-  hideTimer=setTimeout(()=>{if(video&&!video.paused&&!$('.player-settings').open&&!$('.player-controls').matches(':focus-within')&&!$('.player-header').matches(':focus-within'))$('.player-wrap').classList.add('controls-hidden');},3000);
+  hideTimer=setTimeout(()=>{if(video&&!video.paused&&!$('.player-settings').open&&!$('.player-controls').querySelector(':focus-visible')&&!$('.player-header').querySelector(':focus-visible'))$('.player-wrap').classList.add('controls-hidden');},3000);
 }
 function busy(value){$('.player-loading')?.toggleAttribute('hidden',!value);}
 function error(message){if(!video)return;busy(false);showControls();$('.player-error').hidden=false;$('.player-error p').textContent=message;}
@@ -41,7 +41,7 @@ function qualityOptions(){
   $('#quality-select').innerHTML='<option value="auto">تلقائي</option>'+values.map((q,i)=>`<option value="q${i}">${esc(q.quality)}</option>`).join('');
 }
 async function load(media,position=0,qualityOnly=false){
-  stopEngine();const generation=loadId,activeVideo=video;current.media=media;if(!qualityOnly)current.automaticMedia=media;
+  const rate=video?.playbackRate||1;stopEngine();const generation=loadId,activeVideo=video;current.media=media;if(!qualityOnly)current.automaticMedia=media;
   $('.player-error').hidden=true;busy(true);qualityOptions();
   $('#live-edge').hidden=!media.live;$('.live-badge').hidden=!media.live;
   const servers=media.servers||[];
@@ -51,6 +51,7 @@ async function load(media,position=0,qualityOnly=false){
   if(!source){error('لم يُرجع المصدر رابط فيديو صالحًا.');return;}
   activeVideo.onloadedmetadata=()=>{
     if(generation!==loadId)return;
+    activeVideo.playbackRate=rate;
     if(!media.live&&position>0&&(!Number.isFinite(activeVideo.duration)||position<activeVideo.duration-5))activeVideo.currentTime=position;
     activeVideo.play().catch(()=>{busy(false);showControls();});tracks();timeline();
   };

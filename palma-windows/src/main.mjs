@@ -26,6 +26,9 @@ if(!selfTest&&!app.requestSingleInstanceLock()){app.quit();}else{
       return testHandler?.(request)||handler(request);
     });
     window=new BrowserWindow({width:1440,height:940,minWidth:900,minHeight:640,show:false,backgroundColor:'#0c1422',title:'PALMA VISION',icon:path.join(root,'assets/palma-logo.png'),autoHideMenuBar:true,webPreferences:{nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
+    // Keep the operating-system window state in sync with the HTML player.
+    window.on('enter-html-full-screen',()=>window.setFullScreen(true));
+    window.on('leave-html-full-screen',()=>window.setFullScreen(false));
     const external=url=>{try{const u=new URL(url);if(u.protocol==='https:'&&!u.username&&!u.password)shell.openExternal(u.href).catch(()=>{});}catch{}};
     window.webContents.setWindowOpenHandler(({url})=>{
       if(url.startsWith(APP_ORIGIN+'/api/media?')&&new URL(url).searchParams.get('download')==='1')window.webContents.downloadURL(url);

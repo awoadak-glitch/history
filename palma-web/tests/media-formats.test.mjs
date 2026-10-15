@@ -22,10 +22,11 @@ test('inspection preserves bytes and HTTP range metadata across the sniff bounda
  const source=new Response(new ReadableStream({start(c){chunks.forEach(x=>c.enqueue(x));c.close();}}),{status:206,headers:{'Content-Range':'bytes 0-2050/100000'}});
  const result=await inspectMedia(source,'https://cdn.example/stream');assert.equal(result.type,'flv');assert.equal(result.response.status,206);assert.equal(result.response.headers.get('content-range'),'bytes 0-2050/100000');assert.deepEqual(new Uint8Array(await result.response.arrayBuffer()),new Uint8Array([...chunks[0],...chunks[1]]));
 });
-test('APK final deep-link URL takes priority, only media identity headers are forwarded',()=>{
+test('fresh catalogue URLs and native fallback preserve identity without session cookies',()=>{
  const url='https://cdn.example/live/42.css',deep='tdmvideo://play?'+new URLSearchParams({url,ua:'OSCARTV2021',cookies:'must-not-forward'});
- const result=playbackSource({stream_url:'https://old.example/stale',deep_link:deep,headers:{Authorization:'private',Cookie:'private',Referer:'https://source.example/'}});
- assert.equal(result.url,url);assert.deepEqual(result.headers,{'User-Agent':'OSCARTV2021',Referer:'https://source.example/'});
+ const result=playbackSource({stream_url:url,deep_link:deep,headers:{Authorization:'private',Cookie:'private',Referer:'https://source.example/'}});
+ assert.equal(result.url,url);assert.deepEqual(result.headers,{Referer:'https://source.example/'});
+ assert.equal(playbackSource({deep_link:'tdmvideo://play?'+new URLSearchParams({url,ua:'public-player'})}).headers['User-Agent'],'public-player');
  for(const key of ['url','video_url','stream_url','download_url','link'])assert.equal(playbackSource({[key]:url}).url,url);
 });
 test('match leagues and actual channel IDs survive API association records',()=>{

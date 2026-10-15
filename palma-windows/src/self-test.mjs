@@ -57,7 +57,7 @@ export async function runSelfTest({window,handler,setTestHandler,ffmpeg,fetchRes
       if(url.pathname==='/__test/driver.js')return new Response(script,{headers:{'Content-Type':'text/javascript'}});
       if(url.pathname==='/__test/media')return Response.json({playback,item:{provider:'palma',kind:'series',id,title:detail.title_ar,episodeNumber:episodeData.episode_number},episode});
       if(url.pathname==='/__test/check')return (async()=>{const value=await request.json();checks.push(value);console.log(JSON.stringify(value));return new Response('ok');})();
-      if(url.pathname==='/__test/screenshot')return (async()=>{const name=url.searchParams.get('name');if(!/^[a-z]+$/.test(name))return new Response('invalid',{status:400});await writeFile(path.join(directory,name+'.png'),(await window.capturePage()).toPNG());return new Response('ok');})();
+      if(url.pathname==='/__test/screenshot')return (async()=>{const name=url.searchParams.get('name');if(!/^[a-z-]+$/.test(name))return new Response('invalid',{status:400});await writeFile(path.join(directory,name+'.png'),(await window.capturePage()).toPNG());return new Response('ok');})();
       if(url.pathname==='/__test/fullscreen')return (async()=>{
         await window.webContents.executeJavaScript("document.querySelector('#fullscreen-button').click()",true);
         for(let i=0;i<30&&!window.isFullScreen();i++)await new Promise(resolve=>setTimeout(resolve,100));
