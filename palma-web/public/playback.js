@@ -57,7 +57,7 @@ async function load(media,position=0,qualityOnly=false){
   };
   try{
     if(media.type==='hls'&&window.Hls?.isSupported()){
-      const engine=hls=new window.Hls({maxBufferLength:35,enableWorker:true,backBufferLength:30});let recovered=0;
+      const engine=hls=new window.Hls({maxBufferLength:35,enableWorker:true,backBufferLength:30,liveDurationInfinity:true});let recovered=0;
       engine.on(window.Hls.Events.ERROR,(_,event)=>{
         if(generation!==loadId||!event.fatal)return;
         if(event.type===window.Hls.ErrorTypes.MEDIA_ERROR&&recovered++<1){engine.recoverMediaError();return;}

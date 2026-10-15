@@ -47,7 +47,7 @@ return async function handler(req,res) {
     } else throw new SourceError('المصدر غير صالح.',400);
     if(!source) throw new SourceError('السيرفر غير متاح حاليًا.',404);
     if(source.premium && !['0',0,'false',false,'no'].includes(source.premium)) throw new SourceError('هذا السيرفر يحتاج حسابًا لدى المصدر.',403,'PREMIUM_SOURCE');
-    const {url,headers}=playbackSource(source);
+    const {url,headers}=playbackSource(source,{provider});
     const media=await getMedia(url,headers,source.quality||'',p.get('target')==='external'&&!download);
     json(res,200,{...media,live:kind==='channel'||media.live||false,name:source.server_name||source.name||'',selection:{provider,kind,id,episode,index,match_id:p.get('match_id')||''},servers:servers.map((s,index)=>({index,name:s.server_name||s.name||'سيرفر '+(index+1),quality:s.quality||''}))});
   } catch(e) { fail(res,e); }

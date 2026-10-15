@@ -35,3 +35,9 @@ Commit `cb1285b0dfb0a4c058bb5fa35b052154f34b8a03`, run `38768117548`, tested at 
 - A raw channel URL in the inspected API sample differed from its deep-link URL by a fragment; the HTTP origin and path were identical. The native-first selection is correct, but that fragment difference does not explain the upstream refusal.
 - No Cookie or Authorization header was forwarded. The current API includes an `ot` Cookie value in native links; its values and signed URLs are not stored in this repository. Testing that credential against its declared source hosts remains blocked by the earlier automatic approval review until the user explicitly authorizes that transmission.
 - This build was preserved as a workflow artifact, not published as a working release. Full report: `docs/palma-windows-2.2.2-verification.json`.
+
+## Authorized source-session repair (2.2.3)
+
+After reviewing the exact two source destinations, the owner explicitly authorized transmission of the source-issued playback Cookie on 2026-10-15. The adapter now carries the returned `ot` value only for PALMA and only on its matching HTTPS origin (`cdn.mediaoscar.com` or `still-dust-c9ae.manon-lol2000.workers.dev`). It does not import browser/account cookies. Foreign redirects and cross-origin playlist resources lose the credential, including redirects between the two approved hosts.
+
+Media tickets use authenticated encryption so credentials are not readable in playlist URLs. Downloads restore the same bound context; no credentials are persisted in download history. Local tests cover host binding, redirects/resource transitions, encrypted-ticket tampering and both watch/download resolution. The Windows gate also decodes an actual B2 film in addition to the existing series/channel/anime flows.

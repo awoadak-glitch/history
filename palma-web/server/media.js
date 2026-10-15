@@ -2,6 +2,7 @@ import { fetchPublic, readLimited, publicURL, SourceError, mediaURL, isPrivateIP
 import net from 'node:net';
 import {inspectMedia} from './media-format.js';
 import {decodePlaybackLink} from './tdm-link.js';
+import {mediaHeadersForURL} from './source-session.js';
 
 export function witcherSource(source) {
   let url;
@@ -48,7 +49,7 @@ export async function resolveMedia(raw, headers = {}, quality = '', external = f
   if(state.depth>5||state.seen.has(url))throw new SourceError('تعذر العثور على الفيديو داخل صفحة السيرفر.',422,'UNRESOLVED_MEDIA');
   state.seen.add(url);
   if (/pixeldrain\.com$/.test(new URL(url).hostname) && /^\/u\/[^/]+$/.test(new URL(url).pathname)) url = `https://pixeldrain.com/api/file/${new URL(url).pathname.split('/').pop()}`;
-  const delivery=(url,h=headers)=>external?{playable:url,headers:h,delivery:'external'}:{playable:mediaURL(url,h),delivery:'proxy'};
+  const delivery=(url,h=headers)=>external?{playable:url,headers:mediaHeadersForURL(url,h),delivery:'external'}:{playable:mediaURL(url,h),delivery:'proxy'};
   const fetched=await fetchPublic(url,{headers:{...headers,Accept:'*/*'}});
   if(!fetched.response.ok){await fetched.response.body?.cancel();throw new SourceError('تعذر الاتصال بهذا السيرفر. اختر سيرفرًا آخر.',fetched.response.status===403?403:502,'MEDIA_DENIED');}
   const finalURL=fetched.url;

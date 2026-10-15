@@ -36,6 +36,14 @@ try{
  }catch(error){playbackFailures.push(error.message);await check('episode or player failure',{error:error.message});await shot('player-failure');}
  closePlayer();
  try{
+  const response=await fetch('/api/resolve?'+new URLSearchParams({provider:'palma',kind:'movie',id:'4528',index:'1',target:'web'}));
+  const movie=await response.json();if(!response.ok)throw Error('Movie source: '+response.status+' '+movie.code);
+  openPlayer(movie,{provider:'palma',kind:'movie',id:'4528',title:'Oldboy'},'');
+  const video=await decoded('PALMA movie B2 decoded');if(video.duration<300)throw Error('Movie source returned a short replacement video');
+  await shot('movie');
+ }catch(error){playbackFailures.push(error.message);await check('movie failure',{error:error.message});await shot('movie-failure');}
+ closePlayer();
+ try{
   openPlayer(playback||{type:'video'},item,episode);
   const fullscreen=await (await fetch('/__test/fullscreen')).json();await check('native fullscreen state',fullscreen);if(!fullscreen.native||!fullscreen.element||!fullscreen.player_fills_window)throw Error('Player failed native fullscreen');
   await shot('fullscreen');const exited=await (await fetch('/__test/fullscreen?exit=1')).json();await check('native fullscreen exited',exited);if(exited.native||exited.element)throw Error('Player did not exit native fullscreen');

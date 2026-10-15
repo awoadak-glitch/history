@@ -5,6 +5,7 @@ import http from 'node:http';
 import https from 'node:https';
 import { Readable } from 'node:stream';
 import {readFileSync} from 'node:fs';
+import {SESSION_ORIGIN,bindSourceSession,mediaHeadersForURL} from './source-session.js';
 
 export class SourceError extends Error {
   constructor(message, status = 502, code = 'SOURCE_ERROR') { super(message); this.status = status; this.code = code; }
@@ -88,12 +89,13 @@ function pinnedFetch(url, options = {}) {
 export async function fetchPublic(raw, options = {}) {
   let url = await publicURL(raw);
   for (let i = 0; i < 5; i++) {
-    const response = await pinnedFetch(url, { ...options, signal: options.signal || AbortSignal.timeout(55000) });
+    const scoped=mediaHeadersForURL(url.href,options.headers);
+    const response = await pinnedFetch(url, { ...options, headers:Object.fromEntries(Object.entries(scoped)), signal: options.signal || AbortSignal.timeout(55000) });
     if ([301,302,303,307,308].includes(response.status)) {
       const location = response.headers.get('location'); await response.body?.cancel();
       if (!location) throw new SourceError('لم يرسل السيرفر رابطًا صالحًا.');
       const next = await publicURL(new URL(location, url).href);
-      if (next.origin !== url.origin && options.headers) { const headers = { ...options.headers }; delete headers.Authorization; delete headers.Cookie; options = { ...options, headers }; }
+      options={...options,headers:mediaHeadersForURL(next.href,scoped)};
       url = next; continue;
     }
     return { response, url: url.href };
@@ -115,17 +117,34 @@ function secret() {
   return devSecret;
 }
 export function ticket(url, headers = {}, options = {}) {
-  const data = Buffer.from(JSON.stringify({ u: url, h: headers, ...(options.variables?{v:options.variables}:{}), e: Date.now() + 8 * 3600 * 1000 })).toString('base64url');
-  const signature = crypto.createHmac('sha256', secret()).update(data).digest('base64url');
-  return `${data}.${signature}`;
+  headers=mediaHeadersForURL(url,headers);
+  const data=JSON.stringify({u:url,h:headers,...(headers[SESSION_ORIGIN]?{o:headers[SESSION_ORIGIN]}:{}),...(options.variables?{v:options.variables}:{}),e:Date.now()+8*3600*1000});
+  // The playback credential must not be readable from a media URL or manifest.
+  const nonce=crypto.randomBytes(12),cipher=crypto.createCipheriv('aes-256-gcm',crypto.createHash('sha256').update(secret()).digest(),nonce);
+  const encrypted=Buffer.concat([cipher.update(data,'utf8'),cipher.final()]);
+  return ['v2',nonce.toString('base64url'),encrypted.toString('base64url'),cipher.getAuthTag().toString('base64url')].join('.');
 }
 export function unticket(raw) {
   if (!raw || raw.length > 16000) throw new SourceError('رابط المشاهدة غير صالح.', 400);
+  if(raw.startsWith('v2.')){
+    let payload;
+    try{
+      const parts=raw.split('.');if(parts.length!==4)throw Error();
+      const [nonce,data,tag]=parts.slice(1).map(part=>{const bytes=Buffer.from(part,'base64url');if(bytes.toString('base64url')!==part)throw Error();return bytes;});
+      if(nonce.length!==12||tag.length!==16)throw Error();
+      const decipher=crypto.createDecipheriv('aes-256-gcm',crypto.createHash('sha256').update(secret()).digest(),nonce);decipher.setAuthTag(tag);
+      payload=JSON.parse(Buffer.concat([decipher.update(data),decipher.final()]).toString('utf8'));
+    }catch{throw new SourceError('رابط المشاهدة غير صالح.',400);}
+    if(payload.e<Date.now())throw new SourceError('انتهت صلاحية رابط المشاهدة. اختر السيرفر مرة أخرى.',410);
+    payload.h=mediaHeadersForURL(payload.u,bindSourceSession(payload.h,payload.o,payload.h?.Cookie));
+    return payload;
+  }
   const [data, sig] = raw.split('.');
   const expected = crypto.createHmac('sha256', secret()).update(data || '').digest('base64url');
   if (!sig || sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) throw new SourceError('رابط المشاهدة غير صالح.', 400);
   let payload; try { payload = JSON.parse(Buffer.from(data, 'base64url')); } catch { throw new SourceError('رابط المشاهدة غير صالح.', 400); }
   if (payload.e < Date.now()) throw new SourceError('انتهت صلاحية رابط المشاهدة. اختر السيرفر مرة أخرى.', 410);
+  payload.h=mediaHeadersForURL(payload.u,payload.h);
   return payload;
 }
 export const mediaURL = (url, headers = {}, options = {}) => `/api/media?t=${encodeURIComponent(ticket(url, headers, options))}`;
