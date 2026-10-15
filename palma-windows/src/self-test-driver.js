@@ -4,8 +4,16 @@ async function until(predicate,label,timeout=40000){const end=Date.now()+timeout
 const check=async(step,values={})=>{await fetch('/__test/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step,...values})});};
 const shot=name=>fetch('/__test/screenshot?name='+name);
 async function decoded(label){
- const video=await until(()=>document.querySelector('#player-dialog[open] video'),label+' did not open',80000);video.muted=true;
- await until(()=>video.currentTime>3&&video.videoWidth>0&&video.getVideoPlaybackQuality().totalVideoFrames>0,label+' did not decode video',65000);
+ const video=await until(()=>{
+  const message=document.querySelector('#dialog[open] h3');
+  if(message?.textContent.includes('تعذر'))throw Error(label+': '+document.querySelector('#dialog p')?.textContent);
+  return document.querySelector('#player-dialog[open] video');
+ },label+' did not open',80000);video.muted=true;
+ await until(()=>{
+  const message=document.querySelector('#player-dialog[open] .player-error:not([hidden]) p');
+  if(message)throw Error(label+': '+message.textContent);
+  return video.currentTime>3&&video.videoWidth>0&&video.getVideoPlaybackQuality().totalVideoFrames>0;
+ },label+' did not decode video',65000);
  await check(label,{width:video.videoWidth,height:video.videoHeight,time:video.currentTime,duration:Number.isFinite(video.duration)?video.duration:'live',frames:video.getVideoPlaybackQuality().totalVideoFrames});return video;
 }
 try{

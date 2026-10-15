@@ -63,7 +63,9 @@ export function isPrivateIP(ip) {
 }
 export async function publicURL(raw) {
   let url; try { url = new URL(raw); } catch { throw new SourceError('رابط السيرفر غير صالح.', 400, 'INVALID_URL'); }
-  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || (url.port && !['80', '443'].includes(url.port))) throw new SourceError('رابط السيرفر غير مدعوم.', 400, 'INVALID_URL');
+  // PALMA's live-channel gateway redirects to public HTTP media on port 8080.
+  // Validate/pin every destination as usual; source cookies stay origin-bound.
+  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password || (url.port && !['80', '443', '8080'].includes(url.port))) throw new SourceError('رابط السيرفر غير مدعوم.', 400, 'INVALID_URL');
   const host = url.hostname.replace(/^\[|\]$/g, '');
   const addresses = net.isIP(host) ? [{ address: host }] : await dns.lookup(host, { all: true });
   if (!addresses.length || addresses.some(x => isPrivateIP(x.address))) throw new SourceError('عنوان السيرفر غير مدعوم.', 400, 'INVALID_URL');

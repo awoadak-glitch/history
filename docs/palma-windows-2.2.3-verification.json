@@ -1,0 +1,133 @@
+{
+  "platform": "win32",
+  "versions": {
+    "electron": "44.7.2",
+    "node": "24.21.0"
+  },
+  "verified_at": "2026-10-15T16:37:43.736Z",
+  "checks": [
+    {
+      "step": "api/v2/home.php",
+      "status": 200,
+      "sections": 28,
+      "banners": 33
+    },
+    {
+      "step": "api/series/show.php",
+      "status": 200
+    },
+    {
+      "step": "api/seasons/",
+      "status": 200
+    },
+    {
+      "step": "api/episodes/",
+      "status": 200
+    },
+    {
+      "step": "api/episodes/show.php",
+      "status": 200
+    },
+    {
+      "step": "/api/resolve",
+      "status": 200
+    },
+    {
+      "step": "HLS master",
+      "status": 200
+    },
+    {
+      "step": "HLS variant",
+      "status": 200
+    },
+    {
+      "step": "video bytes",
+      "status": 206,
+      "content_type": "video/mp4",
+      "bytes": 1024
+    },
+    {
+      "step": "HLS downloaded, remuxed to MP4 and decoded",
+      "bytes": 4250646,
+      "sample_segments": 2
+    },
+    {
+      "step": "home rendered with source images",
+      "cards": 278,
+      "cover_loaded": true
+    },
+    {
+      "step": "home match opens correct teams and channel IDs",
+      "match_id": "191321",
+      "channels": [
+        "91"
+      ]
+    },
+    {
+      "step": "cast portrait opens actor filmography",
+      "actor_id": "8532",
+      "works": 21
+    },
+    {
+      "step": "PALMA episode decoded",
+      "width": 1920,
+      "height": 1080,
+      "time": 3.040167,
+      "duration": 2876.56,
+      "frames": 80
+    },
+    {
+      "step": "PALMA movie B2 decoded",
+      "width": 1920,
+      "height": 800,
+      "time": 3.030072,
+      "duration": 6223.091869000053,
+      "frames": 74
+    },
+    {
+      "step": "native fullscreen state",
+      "native": true,
+      "element": true,
+      "player_fills_window": true,
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 768
+      }
+    },
+    {
+      "step": "native fullscreen exited",
+      "native": false,
+      "element": false,
+      "player_fills_window": true,
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 720
+      }
+    },
+    {
+      "step": "channel failure",
+      "error": "PALMA live channel decoded did not open"
+    },
+    {
+      "step": "Witcher anime episode decoded",
+      "width": 1440,
+      "height": 1080,
+      "time": 3.025456,
+      "duration": 1421.563,
+      "frames": 77
+    },
+    {
+      "step": "anime selected server",
+      "label": "PD1080p"
+    }
+  ],
+  "series_id": "1667",
+  "episode_id": "43120",
+  "title": "سيدو وحورية",
+  "success": false,
+  "error": "PALMA live channel decoded did not open"
+}

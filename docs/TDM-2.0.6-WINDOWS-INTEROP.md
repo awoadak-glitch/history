@@ -41,3 +41,17 @@ Commit `cb1285b0dfb0a4c058bb5fa35b052154f34b8a03`, run `38768117548`, tested at 
 After reviewing the exact two source destinations, the owner explicitly authorized transmission of the source-issued playback Cookie on 2026-10-15. The adapter now carries the returned `ot` value only for PALMA and only on its matching HTTPS origin (`cdn.mediaoscar.com` or `still-dust-c9ae.manon-lol2000.workers.dev`). It does not import browser/account cookies. Foreign redirects and cross-origin playlist resources lose the credential, including redirects between the two approved hosts.
 
 Media tickets use authenticated encryption so credentials are not readable in playlist URLs. Downloads restore the same bound context; no credentials are persisted in download history. Local tests cover host binding, redirects/resource transitions, encrypted-ticket tampering and both watch/download resolution. The Windows gate also decodes an actual B2 film in addition to the existing series/channel/anime flows.
+
+## Packaged Windows 2.2.3 result
+
+Commit `609e4ee5c007ad7109a8e2c90071c2ab5685dea3`, run `38770379521`, tested on 2026-10-15:
+
+- PALMA episode 43120 decoded at 1920×1080 with duration 2876.56 seconds; movie 4528 / B2 decoded at 1920×800 with duration 6223.09 seconds. These are actual video frames, not a replacement notice.
+- HLS master/variant/segment delivery, a two-segment 4,250,646-byte MP4 download and FFmpeg decoding passed. Witcher Naruto 001 PD1080p, native fullscreen, matches and actor filmography also passed.
+- The remaining failure was channel 63: the resolver rejected the stream URL before opening the player. The build was preserved as an artifact, not published as a working release.
+
+## Confirmed channel routing correction (2.2.4)
+
+Sanitized Windows diagnostic run `38808893030` found that all five qualities for channel 63 returned HTTP 302 from the approved HTTPS gateway to `http://assets.pushyourcss.world:8080`. The existing HTTP validator permitted only ports 80 and 443. It therefore rejected the live destination with `INVALID_URL` after the source session had already been accepted.
+
+Port 8080 is now supported alongside 80/443. Every redirect still requires a public DNS result with address pinning; private addresses, embedded credentials and other ports remain rejected. The source Cookie is stripped on the redirect to the live host. A transport regression test exercises that redirect and asserts that only the UA survives. The UI verification now reports the actual resolver/player error immediately instead of a generic 80-second timeout. Packaged live decoding remains the publication gate.
