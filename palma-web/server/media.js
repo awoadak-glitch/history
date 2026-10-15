@@ -1,6 +1,7 @@
 import { fetchPublic, readLimited, publicURL, SourceError, mediaURL, isPrivateIP } from './http.js';
 import net from 'node:net';
 import {inspectMedia} from './media-format.js';
+import {decodePlaybackLink} from './tdm-link.js';
 
 export function witcherSource(source) {
   let url;
@@ -18,17 +19,7 @@ export function witcherPlayback(source) {
 }
 
 export function unwrapURL(value) {
-  let raw = String(value || '').trim().replaceAll('&amp;', '&');
-  for (let i = 0; i < 4; i++) {
-    if (/^https?:\/\//i.test(raw)) return raw;
-    try {
-      const parsed = new URL(raw), embedded = ['url','link','video','src','stream','download'].map(k => parsed.searchParams.get(k)).find(Boolean);
-      if (embedded) { raw = embedded; continue; }
-    } catch {}
-    try { const decoded = decodeURIComponent(raw); if (decoded !== raw) { raw = decoded; continue; } } catch {}
-    break;
-  }
-  throw new SourceError('هذا السيرفر يستخدم رابطًا خاصًا بالمشغّل الأصلي، ولا يتيح رابط فيديو للويب.', 422, 'NATIVE_PLAYER_REQUIRED');
+  return decodePlaybackLink(value).url;
 }
 export function parseHLS(text, url) {
   const lines = text.split(/\r?\n/), out = [];
@@ -51,7 +42,9 @@ export function extractStreams(html, base) {
   return [...found];
 }
 export async function resolveMedia(raw, headers = {}, quality = '', external = false, state={seen:new Set(),depth:0}) {
-  let url = unwrapURL(raw);
+  const decoded=decodePlaybackLink(raw);
+  let url=decoded.url;
+  headers={...decoded.headers,...headers};
   if(state.depth>5||state.seen.has(url))throw new SourceError('تعذر العثور على الفيديو داخل صفحة السيرفر.',422,'UNRESOLVED_MEDIA');
   state.seen.add(url);
   if (/pixeldrain\.com$/.test(new URL(url).hostname) && /^\/u\/[^/]+$/.test(new URL(url).pathname)) url = `https://pixeldrain.com/api/file/${new URL(url).pathname.split('/').pop()}`;

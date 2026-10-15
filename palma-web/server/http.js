@@ -73,7 +73,7 @@ function pinnedFetch(url, options = {}) {
   return new Promise((resolve,reject) => {
     const family = net.isIP(url.pinnedAddress), transport = url.protocol === 'https:' ? https : http;
     const request = transport.request(url, {
-      method: options.method || 'GET', headers: options.headers || {}, signal: options.signal,
+      method: options.method || 'GET', headers: {'Accept-Encoding':'identity',...options.headers}, signal: options.signal,
       lookup: (_hostname, opts, callback) => opts?.all ? callback(null,[{address:url.pinnedAddress,family}]) : callback(null,url.pinnedAddress,family)
     }, response => {
       const headers = new Headers();for(const [k,v] of Object.entries(response.headers)) if(v!==undefined)headers.set(k,Array.isArray(v)?v.join(', '):v);

@@ -22,10 +22,10 @@ test('inspection preserves bytes and HTTP range metadata across the sniff bounda
  const source=new Response(new ReadableStream({start(c){chunks.forEach(x=>c.enqueue(x));c.close();}}),{status:206,headers:{'Content-Range':'bytes 0-2050/100000'}});
  const result=await inspectMedia(source,'https://cdn.example/stream');assert.equal(result.type,'flv');assert.equal(result.response.status,206);assert.equal(result.response.headers.get('content-range'),'bytes 0-2050/100000');assert.deepEqual(new Uint8Array(await result.response.arrayBuffer()),new Uint8Array([...chunks[0],...chunks[1]]));
 });
-test('fresh catalogue URLs and native fallback preserve identity without session cookies',()=>{
+test('native playback keeps its user agent even when catalogue HTTP URLs and cookie parameters also exist',()=>{
  const url='https://cdn.example/live/42.css',deep='tdmvideo://play?'+new URLSearchParams({url,ua:'OSCARTV2021',cookies:'must-not-forward'});
  const result=playbackSource({stream_url:url,deep_link:deep,headers:{Authorization:'private',Cookie:'private',Referer:'https://source.example/'}});
- assert.equal(result.url,url);assert.deepEqual(result.headers,{Referer:'https://source.example/'});
+ assert.equal(result.url,url);assert.deepEqual(result.headers,{'User-Agent':'OSCARTV2021',Referer:'https://source.example/'});
  assert.equal(playbackSource({deep_link:'tdmvideo://play?'+new URLSearchParams({url,ua:'public-player'})}).headers['User-Agent'],'public-player');
  for(const key of ['url','video_url','stream_url','download_url','link'])assert.equal(playbackSource({[key]:url}).url,url);
 });
