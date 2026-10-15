@@ -55,3 +55,13 @@ Commit `609e4ee5c007ad7109a8e2c90071c2ab5685dea3`, run `38770379521`, tested on 
 Sanitized Windows diagnostic run `38808893030` found that all five qualities for channel 63 returned HTTP 302 from the approved HTTPS gateway to `http://assets.pushyourcss.world:8080`. The existing HTTP validator permitted only ports 80 and 443. It therefore rejected the live destination with `INVALID_URL` after the source session had already been accepted.
 
 Port 8080 is now supported alongside 80/443. Every redirect still requires a public DNS result with address pinning; private addresses, embedded credentials and other ports remain rejected. The source Cookie is stripped on the redirect to the live host. A transport regression test exercises that redirect and asserts that only the UA survives. The UI verification now reports the actual resolver/player error immediately instead of a generic 80-second timeout. Packaged live decoding remains the publication gate.
+
+## Released Windows 2.2.4 — verified
+
+Commit `5c0e85beabf4e35c9318ff684a7ec9a425684cbd`, successful Windows run `38809247179`, tested at 2026-10-15 21:23 UTC:
+
+- All 44 unit tests passed. The packaged executable decoded the native PALMA episode (1920×1080), B2 film (1920×800), channel 63 (1920×1080, live) and Witcher Naruto 001 PD1080p (1440×1080). The channel screenshot shows the actual beIN Sports 1 broadcast.
+- Native fullscreen entry/exit, home-to-match navigation (match 391399 → channel 65), cast-to-filmography (actor 8532 → 21 works), source images, HLS ranges and download/remux/decode all passed.
+- Full sanitized evidence: `docs/palma-windows-2.2.4-verification.json`. Screenshots and the same report are attached to the release. This verifies the sampled current sources; it does not guarantee every upstream server or JavaScript-only embed. The separately configured Drama World provider remains unavailable.
+- Released ZIP: https://github.com/awoadak-glitch/history/releases/download/palma-windows-v2.2.4/PALMA-VISION-Windows-2.2.4.zip
+- ZIP size: 182,270,393 bytes. SHA-256: `3452d4854c3cd6a5777b7d81a89dfb90f4ff6ec231bda28ed1ab281650b5143e`.
