@@ -31,7 +31,7 @@ function grid(items){return items.length?`<div class="grid">${items.map(mediaCar
 function matchCard(m,detail=false){
   const home=m.home_team||m.homeTeam||{},away=m.away_team||m.awayTeam||{},scheduled=['NS','TBD','PST'].includes(m.status);
   const inner=`<div class="team">${img(home.logo||m.home_team_logo,'')}<strong>${esc(home.name||m.home_team_name)}</strong></div><div><small>${esc(m.league_name||m.league?.name||'')}</small><div class="match-score">${scheduled?'VS':esc(m.home_goals??m.home_score??'—')+' — '+esc(m.away_goals??m.away_score??'—')}</div><div class="match-date">${esc(scheduled?m.match_time:m.status)}</div></div><div class="team">${img(away.logo||m.away_team_logo,'')}<strong>${esc(away.name||m.away_team_name)}</strong></div>`;
-  return detail?`<section class="match-card match-hero">${inner}</section>`:`<a class="match-card" href="${link('match',{id:m.id})}">${inner}</a>`;
+  return detail===true?`<section class="match-card match-hero">${inner}</section>`:`<a class="match-card" href="${link('match',{id:m.id})}">${inner}</a>`;
 }
 function promoSection(section){
   const title=first(section,'title_ar','title_en'),type=section.promo_action_type,value=section.promo_action_value;
@@ -92,7 +92,7 @@ async function home(token){
     if(!active(token))return;
     const title=first(section,'title_ar','title_en','title')||'أحدث الأعمال',type=first(section,'section_type'),kind=sectionKind(type);
     if(type.startsWith('promo_banner')){container.insertAdjacentHTML('beforeend',promoSection(section));continue;}
-    if(type==='today_matches'){container.insertAdjacentHTML('beforeend',`<section class="section"><div class="section-head"><h2>${esc(title)}</h2><a href="${link('matches')}">عرض الكل</a></div><div class="home-matches">${list(section.items).map(matchCard).join('')}</div></section>`);continue;}
+    if(type==='today_matches'){container.insertAdjacentHTML('beforeend',`<section class="section"><div class="section-head"><h2>${esc(title)}</h2><a href="${link('matches')}">عرض الكل</a></div><div class="home-matches">${list(section.items).map(m=>matchCard(m)).join('')}</div></section>`);continue;}
     const view=Object.keys(nativeKinds).find(k=>nativeKinds[k]===kind)||'series';
     const items=list(section.items||section.movieItems||section.seriesItems||section.animeItems||section.channelItems||section.actorItems||section.wrestlingItems);
     const more=Number(section.hide_see_all)?'':link(view,sectionQuery(section));

@@ -13,8 +13,9 @@ try{
  await until(()=>document.querySelector('.media-card'),'Home did not render');await document.fonts.ready;
  const cover=document.querySelector('.hero-cover');if(cover)await Promise.race([cover.decode(),wait(12000)]);
  await check('home rendered with source images',{cards:document.querySelectorAll('.media-card').length,cover_loaded:cover?.naturalWidth>0});await shot('home');
+ if(document.querySelectorAll('.home-matches .match-card').length!==document.querySelectorAll('.home-matches a.match-card').length)throw Error('Some home matches are not navigable');
  const match=await until(()=>document.querySelector('.home-matches .match-card'),'Home match card absent');const matchId=new URLSearchParams(match.hash.split('?')[1]).get('id');match.click();
- await until(()=>document.querySelector('.match-hero'),'Home match did not open match details');
+ await until(()=>document.body.dataset.view==='match'&&document.querySelector('.match-hero'),'Home match did not open match details');
  const expected=(await (await fetch('/api/catalog?'+new URLSearchParams({provider:'palma',route:'api/matches/show.php',id:matchId}))).json()).data;
  if(!document.querySelector('h1').textContent.includes(expected.home_team?.name||expected.home_team_name))throw Error('Home match opened wrong teams');
  const channelLinks=[...document.querySelectorAll('#match-streams .media-card a')].map(a=>new URLSearchParams(a.hash.split('?')[1]).get('id'));
@@ -34,7 +35,7 @@ try{
  const channelButton=await until(()=>document.querySelector('#detail-content .server-row button'),'Channel servers missing');channelButton.click();
  await decoded('PALMA live channel decoded');await shot('channel');closePlayer();
  location.hash='#/servers?provider=witcher&kind=anime&id=Naruto&episode=001&title=Naruto';
- await until(()=>document.querySelector('#detail-content .server-row button'),'Witcher episode servers missing');
+ await until(()=>document.body.dataset.view==='servers'&&document.querySelector('#detail-content .server-row button'),'Witcher episode servers missing');
  // Exercise a real visible server choice. Report every attempted server by label only.
  let animePlayed=false;const buttons=[...document.querySelectorAll('#detail-content .server-row button')].filter(b=>b.textContent.includes('مشاهدة'));
  const candidates=buttons.length?buttons:[...document.querySelectorAll('#detail-content .server-row .btn')].filter(b=>b.tagName==='BUTTON').filter((_,i)=>i%2===0);
