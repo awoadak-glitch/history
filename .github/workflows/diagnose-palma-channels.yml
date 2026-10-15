@@ -1,0 +1,23 @@
+name: Diagnose PALMA channel routing
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/palma-channel-diagnostic.mjs'
+      - '.github/workflows/diagnose-palma-channels.yml'
+permissions:
+  contents: read
+jobs:
+  routing:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Report sanitized channel redirects
+        run: node tools/palma-channel-diagnostic.mjs
