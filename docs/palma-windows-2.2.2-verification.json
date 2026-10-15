@@ -1,0 +1,110 @@
+{
+  "version": "2.2.2",
+  "source_commit": "cb1285b0dfb0a4c058bb5fa35b052154f34b8a03",
+  "workflow_run": 38768117548,
+  "workflow_url": "https://github.com/awoadak-glitch/history/actions/runs/38768117548",
+  "artifact_id": 11990616019,
+  "unit_tests": {
+    "passed": 37,
+    "failed": 0
+  },
+  "platform": "win32",
+  "versions": {
+    "electron": "44.7.2",
+    "node": "24.21.0"
+  },
+  "verified_at": "2026-10-15T16:22:34.949Z",
+  "checks": [
+    {
+      "step": "api/v2/home.php",
+      "status": 200,
+      "sections": 28,
+      "banners": 33
+    },
+    {
+      "step": "api/series/show.php",
+      "status": 200
+    },
+    {
+      "step": "api/seasons/",
+      "status": 200
+    },
+    {
+      "step": "api/episodes/",
+      "status": 200
+    },
+    {
+      "step": "api/episodes/show.php",
+      "status": 200
+    },
+    {
+      "step": "native source unavailable",
+      "error": "/api/resolve: 403 SOURCE_SESSION_REQUIRED"
+    },
+    {
+      "step": "home rendered with source images",
+      "cards": 278,
+      "cover_loaded": true
+    },
+    {
+      "step": "home match opens correct teams and channel IDs",
+      "match_id": "191321",
+      "channels": [
+        "91"
+      ]
+    },
+    {
+      "step": "cast portrait opens actor filmography",
+      "actor_id": "8532",
+      "works": 21
+    },
+    {
+      "step": "episode or player failure",
+      "error": "/api/resolve: 403 SOURCE_SESSION_REQUIRED"
+    },
+    {
+      "step": "native fullscreen state",
+      "native": true,
+      "element": true,
+      "player_fills_window": true,
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 768
+      }
+    },
+    {
+      "step": "native fullscreen exited",
+      "native": false,
+      "element": false,
+      "player_fills_window": true,
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 1024,
+        "height": 720
+      }
+    },
+    {
+      "step": "channel failure",
+      "error": "PALMA live channel decoded did not open"
+    },
+    {
+      "step": "Witcher anime episode decoded",
+      "width": 1440,
+      "height": 1080,
+      "time": 3.059171,
+      "duration": 1421.563,
+      "frames": 78
+    },
+    {
+      "step": "anime selected server",
+      "label": "PD1080p"
+    }
+  ],
+  "success": false,
+  "error": "/api/resolve: 403 SOURCE_SESSION_REQUIRED; PALMA live channel decoded did not open",
+  "source_cookies_transmitted": false,
+  "published_as_working_release": false
+}

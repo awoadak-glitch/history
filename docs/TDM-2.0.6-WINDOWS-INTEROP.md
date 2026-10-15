@@ -24,3 +24,14 @@ The tests include an independently generated XOR transport fixture, exact signed
 ## Verification before this patch
 
 Windows 2.2.1 entered and exited native fullscreen, opened the correct home-match channel and actor filmography, and decoded Witcher Naruto 001 / PD 1080p (1440×1080; 1421.563 seconds). Native PALMA requests failed and channels did not play. These failures must not be described as fixed until a new packaged-app check succeeds.
+
+## Packaged Windows 2.2.2 result
+
+Commit `cb1285b0dfb0a4c058bb5fa35b052154f34b8a03`, run `38768117548`, tested at 2026-10-15 16:22 UTC:
+
+- All 37 unit tests passed and the complete Windows ZIP built successfully.
+- The native PALMA episode request, with the restored TDM UA, redirected to the source's notice video and was rejected by our media validator. It is not a playable episode. Channel playback also failed.
+- Home images, match-to-channel navigation, actor filmography, native fullscreen entry/exit and actual Witcher Naruto 001 PD 1080p decoding passed. Anime duration was 1421.563 seconds and 78 frames decoded at 3.059 seconds.
+- A raw channel URL in the inspected API sample differed from its deep-link URL by a fragment; the HTTP origin and path were identical. The native-first selection is correct, but that fragment difference does not explain the upstream refusal.
+- No Cookie or Authorization header was forwarded. The current API includes an `ot` Cookie value in native links; its values and signed URLs are not stored in this repository. Testing that credential against its declared source hosts remains blocked by the earlier automatic approval review until the user explicitly authorizes that transmission.
+- This build was preserved as a workflow artifact, not published as a working release. Full report: `docs/palma-windows-2.2.2-verification.json`.
