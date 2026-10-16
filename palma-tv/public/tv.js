@@ -35,7 +35,7 @@ function keydown(e){
     if(['Enter',' ','MediaPlayPause'].includes(key)){if(!e.repeat)$('#play-toggle')?.click();return;}
     focus($('#play-toggle'));return;
   }
-  if(key==='Enter'||key===' '){if(e.repeat)return;if(active?.tagName==='SELECT')picker(active);else if(active?.tagName==='SUMMARY')active.parentElement.open=!active.parentElement.open;else active?.click();return;}
+  if(key==='Enter'||key===' '){if(e.repeat)return;if(typing){active.focus();window.PalmaTVNative?.keyboard();}else if(active?.tagName==='SELECT')picker(active);else if(active?.tagName==='SUMMARY')active.parentElement.open=!active.parentElement.open;else active?.click();return;}
   if(active?.matches('input[type="range"]')&&['ArrowLeft','ArrowRight'].includes(key)){
     const amount=active.id==='player-seek'?10:Number(active.step)||1;active.value=String(Math.max(Number(active.min),Math.min(Number(active.max),Number(active.value)+(key==='ArrowRight'?amount:-amount))));active.dispatchEvent(new Event('input',{bubbles:true}));active.dispatchEvent(new Event('change',{bubbles:true}));return;
   }

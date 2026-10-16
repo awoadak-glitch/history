@@ -29,6 +29,7 @@ await patch('app.js',[
   ["if(location.protocol==='palma:'){","if(true){"],
   ["PALMA VISION · Windows","PALMA TV · Android TV / Google TV · 1.0.0"],
   ["readStore('auto-banner',true)","false"],
+  ['<label class="btn outline" for="import-library">','<label class="btn outline" for="import-library" tabindex="0" role="button">'],
   ["function exportLibrary(){","function exportLibrary(){if(window.PalmaTVNative){window.PalmaTVNative.exportLibrary(JSON.stringify({app:'PALMA VISION WEB',version:1,favorites:readStore('favorites',[]),progress:readStore('progress',{})}));return;}"],
 ]);
 let navigation=await readFile(path.join(out,'web/public/navigation.js'),'utf8');

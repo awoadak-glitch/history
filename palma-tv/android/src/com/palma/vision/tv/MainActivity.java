@@ -39,7 +39,8 @@ public class MainActivity extends Activity {
     try{
       File root=new File(getFilesDir(),"runtime");copyAssets("runtime",root);
       System.loadLibrary("node");System.loadLibrary("palma_node");
-      startNode(new String[]{"node",new File(root,"main.mjs").getAbsolutePath(),Integer.toString(PORT),token,new File(getFilesDir(),"saved-media").getAbsolutePath(),tests?"test":"app"});
+      int code=startNode(new String[]{"node",new File(root,"launch.mjs").getAbsolutePath(),Integer.toString(PORT),token,new File(getFilesDir(),"saved-media").getAbsolutePath(),tests?"test":"app"});
+      android.util.Log.e("PALMA-TV","Runtime exited with code "+code);
       failed=true;
     }catch(Throwable error){failed=true;android.util.Log.e("PALMA-TV","Runtime initialization failed: "+error.getClass().getSimpleName());}
   }
@@ -69,18 +70,19 @@ public class MainActivity extends Activity {
     web.setBackgroundColor(Color.rgb(12,20,34));
     web.setWebViewClient(new WebViewClient(){
       @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){Uri uri=request.getUrl();if(local(uri))return false;if(request.isForMainFrame()&&request.hasGesture()&&"https".equals(uri.getScheme())){try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}catch(Exception e){Toast.makeText(MainActivity.this,"لا يوجد تطبيق لفتح هذا الرابط",Toast.LENGTH_SHORT).show();}}return true;}
-      @Override public void onPageFinished(WebView view,String url){if(local(Uri.parse(url))){CookieManager.getInstance().flush();view.requestFocus();}}
+      @Override public void onPageFinished(WebView view,String url){if(local(Uri.parse(url))){CookieManager.getInstance().flush();view.requestFocus();if(tests&&getIntent().getBooleanExtra("verifyRestart",false))view.evaluateJavascript("console.log('PALMA_TV_TEST '+JSON.stringify({restart:true,retained:localStorage.getItem('palma-tv-test-persistence')==='retained',progress:!!localStorage.getItem('palma.progress')}))",null);}}
       @Override public boolean onRenderProcessGone(WebView view,RenderProcessGoneDetail detail){view.destroy();web=null;failure("توقفت واجهة التلفاز. أغلق التطبيق وافتحه مجددًا.");return true;}
     });
     web.setWebChromeClient(new WebChromeClient(){
       @Override public void onShowCustomView(View view,CustomViewCallback callback){if(fullView!=null){callback.onCustomViewHidden();return;}fullView=view;fullCallback=callback;frame.addView(view,new FrameLayout.LayoutParams(-1,-1));immersive();}
       @Override public void onHideCustomView(){if(fullView!=null){frame.removeView(fullView);fullView=null;fullCallback.onCustomViewHidden();fullCallback=null;immersive();}}
-      @Override public boolean onConsoleMessage(ConsoleMessage message){if(tests&&message.message().startsWith("PALMA_TV_TEST "))android.util.Log.i("PALMA-TV-TEST",message.message().substring(14));return true;}
+      @Override public boolean onConsoleMessage(ConsoleMessage message){if(tests&&message.message().startsWith("PALMA_TV_TEST "))android.util.Log.i("PALMA-TV-TEST",message.message().substring(14));else if(tests&&message.message().startsWith("Uncaught")){try{JSONObject error=new JSONObject();error.put("javascriptError",message.message().replaceAll("https?://\\S+","[URL]"));error.put("line",message.lineNumber());error.put("source",Uri.parse(message.sourceId()).getPath());android.util.Log.i("PALMA-TV-TEST",error.toString());}catch(Exception ignored){}}return true;}
       @Override public void onPermissionRequest(PermissionRequest request){request.deny();}
       @Override public boolean onShowFileChooser(WebView view,ValueCallback<Uri[]> callback,FileChooserParams params){if(fileCallback!=null)fileCallback.onReceiveValue(null);fileCallback=callback;try{Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");startActivityForResult(intent,21);}catch(Exception error){fileCallback.onReceiveValue(null);fileCallback=null;Toast.makeText(MainActivity.this,"لا يوجد منتقي ملفات على هذا الجهاز",Toast.LENGTH_LONG).show();}return true;}
     });
     web.addJavascriptInterface(new Object(){
       @JavascriptInterface public void exit(){ui.post(()->{if(web!=null&&local(Uri.parse(web.getUrl())))finish();});}
+      @JavascriptInterface public void keyboard(){ui.post(()->{if(web!=null&&local(Uri.parse(web.getUrl()))){web.requestFocus();((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showSoftInput(web,android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);}});}
       @JavascriptInterface public void exportLibrary(String data){if(data==null||data.length()>4*1024*1024)return;ui.post(()->{if(web==null||!local(Uri.parse(web.getUrl())))return;backup=data;try{Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");intent.putExtra(Intent.EXTRA_TITLE,"palma-tv-library.json");startActivityForResult(intent,22);}catch(Exception error){backup=null;Toast.makeText(MainActivity.this,"لا يوجد منتقي ملفات على هذا الجهاز",Toast.LENGTH_LONG).show();}});}
     },"PalmaTVNative");
     frame.removeAllViews();frame.addView(web,new FrameLayout.LayoutParams(-1,-1));

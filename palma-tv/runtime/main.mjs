@@ -1,6 +1,5 @@
 import http from 'node:http';
 import {timingSafeEqual} from 'node:crypto';
-import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {createReadStream} from 'node:fs';
 import {stat,readFile,writeFile} from 'node:fs/promises';
@@ -62,10 +61,4 @@ export function createTVServer({token,port,storage,publicRoot,test=false}){
     }catch{if(!res.headersSent)json(res,500,{error:'تعذر إكمال العملية. أعد المحاولة.'});else res.destroy();}
   });
   server.on('close',()=>downloads.close());return server;
-}
-if(process.argv[1]===fileURLToPath(import.meta.url)){
-  const [, ,rawPort,token,storage,mode]=process.argv;
-  if(!/^\d+$/.test(rawPort)||!token||token.length!==64||!storage)throw Error('Invalid local runtime configuration');
-  const root=fileURLToPath(new URL('./web/public',import.meta.url));
-  createTVServer({port:Number(rawPort),token,storage,publicRoot:root,test:mode==='test'}).listen(Number(rawPort),'127.0.0.1',()=>console.log('PALMA TV runtime ready'));
 }
