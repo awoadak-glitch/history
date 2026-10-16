@@ -8,6 +8,7 @@ await rm(out,{recursive:true,force:true});await mkdir(out,{recursive:true});
 await cp(path.join(root,'runtime'),out,{recursive:true});
 for(const name of ['public','api','server'])await cp(path.join(root,'../palma-web',name),path.join(out,'web',name),{recursive:true,filter:p=>!p.split(path.sep).includes('generated')});
 await cp(path.join(root,'public'),path.join(out,'web/public'),{recursive:true});
+await cp(path.join(root,'licenses'),path.join(out,'licenses'),{recursive:true});
 await cp(path.join(root,'../palma-windows/src/download-core.mjs'),path.join(out,'download-core.mjs'));
 await writeFile(path.join(out,'package.json'),JSON.stringify({type:'module',version:'1.0.0'}));
 async function patch(name,changes){const file=path.join(out,'web/public',name);let source=await readFile(file,'utf8');for(const [before,after]of changes){if(source.split(before).length!==2)throw Error(`TV overlay drift in ${name}: ${before.slice(0,60)}`);source=source.replace(before,after);}await writeFile(file,source);}

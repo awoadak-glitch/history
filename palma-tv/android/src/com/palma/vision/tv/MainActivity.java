@@ -14,7 +14,8 @@ import android.webkit.*;
 import android.widget.*;
 import org.json.JSONObject;
 import java.io.*;
-import java.net.*;
+import java.net.URL;
+import java.net.HttpURLConnection;
 import java.security.SecureRandom;
 
 public class MainActivity extends Activity {
