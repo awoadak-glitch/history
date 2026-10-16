@@ -5,6 +5,7 @@ import {renderDesktopDownloads} from './desktop-downloads.js';
 import {mainNavigation,drawerNavigation,navigationState} from './navigation.js';
 import {sectionKind,orderedSections,sectionQuery} from './palma-content.js';
 import {matchGroups,matchChannel,people,artwork} from './content-details.js';
+import {animeDetailMarkup,bindAnimeDetail} from './anime-view.js';
 
 const main=document.getElementById('main'),seeds=new Map();
 let controller=new AbortController(),generation=0,heroTimer,searchTimer,actions=new Map(),actionId=0,activeView='home';
@@ -184,6 +185,10 @@ function extraDetails(raw){
   return castSection(raw.actors||raw.cast)+(crew.length?`<section class="section"><div class="section-head"><h2>صنّاع العمل</h2></div><div class="crew-grid">${crew.map(x=>`<div class="crew-card">${img(x.photo,x.name)}<div><strong>${esc(x.name)}</strong><small>${esc(roles[x.role]||x.role)}</small></div></div>`).join('')}</div></section>`:'')+(scores.length?`<section class="section"><div class="section-head"><h2>التقييمات</h2></div><div class="rating-grid">${scores.map(([label,value,max])=>`<div><strong>${esc(value)}<small> / ${max}</small></strong><span>${label}</span></div>`).join('')}</div></section>`:'')+(raw.awards?.awards_text?`<p class="info-panel" dir="auto">${esc(raw.awards.awards_text)}</p>`:'')+(images.length?`<section class="section"><div class="section-head"><h2>صور العمل</h2></div><div class="artwork-rail">${images.map((url,index)=>`<button data-action="${action(()=>{const d=modal('صور العمل',img(url,'صورة من العمل','gallery-full',false));d.classList.add('gallery-dialog');d.addEventListener('close',()=>d.classList.remove('gallery-dialog'),{once:true});})}" aria-label="عرض الصورة ${index+1}">${img(url,'صورة من العمل')}</button>`).join('')}</div></section>`:'');
 }
 function renderDetail(item,raw,token){
+  if(item.provider==='witcher'&&item.kind==='anime'){
+    page(animeDetailMarkup(item,raw));document.title=`${item.title} | PALMA VISION`;
+    bindAnimeDetail(main.querySelector('.anime-detail-page'),item,raw,{signal:controller.signal,loadEpisodes:()=>loadSeasons(item,raw,token),renderRail:rail});return;
+  }
   const favoriteAction=button(favorite(item)?'في المفضلة':'إضافة للمفضلة',()=>{const added=toggleFavorite(item);toast(added?'أضيف للمفضلة':'أزيل من المفضلة');renderDetail(item,raw,token);},'btn outline','heart');
   const viewEpisodes=['series','anime'].includes(item.kind)&&item.provider!=='drama'||item.kind==='series';
   const meta=[['النوع',first(raw,'type','anime_type','content_type')||badgeText(item)],['سنة العرض',item.year],['الحالة',first(raw,'status','state')||first(raw.details,'state')],[item.kind==='movie'?'المدة':'مدة الحلقة',first(raw,'duration','episode_duration','runtime')],['عدد الحلقات',first(raw,'episodes_count','episode_count')||first(raw.details,'eps_num')],['التقييم',Number.isFinite(Number(item.rating))&&item.rating?Number(item.rating).toFixed(1):item.rating],['الدولة',first(raw,'country_name','country')],['الفئة العمرية',first(raw,'age_rating')||first(raw.details,'age')],['تاريخ الميلاد',raw.birthdate],['الجنسية',raw.nationality],['تاريخ الوفاة',raw.deathday],['موعد العرض',raw.broadcast_note],['اللغة',list(raw.spoken_languages).map(x=>typeof x==='string'?x:x.name||x.english_name).filter(Boolean).join('، ')],['شركات الإنتاج',list(raw.production_companies).map(x=>x.name).filter(Boolean).join('، ')]].filter(x=>x[1]);

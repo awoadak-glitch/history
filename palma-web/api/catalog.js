@@ -42,7 +42,7 @@ export function validateRoute(provider, route) {
   if (route.length > 1500 || route.includes('..') || /[\r\n\\]/.test(route)) return false;
   try { if(route.split('/').some(s => ['.','..'].includes(decodeURIComponent(s)))) return false; } catch { return false; }
   if (provider === 'palma') return routes.has(route);
-  if (provider === 'witcher') return /^(home|news|search|catalog|anime\/[^/?]+(?:\/episodes(?:\/[^/?]+\/servers)?)?)$/.test(route);
+  if (provider === 'witcher') return /^(home|news|search|catalog|anime\/[^/?]+(?:\/extras|\/episodes(?:\/[^/?]+\/servers)?)?)$/.test(route);
   if (provider === 'drama') return /^(first\/|genre\/all\/|category\/all\/|country\/all\/|serie\/by\/filtres\/[^/]+\/[^/]+\/\d+\/|movie\/by\/filtres\/[^/]+\/[^/]+\/\d+\/|channel\/by\/filtres\/[^/]+\/[^/]+\/\d+\/|search\/[^/]+\/\d+\/|movie\/by\/\d+\/|channel\/by\/\d+\/|season\/by\/serie\/\d+\/|movie\/source\/by\/\d+\/|episode\/source\/by\/\d+\/)$/.test(route);
   return false;
 }

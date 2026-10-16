@@ -43,7 +43,8 @@ export function card(raw,provider='palma',kind='series'){
   if(poster && !/^(https?:|data:)/.test(poster))poster=new URL(poster,imageBase).href;
   if(cover && !/^(https?:|data:)/.test(cover))cover=new URL(cover,imageBase).href;
   const episodeName=kind==='episode'?`الحلقة ${raw.episode_number||''}`:raw.episodeName;
-  return {...raw,id,title,poster,cover,provider,kind,episodeName,year:first(raw,'release_year','series_year','year')||first(d,'year'),rating:first(raw,'rating','rate'),tags:raw.tags||raw.genres||[],story:arabic(raw.story)||arabic(raw.bio)||arabic(d.story)||first(raw,'description','story_en')};
+  const rating=first(raw,'rating','rate')||(provider==='witcher'?first(raw.rating,'rate')||first(raw,'average_rate')||first(d,'mal_mean'):'');
+  return {...raw,id,title,poster,cover,provider,kind,episodeName,year:first(raw,'release_year','series_year','year')||first(d,'year'),rating,tags:raw.tags||raw.genres||[],story:arabic(raw.story)||arabic(raw.bio)||arabic(d.story)||first(raw,'description','story_en')};
 }
 export const keyOf=item=>`${item.provider}:${item.kind}:${item.id}`;
 export const playbackKey=(item,episode='')=>`${keyOf(item)}:${episode||'movie'}`;
