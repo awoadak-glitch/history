@@ -24,7 +24,9 @@ while time.monotonic()-started<750:
             (out/'verification.json').write_text(json.dumps({'passed':False,'error':event},indent=2));
             with (out/'failure.png').open('wb') as f:adb('exec-out','screencap','-p',stdout=f)
             sys.exit(1)
-        if event.get('step')=='remote-ready':adb('shell','input','keyevent','20')
+        # Inject a real DPAD event without blocking on Android's input completion
+        # handshake; the WebView assertion still waits for actual focus movement.
+        if event.get('step')=='remote-ready':adb('shell','input','dpad','keyevent','--async','20')
         if event.get('screenshot'):
             with (out/(event['screenshot']+'.png')).open('wb') as f:adb('exec-out','screencap','-p',stdout=f)
         if event.get('done'):
