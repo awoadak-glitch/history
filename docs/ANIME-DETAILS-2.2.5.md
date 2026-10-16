@@ -58,3 +58,20 @@ The packaged 2.2.5 Windows check passed in Actions run 38842693128. See
 `palma-windows-2.2.5-verification.json`. Screenshot review found a broken upstream
 cover URL and inconsistent LTR title alignment; 2.2.6 keeps the same features and
 adds the anime poster fallback plus right-aligned titles in the Arabic layout.
+
+The final 2.2.6 package passed all 49 unit tests and the packaged live-source
+verification in Actions run **38843220956** on 2026-10-16. The reviewed screenshot
+now shows Naruto's actual poster as the failed-cover fallback and the title beside
+the poster. `palma-windows-2.2.6-verification.json` records 268 character relations,
+31 Naruto voice entries, pagination from 24 to 48 characters, 220 episodes, the
+source countdown advancing by one second, and successful Naruto PD1080p decoding.
+PALMA series, B2 movie, live channel, match routing, actor works, HLS download, and
+native fullscreen checks also passed.
+
+Final code commit: `d23bca89fc2a11532153a1de968b972f913e3c98`.
+Release: https://github.com/awoadak-glitch/history/releases/tag/palma-windows-v2.2.6
+ZIP: `PALMA-VISION-Windows-2.2.6.zip`, 182281112 bytes.
+SHA256: `9ce477e11b651fe863082e6b2aaa8a37010315d069e20f6fa790bb005d30ef60`.
+The released file's GitHub asset state is `uploaded`; its report and screenshots
+are attached to the same release. These are sampled source checks, not a guarantee
+for every title or third-party server.
