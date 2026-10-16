@@ -53,3 +53,8 @@ button through episode 001, server selection and decoded video. Existing movie,
 series, live-channel, native-fullscreen and download checks remain release gates.
 The workflow uploads its JSON report and screenshots before publishing a ZIP;
 see the release's verification evidence for the packaged result.
+
+The packaged 2.2.5 Windows check passed in Actions run 38842693128. See
+`palma-windows-2.2.5-verification.json`. Screenshot review found a broken upstream
+cover URL and inconsistent LTR title alignment; 2.2.6 keeps the same features and
+adds the anime poster fallback plus right-aligned titles in the Arabic layout.

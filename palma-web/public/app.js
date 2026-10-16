@@ -71,7 +71,16 @@ async function shareApp(){const url=location.origin+'/';if(navigator.share){try{
 document.addEventListener('keydown',e=>{if(e.key==='Escape')drawer(false);});
 document.getElementById('drawer-shade').onclick=()=>drawer(false);
 document.addEventListener('click',e=>{const node=e.target.closest('[data-action]');if(node){const fn=actions.get(node.dataset.action);if(fn)Promise.resolve(fn(e)).catch(err=>{if(err.name!=='AbortError')toast(err.message);});}if(e.target.closest('.nav-item,.bottom-nav a,.drawer-brand'))drawer(false);});
-document.addEventListener('error',e=>{if(e.target.tagName==='IMG'&&!e.target.src.endsWith('/assets/palma-logo.png')){e.target.src='/assets/palma-logo.png';e.target.style.objectFit='contain';}},true);
+document.addEventListener('error',e=>{
+  const image=e.target;if(image.tagName!=='IMG')return;
+  if(image.classList.contains('anime-detail-backdrop')){
+    const fallback=safeURL(image.dataset.animeFallback);
+    if(fallback&&!image.dataset.fallbackUsed){image.dataset.fallbackUsed='true';image.src=fallback;}
+    else image.hidden=true;
+    return;
+  }
+  if(!image.src.endsWith('/assets/palma-logo.png')){image.src='/assets/palma-logo.png';image.style.objectFit='contain';}
+},true);
 function active(token){return token===generation;}
 function page(html){main.innerHTML=`<div class="page">${html}</div>`;}
 

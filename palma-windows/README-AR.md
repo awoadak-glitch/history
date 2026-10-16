@@ -1,4 +1,4 @@
-# PALMA VISION — Windows 2.2.5
+# PALMA VISION — Windows 2.2.6
 
 نسخة مستقلة تجلب محتوى بالما مباشرة، من دون APK أو محاكي أو تثبيت Node.js.
 فك ضغط الحزمة كاملة، ثم افتح `PALMA VISION.exe`. احتفظ ببقية الملفات بجانبه.

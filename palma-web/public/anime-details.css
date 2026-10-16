@@ -8,8 +8,8 @@
 .anime-title-block{min-width:0;flex:1}
 .anime-eyebrow{font-size:11px;letter-spacing:3px;color:var(--anime-accent);display:block;direction:ltr;text-align:right;margin-bottom:12px}
 .anime-title-block .chips{margin-bottom:12px}
-.anime-title-block h1{font-size:clamp(26px,3.7vw,44px);line-height:1.35;overflow-wrap:anywhere;max-width:850px}
-.anime-english{color:var(--muted);font-size:15px;margin-top:8px}
+.anime-title-block h1{font-size:clamp(26px,3.7vw,44px);line-height:1.35;overflow-wrap:anywhere;max-width:850px;text-align:right}
+.anime-english{color:var(--muted);font-size:15px;margin-top:8px;text-align:right}
 .anime-genres{display:flex;gap:8px 17px;flex-wrap:wrap;margin:18px 0 22px;color:var(--text);font-size:12px}
 .anime-genres span+span{position:relative}
 .anime-genres span+span:before{content:'·';position:absolute;inset-inline-start:-11px;color:var(--anime-accent)}

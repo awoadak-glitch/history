@@ -68,6 +68,8 @@ try{
  const animePage=await until(()=>document.querySelector('.anime-detail-page[data-characters-loaded="true"]'),'Anime characters did not load',60000);
  if(animePage.querySelector('.anime-airing').dataset.airingState!=='finished')throw Error('Completed Naruto received a future episode countdown');
  await until(()=>animePage.querySelector('.anime-detail-poster')?.naturalWidth>0,'Anime poster did not load');
+ await until(()=>animePage.querySelector('.anime-detail-backdrop')?.naturalWidth>0,'Anime backdrop fallback did not load');
+ if(animePage.querySelector('.anime-detail-backdrop').src.endsWith('/assets/palma-logo.png'))throw Error('Failed anime backdrop was replaced by a logo');
  if(!animePage.textContent.includes('Studio Pierrot')||!animePage.textContent.includes('220 حلقة'))throw Error('Anime source metadata missing');
  await check('anime detail metadata and completed schedule',{title:animePage.querySelector('h1').textContent,characters_total:Number(animePage.querySelector('[data-characters-count]').textContent),poster_loaded:true});await shot('anime-details');
  document.getElementById('anime-tab-characters').click();document.querySelector('.anime-detail-tabs').scrollIntoView({block:'start'});
