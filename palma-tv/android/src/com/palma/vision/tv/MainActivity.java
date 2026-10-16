@@ -51,7 +51,7 @@ public class MainActivity extends Activity {
   }
   private void waitUntilReady(int attempts){
     if(isFinishing())return;
-    if(failed||attempts>100){failure("تعذر بدء التطبيق. أغلقه وافتحه مجددًا. يحتاج PALMA TV إلى Android 7 أو أحدث وAndroid System WebView.");return;}
+    if(failed||attempts>100){failure("تعذر بدء محرّك بالما الداخلي. أغلق التطبيق وافتحه مجددًا. إذا استمرت المشكلة، أعد تشغيل التلفاز.");return;}
     new Thread(()->{
       boolean ok=false;try{HttpURLConnection c=(HttpURLConnection)new URL("http://127.0.0.1:"+PORT+"/health").openConnection();c.setConnectTimeout(300);c.setReadTimeout(300);c.setRequestProperty("Authorization","Bearer "+token);ok=c.getResponseCode()==200;c.disconnect();}catch(Exception ignored){}
       final boolean connected=ok;ui.post(()->{if(connected){ready=true;openWeb();}else ui.postDelayed(()->waitUntilReady(attempts+1),250);});
