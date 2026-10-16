@@ -1,12 +1,14 @@
 import json,pathlib,subprocess,time,sys
 root=pathlib.Path(__file__).resolve().parents[1];out=root/'test-output';out.mkdir(exist_ok=True)
-def adb(*args,**kwargs):return subprocess.run(['adb',*args],check=True,**kwargs)
+def adb(*args,**kwargs):
+    kwargs.setdefault('timeout',45)
+    return subprocess.run(['adb',*args],check=True,**kwargs)
 adb('shell','wm','size','1920x1080');adb('shell','wm','density','240')
 adb('shell','settings','put','system','accelerometer_rotation','0');adb('shell','settings','put','system','user_rotation','0')
 # A fresh phone emulator otherwise consumes DPAD input in Android's first-use
 # fullscreen tutorial. Real TV launchers do not display this phone-only overlay.
 adb('shell','settings','put','secure','immersive_mode_confirmations','confirmed')
-adb('install','-r',str(root/'build/android/test.apk'));adb('logcat','-c')
+adb('install','-r',str(root/'build/android/test.apk'),timeout=120);adb('logcat','-c')
 adb('shell','am','start','-n','com.palma.vision.tv/.MainActivity','--ez','selfTest','true')
 seen=set();finished=False;started=time.monotonic();saved_report=None
 while time.monotonic()-started<750:

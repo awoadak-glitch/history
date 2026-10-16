@@ -4,7 +4,7 @@ const report={version:'1.0.0',platform:'Android emulator',checks:[],passed:false
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const check=(step,values={})=>{report.checks.push({step,...values});console.log('PALMA_TV_TEST '+JSON.stringify({step,...values}));};
 async function until(predicate,label,timeout=65000){const end=Date.now()+timeout;while(Date.now()<end){const value=predicate();if(value)return value;await wait(200);}throw Error(label);}
-async function api(route,params={}){const r=await fetch(route+'?'+new URLSearchParams(params));const j=await r.json();if(!r.ok)throw Error('API '+r.status+' '+(j.code||''));return j;}
+async function api(route,params={}){const r=await fetch(route+'?'+new URLSearchParams(params),{signal:AbortSignal.timeout(120000)});const j=await r.json();if(!r.ok)throw Error('API '+r.status+' '+(j.code||''));return j;}
 async function decoded(label){const video=await until(()=>document.querySelector('#player-dialog[open] video'),label+' player missing');video.muted=true;await until(()=>{if(document.querySelector('.player-error:not([hidden])'))throw Error(label+' playback error');return video.currentTime>3&&video.videoWidth>0&&video.getVideoPlaybackQuality().totalVideoFrames>0;},label+' decode timeout');check(label,{width:video.videoWidth,height:video.videoHeight,frames:video.getVideoPlaybackQuality().totalVideoFrames,duration:Number.isFinite(video.duration)?video.duration:'live'});return video;}
 async function shot(name){console.log('PALMA_TV_TEST '+JSON.stringify({screenshot:name}));await wait(1600);}
 try{
@@ -15,11 +15,11 @@ try{
   window.PalmaTV.focus(sidebar.querySelector('.nav-item'));check('remote-ready');
   const first=document.activeElement;await until(()=>document.activeElement!==first,'Real Android DPAD key did not move focus',15000);check('Android DPAD focus moved',{target:document.activeElement.getAttribute('href')});await shot('home');
   location.hash='#/detail?provider=palma&kind=movie&id=4528';await until(()=>document.querySelector('#detail-content .server-row'),'Movie details missing');await shot('movie-details');
-  const movie=await api('/api/resolve',{provider:'palma',kind:'movie',id:'4528',index:'1',target:'web'});openPlayer(movie,{provider:'palma',kind:'movie',id:'4528',title:'Oldboy'},'');
+  check('Resolving movie');const movie=await api('/api/resolve',{provider:'palma',kind:'movie',id:'4528',index:'1',target:'web'});check('Movie resolved',{type:movie.type});openPlayer(movie,{provider:'palma',kind:'movie',id:'4528',title:'Oldboy'},'');
   const video=await decoded('PALMA B2 movie decoded');if(video.duration<300)throw Error('Movie returned a short substitute');
   const box=document.querySelector('.player-wrap').getBoundingClientRect();if(Math.abs(box.width-innerWidth)>2||Math.abs(box.height-innerHeight)>2)throw Error('Player not true viewport fullscreen');check('Immersive fullscreen',{width:box.width,height:box.height});await shot('movie');
   window.PalmaTV.mediaKey(127);if(!video.paused)throw Error('Pause key failed');window.PalmaTV.mediaKey(126);await until(()=>!video.paused,'Play key failed');window.PalmaTV.mediaKey(90);await until(()=>video.currentTime>10,'Seek key failed');check('Remote play pause and seek');closePlayer();
-  const channel=await api('/api/resolve',{provider:'palma',kind:'channel',id:'63',index:'0',target:'web'});openPlayer(channel,{provider:'palma',kind:'channel',id:'63',title:'PALMA live'},'');await decoded('PALMA live channel decoded');await shot('channel');closePlayer();
+  check('Resolving channel');const channel=await api('/api/resolve',{provider:'palma',kind:'channel',id:'63',index:'0',target:'web'});check('Channel resolved',{type:channel.type});openPlayer(channel,{provider:'palma',kind:'channel',id:'63',title:'PALMA live'},'');await decoded('PALMA live channel decoded');await shot('channel');closePlayer();
   location.hash='#/detail?provider=witcher&kind=anime&id=Naruto&area=main';await until(()=>document.querySelector('.anime-title-block h1')?.textContent==='Naruto','Anime detail missing');
   const tab=await until(()=>document.querySelector('[data-anime-tab="characters"]'),'Characters tab missing');tab.click();await until(()=>document.querySelector('[data-character-id="17"]'),'Characters missing');check('Anime characters and details');await shot('anime-details');
   const servers=await api('/api/catalog',{provider:'witcher',route:'anime/Naruto/episodes/001/servers'}),items=Array.isArray(servers)?servers:servers.items||servers.data||[];
