@@ -1,0 +1,61 @@
+name: Build independent PALMA TV
+on:
+  push:
+    branches: [main]
+    paths: ['palma-tv/**', '.github/workflows/build-palma-tv.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: palma-tv
+  cancel-in-progress: false
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Prepare TV runtime and verify source contracts
+        run: |
+          node palma-tv/scripts/prepare.mjs
+          npm --prefix palma-web test
+          npm --prefix palma-tv test
+      - name: Install native build tools
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'ndk;26.1.10909125'
+      - name: Build universal APK
+        run: python3 palma-tv/scripts/build-android.py
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Test native runtime, remote and actual video decoding
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          ram-size: 3072M
+          heap-size: 512M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: python3 palma-tv/scripts/test-emulator.py
+      - name: Preserve APK and verification
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: palma-tv-build
+          path: |
+            palma-tv/release/*
+            palma-tv/test-output/*
+          if-no-files-found: warn
+          retention-days: 14

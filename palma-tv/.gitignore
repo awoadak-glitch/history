@@ -1,0 +1,5 @@
+build/
+release/
+test-output/
+*.zip
+*.apk
