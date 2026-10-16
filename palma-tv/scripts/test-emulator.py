@@ -16,6 +16,9 @@ while time.monotonic()-started<750:
     for line in logs.splitlines():
         if line in seen:continue
         seen.add(line)
+        if 'PALMA_TV_NETWORK ' in line:
+            try:print(json.dumps({'network':json.loads(line[line.index('{'):])}),flush=True)
+            except (ValueError,json.JSONDecodeError):pass
         if 'PALMA-TV-TEST' not in line:continue
         try:event=json.loads(line[line.index('{'):])
         except (ValueError,json.JSONDecodeError):continue

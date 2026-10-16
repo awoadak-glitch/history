@@ -9,7 +9,8 @@ async function decoded(label){const video=await until(()=>document.querySelector
 async function shot(name){console.log('PALMA_TV_TEST '+JSON.stringify({screenshot:name}));await wait(1600);}
 try{
   report.webview=navigator.userAgent;report.viewport={width:innerWidth,height:innerHeight};
-  await until(()=>document.querySelector('.media-card'),'PALMA home missing',95000);await document.fonts.ready;
+  let retries=0;
+  await until(()=>{const card=document.querySelector('.media-card');if(card)return card;const retry=document.querySelector('.native-home-state .btn.primary');if(retry&&retries<2){check('Retry catalogue after connection error',{attempt:++retries});retry.click();}return false;},'PALMA home missing',130000);await document.fonts.ready;
   check('Native Node source catalogue and home',{cards:document.querySelectorAll('.media-card').length});
   const sidebar=document.getElementById('sidebar');if(sidebar.inert||sidebar.getBoundingClientRect().right>innerWidth+5)throw Error('TV navigation not visible');
   window.PalmaTV.focus(sidebar.querySelector('.nav-item'));check('remote-ready');
@@ -27,6 +28,6 @@ try{
   if(!played)throw Error('Anime failed on tested servers');
   location.hash='#/settings';await until(()=>document.querySelector('#playback-target'),'Settings missing');window.PalmaTV.picker(document.querySelector('#playback-target'));if(!document.querySelector('.tv-picker[open]'))throw Error('Remote select picker missing');window.PalmaTV.back();check('Remote select and back');
   localStorage.setItem('palma-tv-test-persistence','retained');check('Persisted local preferences');location.hash='#/home';report.passed=true;
-}catch(error){report.error=String(error.message).slice(0,250);check('FAILED',{error:report.error});}
+}catch(error){report.error=String(error.message).slice(0,250);report.screenMessage=document.querySelector('#main .state p')?.textContent?.slice(0,200)||'';check('FAILED',{error:report.error,screenMessage:report.screenMessage});}
 await fetch('/test/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(report)});
 console.log('PALMA_TV_TEST '+JSON.stringify({done:true,passed:report.passed,report}));
