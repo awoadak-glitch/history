@@ -47,3 +47,6 @@ window.addEventListener('hashchange',()=>{previousRoute=route;route=location.has
 new MutationObserver(()=>{if(!scheduled){scheduled=true;requestAnimationFrame(()=>{scheduled=false;initial();});}}).observe(document.body,{childList:true,subtree:true});
 const hint=document.createElement('div');hint.className='tv-remote-hint';hint.textContent='الأسهم للتنقل  •  OK للاختيار  •  رجوع للعودة';document.body.append(hint);
 window.PalmaTV={back,mediaKey,focus,initial,picker};setTimeout(initial,200);
+
+// Reassert native immersive mode when entering or leaving the video surface.
+new MutationObserver(()=>window.PalmaTVNative?.immersive()).observe($('#player-dialog'),{attributes:true,attributeFilter:['open']});

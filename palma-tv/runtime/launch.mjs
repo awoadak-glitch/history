@@ -11,6 +11,9 @@ if(!/^\d+$/.test(rawPort)||!token||token.length!==64||!storage)throw Error('Inva
 dns.setDefaultResultOrder('ipv4first');
 net.setDefaultAutoSelectFamily(true);
 if(mode==='test'){
+  // Observe fatal failures without suppressing Node's normal exit behavior.
+  process.on('uncaughtExceptionMonitor',(error,origin)=>console.error('PALMA_TV_FATAL '+JSON.stringify({name:error.name,code:error.code,origin,stack:String(error.stack).replace(/https?:\/\/\S+/g,'[URL]').slice(0,4000)})));
+  process.on('exit',code=>console.log('PALMA_TV_EXIT '+code));
   const fetch=globalThis.fetch;
   globalThis.fetch=async(...args)=>{try{return await fetch(...args);}catch(error){console.log('PALMA_TV_NETWORK '+JSON.stringify({name:error.name,code:error.cause?.code||error.code||'unknown'}));throw error;}};
 }

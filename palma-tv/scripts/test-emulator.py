@@ -1,4 +1,4 @@
-import json,pathlib,subprocess,time,sys
+import json,pathlib,subprocess,time,sys,re
 root=pathlib.Path(__file__).resolve().parents[1];out=root/'test-output';out.mkdir(exist_ok=True)
 def adb(*args,**kwargs):
     kwargs.setdefault('timeout',45)
@@ -11,8 +11,19 @@ adb('shell','settings','put','secure','immersive_mode_confirmations','confirmed'
 adb('install','-r',str(root/'build/android/test.apk'),timeout=120);adb('logcat','-c')
 adb('shell','am','start','-n','com.palma.vision.tv/.MainActivity','--ez','selfTest','true')
 seen=set();finished=False;started=time.monotonic();saved_report=None
+def safe_log(text):
+    text=re.sub(r'https?://[^\s\"\']+', '[URL]', text)
+    text=re.sub(r'(?i)(?:session|token|cookie|authorization)[:=]\s*[^\s,\"\']+', '[credential]', text)
+    return re.sub(r'\b[a-f0-9]{64}\b','[hash]',text)
+def diagnostics(reason):
+    logs=adb('logcat','-b','all','-d','-s','PALMA-TV-TEST:I','PALMA-TV:I','PALMA-Node:I','AndroidRuntime:E','libc:F','DEBUG:F','ActivityManager:I','lmkd:I','*:S',capture_output=True,text=True).stdout
+    (out/'runtime-failure.txt').write_text(safe_log(logs))
+    (out/'verification.json').write_text(json.dumps({'passed':False,'error':reason},indent=2))
+    with (out/'failure.png').open('wb') as f:adb('exec-out','screencap','-p',stdout=f)
+    print(safe_log(logs[-16000:]),flush=True)
+    raise SystemExit(reason)
 while time.monotonic()-started<750:
-    logs=adb('logcat','-d','-s','PALMA-TV-TEST:I','PALMA-TV:E','PALMA-Node:I','AndroidRuntime:E','*:S',capture_output=True,text=True).stdout
+    logs=adb('logcat','-d','-s','PALMA-TV-TEST:I','PALMA-TV:I','PALMA-Node:I','AndroidRuntime:E','*:S',capture_output=True,text=True).stdout
     for line in logs.splitlines():
         if line in seen:continue
         seen.add(line)
@@ -41,10 +52,8 @@ while time.monotonic()-started<750:
         if event.get('restart') and saved_report is not None:
             retained=event.get('retained') and event.get('progress');saved_report['checks'].append({'step':'Preferences and playback progress survive a process restart','passed':bool(retained)});saved_report['passed']=bool(retained)
             (out/'verification.json').write_text(json.dumps(saved_report,indent=2,ensure_ascii=False));adb('shell','am','force-stop','com.palma.vision.tv');sys.exit(0 if retained else 1)
-    if 'Runtime initialization failed:' in logs or 'Runtime exited with code' in logs or 'FATAL EXCEPTION' in logs:break
+    if any(message in logs for message in ['Runtime initialization failed:', 'Runtime exited with code', 'FATAL EXCEPTION', 'PALMA_TV_FATAL', 'WebView renderer stopped']):diagnostics('Android runtime or renderer stopped')
+    pid=subprocess.run(['adb','shell','pidof','com.palma.vision.tv'],capture_output=True,text=True,timeout=15)
+    if not pid.stdout.strip():diagnostics('Android application process exited unexpectedly')
     time.sleep(1)
-with (out/'failure.png').open('wb') as f:adb('exec-out','screencap','-p',stdout=f)
-# Diagnostic text can contain remote addresses. Keep only runtime/error names rather than source requests.
-safe=[line for line in logs.splitlines() if 'PALMA-TV' in line or 'FATAL EXCEPTION' in line or 'java.lang.' in line or 'Cannot ' in line or 'Error:' in line]
-(out/'startup-failure.txt').write_text('\n'.join(safe))
-raise SystemExit('Android TV verification timed out; inspect screenshot and startup-failure.txt')
+diagnostics('Android TV verification timed out')

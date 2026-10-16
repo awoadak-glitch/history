@@ -5,6 +5,9 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Build;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.KeyEvent;
@@ -29,7 +32,7 @@ public class MainActivity extends Activity {
   private ValueCallback<Uri[]> fileCallback;private String backup;
   @Override public void onCreate(Bundle state){
     super.onCreate(state);tests=getIntent().getBooleanExtra("selfTest",false);
-    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);immersive();
+    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON|WindowManager.LayoutParams.FLAG_FULLSCREEN);immersive();
     frame=new FrameLayout(this);frame.setBackgroundColor(Color.rgb(12,20,34));setContentView(frame);
     TextView loading=new TextView(this);loading.setText("PALMA TV\nجاري تجهيز التطبيق…");loading.setTextColor(Color.rgb(216,186,120));loading.setTextSize(26);loading.setGravity(17);frame.addView(loading,new FrameLayout.LayoutParams(-1,-1));
     synchronized(MainActivity.class){if(!started){started=true;byte[] random=new byte[32];new SecureRandom().nextBytes(random);StringBuilder hex=new StringBuilder();for(byte b:random)hex.append(String.format("%02x",b&255));token=hex.toString();new Thread(()->startRuntime(),"palma-runtime").start();}}
@@ -70,8 +73,8 @@ public class MainActivity extends Activity {
     web.setBackgroundColor(Color.rgb(12,20,34));
     web.setWebViewClient(new WebViewClient(){
       @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){Uri uri=request.getUrl();if(local(uri))return false;if(request.isForMainFrame()&&request.hasGesture()&&"https".equals(uri.getScheme())){try{startActivity(new Intent(Intent.ACTION_VIEW,uri));}catch(Exception e){Toast.makeText(MainActivity.this,"لا يوجد تطبيق لفتح هذا الرابط",Toast.LENGTH_SHORT).show();}}return true;}
-      @Override public void onPageFinished(WebView view,String url){if(local(Uri.parse(url))){CookieManager.getInstance().flush();view.requestFocus();if(tests&&getIntent().getBooleanExtra("verifyRestart",false))view.evaluateJavascript("console.log('PALMA_TV_TEST '+JSON.stringify({restart:true,retained:localStorage.getItem('palma-tv-test-persistence')==='retained',progress:!!localStorage.getItem('palma.progress')}))",null);}}
-      @Override public boolean onRenderProcessGone(WebView view,RenderProcessGoneDetail detail){view.destroy();web=null;failure("توقفت واجهة التلفاز. أغلق التطبيق وافتحه مجددًا.");return true;}
+      @Override public void onPageFinished(WebView view,String url){if(local(Uri.parse(url))){CookieManager.getInstance().flush();view.requestFocus();immersive();if(tests&&getIntent().getBooleanExtra("verifyRestart",false))view.evaluateJavascript("console.log('PALMA_TV_TEST '+JSON.stringify({restart:true,retained:localStorage.getItem('palma-tv-test-persistence')==='retained',progress:!!localStorage.getItem('palma.progress')}))",null);}}
+      @Override public boolean onRenderProcessGone(WebView view,RenderProcessGoneDetail detail){android.util.Log.e("PALMA-TV","WebView renderer stopped; crashed="+detail.didCrash());frame.removeView(view);view.destroy();web=null;failure("توقفت واجهة التلفاز. أغلق التطبيق وافتحه مجددًا.");return true;}
     });
     web.setWebChromeClient(new WebChromeClient(){
       @Override public void onShowCustomView(View view,CustomViewCallback callback){if(fullView!=null){callback.onCustomViewHidden();return;}fullView=view;fullCallback=callback;frame.addView(view,new FrameLayout.LayoutParams(-1,-1));immersive();}
@@ -81,7 +84,9 @@ public class MainActivity extends Activity {
       @Override public boolean onShowFileChooser(WebView view,ValueCallback<Uri[]> callback,FileChooserParams params){if(fileCallback!=null)fileCallback.onReceiveValue(null);fileCallback=callback;try{Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");startActivityForResult(intent,21);}catch(Exception error){fileCallback.onReceiveValue(null);fileCallback=null;Toast.makeText(MainActivity.this,"لا يوجد منتقي ملفات على هذا الجهاز",Toast.LENGTH_LONG).show();}return true;}
     });
     web.addJavascriptInterface(new Object(){
-      @JavascriptInterface public void exit(){ui.post(()->{if(web!=null&&local(Uri.parse(web.getUrl())))finish();});}
+      @JavascriptInterface public void exit(){ui.post(()->{if(web!=null&&local(Uri.parse(web.getUrl()))){if(tests)android.util.Log.i("PALMA-TV","User requested exit");finish();}});}
+      @JavascriptInterface public void immersive(){ui.post(()->MainActivity.this.immersive());}
+      @JavascriptInterface public void verifyFullscreen(){if(!tests)return;ui.postDelayed(()->{if(web==null)return;WindowInsets insets=getWindow().getDecorView().getRootWindowInsets();boolean hidden=insets!=null&&(Build.VERSION.SDK_INT>=30?!insets.isVisible(WindowInsets.Type.statusBars())&&!insets.isVisible(WindowInsets.Type.navigationBars()):(getWindow().getDecorView().getSystemUiVisibility()&View.SYSTEM_UI_FLAG_FULLSCREEN)!=0);web.evaluateJavascript("window.dispatchEvent(new CustomEvent('palma-tv-insets',{detail:{hidden:"+hidden+"}}))",null);},500);}
       @JavascriptInterface public void keyboard(){ui.post(()->{if(web!=null&&local(Uri.parse(web.getUrl()))){web.requestFocus();((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).showSoftInput(web,android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);}});}
       @JavascriptInterface public void exportLibrary(String data){if(data==null||data.length()>4*1024*1024)return;ui.post(()->{if(web==null||!local(Uri.parse(web.getUrl())))return;backup=data;try{Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");intent.putExtra(Intent.EXTRA_TITLE,"palma-tv-library.json");startActivityForResult(intent,22);}catch(Exception error){backup=null;Toast.makeText(MainActivity.this,"لا يوجد منتقي ملفات على هذا الجهاز",Toast.LENGTH_LONG).show();}});}
     },"PalmaTVNative");
@@ -89,7 +94,9 @@ public class MainActivity extends Activity {
     web.loadUrl("http://127.0.0.1:"+PORT+"/?session="+token+"#/home");
   }
   private void failure(String text){frame.removeAllViews();TextView message=new TextView(this);message.setText(text);message.setTextColor(Color.WHITE);message.setTextSize(22);message.setGravity(17);message.setPadding(40,30,40,30);frame.addView(message,new FrameLayout.LayoutParams(-1,-1));}
-  private void immersive(){getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_LAYOUT_STABLE);}
+  private void immersive(){
+    if(Build.VERSION.SDK_INT>=30){getWindow().setDecorFitsSystemWindows(false);WindowInsetsController controller=getWindow().getInsetsController();if(controller!=null){controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);controller.hide(WindowInsets.Type.systemBars());}}
+    else getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_LAYOUT_STABLE);}
   @Override public void onWindowFocusChanged(boolean focus){super.onWindowFocusChanged(focus);if(focus)immersive();}
   @Override public void onBackPressed(){if(fullView!=null){frame.removeView(fullView);fullView=null;if(fullCallback!=null)fullCallback.onCustomViewHidden();return;}if(web!=null){web.evaluateJavascript("window.PalmaTV && window.PalmaTV.back()",null);}else finish();}
   @Override public boolean dispatchKeyEvent(KeyEvent event){
@@ -99,7 +106,7 @@ public class MainActivity extends Activity {
     }
     return super.dispatchKeyEvent(event);
   }
-  @Override protected void onPause(){if(web!=null){web.evaluateJavascript("document.querySelector('#player-dialog video')?.pause()",null);CookieManager.getInstance().flush();}super.onPause();}
+  @Override protected void onPause(){if(tests)android.util.Log.i("PALMA-TV","Activity paused; finishing="+isFinishing());if(web!=null){web.evaluateJavascript("document.querySelector('#player-dialog video')?.pause()",null);CookieManager.getInstance().flush();}super.onPause();}
   @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request==21&&fileCallback!=null){fileCallback.onReceiveValue(result==RESULT_OK&&data!=null&&data.getData()!=null?new Uri[]{data.getData()}:null);fileCallback=null;}if(request==22){String value=backup;backup=null;if(result==RESULT_OK&&data!=null&&data.getData()!=null&&value!=null){try(OutputStream out=getContentResolver().openOutputStream(data.getData())){out.write(value.getBytes("UTF-8"));Toast.makeText(this,"تم حفظ بيانات بالما",Toast.LENGTH_SHORT).show();}catch(Exception error){Toast.makeText(this,"تعذر حفظ الملف",Toast.LENGTH_SHORT).show();}}}}
-  @Override protected void onDestroy(){if(web!=null){web.destroy();web=null;}super.onDestroy();}
+  @Override protected void onDestroy(){if(tests)android.util.Log.i("PALMA-TV","Activity destroyed; finishing="+isFinishing());if(web!=null){web.destroy();web=null;}super.onDestroy();}
 }
