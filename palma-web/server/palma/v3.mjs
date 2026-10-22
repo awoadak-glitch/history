@@ -119,7 +119,7 @@ export class PalmaV3Client {
       } catch {throw new PalmaV3Error('تعذر التحقق من استجابة المشاهدة الآمنة.',502,'PALMA_V3_DECRYPT_FAILED');}
     }
     if(!response.ok||parsed?.status==='error') {
-      if(route===registrationRoute&&(response.status===401||response.status===403))throw new PalmaV3Error('مصدر المشاهدة لم يقبل تسجيل نسخة الكمبيوتر. يلزم تفعيل دعم Windows لدى المصدر.',503,'PALMA_V3_DEVICE_REJECTED');
+      if(route===registrationRoute&&(response.status===401||response.status===403))throw new PalmaV3Error('تعذر التحقق من هوية التطبيق لدى مصدر المشاهدة. لم تُنشأ جلسة تشغيل.',503,'PALMA_V3_DEVICE_REJECTED');
       if([401,403].includes(response.status))throw new PalmaV3Error('رفض مصدر المشاهدة جلسة هذا الجهاز. لا يمكن تجهيز رابط البث.',403,'PALMA_V3_SESSION_REJECTED');
       throw new PalmaV3Error('تعذر تجهيز رابط المشاهدة من المصدر.',response.status===404?404:502,'PALMA_V3_UPSTREAM_ERROR');
     }
