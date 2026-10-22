@@ -7,7 +7,7 @@ const restricted=value=>value!=null&&!['0',0,'false',false,'no'].includes(value)
 export function assertPlaybackAllowed(value) {
   if(value?.update_required)throw new SourceError('مصدر المشاهدة يتطلب تحديث طريقة الاتصال. لا يمكن استخدام روابط الإصدار القديم.',503,'PALMA_UPDATE_REQUIRED');
   if(restricted(value?.premium))throw new SourceError('هذا السيرفر يحتاج حسابًا لدى المصدر.',403,'PREMIUM_SOURCE');
-  for(const name of ['tdm_guard','tamper_guard']) {
+  for(const name of ['tdm_guard','tamper_guard','adblock_guard']) {
     const guard=value?.[name];
     if(guard?.action&&!['allow','none'].includes(guard.action))throw new SourceError('يتطلب المصدر تحققًا من الجهاز أو تطبيق التشغيل قبل المشاهدة.',403,'PALMA_PLAYER_VERIFICATION_REQUIRED');
   }

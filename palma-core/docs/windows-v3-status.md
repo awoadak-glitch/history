@@ -1,81 +1,73 @@
 # Windows playback after OscarTV 1.1.6
 
-Status: development draft, blocked by source registration. No working Windows
-playback release has been produced from this change.
+Status: V3 registration, encrypted detail/resolve responses, an HLS playlist,
+and real MPEG-TS media bytes succeeded against the source on 2026-10-22.
+Windows 2.2.7 packaging and Windows decoding/download verification are pending.
 
-## Evidence from the supplied application and live requests
+## Cause and corrected diagnosis
 
-- Supplied application: `com.drama.mp4`, version name `1.1.6`, version code `18`.
-- Existing Windows 2.2.6 catalog requests still return content. A movie detail
-  response has `update_required: true` and the message
-  `حدّث التطبيق لمتابعة المشاهدة`; its links do not establish a usable playback
-  session. Sending version 18 as a query parameter or `X-App-Ver` did not clear
-  this requirement in the prior comparison.
-- The supplied Android code has separate account endpoints (`api/auth/*`) and
-  device playback registration (`api/v3/devices/*`). Account sync/login is not
-  evidence that a Windows playback device has been accepted.
-- The new Windows transport was exercised against the existing source origin
-  `https://api.ossccaarr111.online/` on 2026-10-22. The challenge request returned
-  HTTP 200. Registering a freshly generated P-256 public key with platform
-  `windows` returned HTTP 403 and `attestation failed`.
-- This refusal does not isolate the platform field as its cause: that request
-  had no accepted application-attestation proof. It establishes failure to
-  satisfy registration, not that changing the platform label would fix it or
-  that the server necessarily needs a Windows-specific endpoint.
-- The APK obtains `device_secret` from a successful registration response and
-  stores it for subsequent requests. It is not a fixed playback credential in
-  the APK that can be copied into a standalone Windows client.
-- Consequently no authorized V3 detail, resolve, or real video request could
-  follow that registration. A changed hostname or fabricated Android proof was
-  not used to work around the refusal.
+Windows 2.2.6 still loads the catalog, but legacy playback detail reports
+`update_required: true`. A version header alone does not establish the new
+session. Playback now uses `api/v3/devices/*` and `api/v3/resolve.php`.
+Account login under `api/auth/*` is separate and was not needed in the live test.
 
-## Implemented in this draft
+The earlier registration probe omitted `attest` and received HTTP 403 with
+`attestation failed`. It did not establish that Windows was unsupported.
+With the recovered application identity, registration with platform `windows`
+returned HTTP 200, `status: success`, `sig_alg: ecdsa`, and `trust: basic`.
+No server changes were needed for this test.
 
-The desktop resolver uses V3 content details and resolves a selected link ID
-through `api/v3/resolve.php` when the V3 response does not already contain a
-link. Movie, series episode, anime episode, anime film, channel, wrestling and
-match-highlight identifiers are kept distinct. Watch and download use the same
-authorized media/session pipeline.
+## Recovered release identity
 
-Each installation creates its own P-256 private key and random device ID. The
-Windows main process stores registration credentials through Electron
-`safeStorage`. Records are separated and validated by API origin. Keys and
-source tokens are not sent to the renderer, committed, or logged.
+Supplied APK: `com.drama.mp4`, version name `1.1.6`, code `18`, SHA-256
+`b6b23d4f667d4662281bb2a8363d3821d36aa37ecc13e06384227dd96a45326b`.
+Public signer-certificate SHA-256:
+`6e2fcda8631eb49ebcba4ca8ef4c597abe84654c7d3e8096db32bdd21ecf763f`.
 
-V3 requests sign the method, encoded path, query hash, timestamp, random nonce,
-and body hash. Encrypted responses are verified using AES-256-GCM and the
-request-bound response key. Clock mismatch has one bounded retry. Registration
-refusal has a cooldown, retains the same identity, and does not fall back to
-legacy playback URLs. A token-renewal method is available for the source's
-`api/v3/devices/token.php` contract.
+`nativeAttestationData` builds JSON with `file`, `raw`, `pm`, `hook`, and `acf`.
+The native APK readers hash the first signer certificate, through stdio and
+direct reads respectively. The package-manager reader hashes that certificate.
+An independent signing-block parser and Androguard obtained the same digest.
+The manifest declares `androidx.core.app.CoreComponentFactory`, represented as
+`ok` by the native serializer. `registration-profile.mjs` documents the legacy
+compatibility identity. It is release metadata, not a Windows integrity
+guarantee or hardware attestation.
 
-Legacy `update_required` responses and V3 registration refusal now have distinct
-errors. They are not reported as one failed playback server that a different
-quality or server selection can necessarily fix. Source player-verification
-requirements and premium flags are preserved.
+The APK has a software P-256 key fallback. The Windows client creates its own
+key and omits Android hardware `attest_chain` and its challenge. The platform
+stays Windows. The source version `1.1.6` is separate from desktop `2.2.7`.
+The public certificate identity is not the APK's private signing key.
 
-## Remaining prerequisite
+## Implementation and evidence
 
-The source operator must support registration of this Windows client or provide
-a documented Windows attestation/provisioning integration for its generated
-public key. The transport exposes `provideRegistrationProof` for that supported
-integration; no proof provider is configured in the desktop build. Android
-binary identity or a mobile device's private credentials are not substituted.
+Each installation creates its own P-256 key and device ID. Electron safeStorage
+protects source credentials, separated by API origin. The server issues each
+installation's secret; no shared secret is shipped or logged.
 
-After that integration is available, verify real movie and episode playback,
-HLS segments, channels, and downloads on Windows, then package a new release.
-Do not publish this draft as a tested 2.2.7 playback fix.
+V3 signs the method, path, query hash, timestamp, nonce, and body hash.
+AES-256-GCM responses use a request-bound response key. The resolver requests
+V3 details then resolves the selected link ID. Source-issued cookies remain
+bound to approved media origins and are removed on cross-origin redirects.
+Movies, episodes, anime, channels, wrestling, and match videos retain separate
+source identifiers. Premium, update, player, tamper, and adblock rejections
+remain enforced. Refused registration retains its key and has a retry cooldown.
 
-## Validation
+Live diagnostic for movie 4655: registration HTTP 200; encrypted detail and
+resolve HTTP 200; no update requirement or guard rejection; HLS HTTP 200/206;
+first media segment returned MPEG-TS bytes. Account login was not called.
 
-The complete local web/desktop unit suite passed: 62 tests, including 13 new
-tests for the V3 transport, playback mapping, and protected storage. The desktop
-main module also passed the Node syntax check.
+## Validation and release gate
 
-Local tests cover independent request-signature verification, encrypted-response
-authentication, time correction, stable device identity, encrypted persistence,
-origin separation, registration refusal, content/link mapping, and passing
-source-issued cookies through the playback/download resolver. These tests use
-synthetic source fixtures and do not prove that the live source accepts Windows.
-Native Windows GUI playback and Windows DPAPI were not exercised here; the
-storage integration was tested using an injected encryption adapter.
+63 local web/desktop unit tests pass. They cover signatures, encrypted replies,
+time correction, persistence, origin separation, application identity, link
+mapping, guards, and session propagation. They do not replace Windows testing.
+
+The branch workflow builds Windows 2.2.7 and runs `--self-test-v3` in the packaged
+Electron app. It verifies movie HLS, movie B2, episode decoding and seeking,
+a live channel, and a short HLS download remuxed and decoded with bundled FFmpeg.
+Reports contain status, dimensions, durations and frame counts, never signed
+URLs or credentials. Build artifacts are retained on failure; only a successful
+playback report establishes a verified package.
+
+This hotfix does not include the separate unfinished remote administration
+work. Existing watch history, favorites, navigation, and AWR code are retained.

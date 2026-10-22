@@ -13,14 +13,14 @@ export function canonicalRequest(method,url,timestamp,nonce,body='') {
 }
 
 // The store belongs to one installation and one HTTPS API origin. It must protect
-// its contents at rest. Never import credentials or Android attestations from an APK.
+// its contents at rest. Device private keys and session secrets are never shared.
 export class PalmaV3Client {
-  constructor({base,store,fetchImpl=globalThis.fetch,version='2.2.6',timeout=25000,provideRegistrationProof}={}) {
+  constructor({base,store,fetchImpl=globalThis.fetch,version='2.2.7',sourceVersion=version,timeout=25000,provideRegistrationProof}={}) {
     this.base=new URL(base);
     if(this.base.protocol!=='https:'||this.base.username||this.base.password||this.base.port)throw new TypeError('Expected an HTTPS API origin');
     this.base=new URL(this.base.origin+'/');
     if(!store?.load||!store?.save)throw new TypeError('Protected device store required');
-    this.store=store;this.fetch=fetchImpl;this.version=version;this.timeout=timeout;
+    this.store=store;this.fetch=fetchImpl;this.version=version;this.sourceVersion=sourceVersion;this.timeout=timeout;
     this.provideRegistrationProof=provideRegistrationProof;this.clockOffset=0;
     this.initPromise=null;this.registrationPromise=null;this.state=null;
     this.registrationFailure=null;this.retryAt=0;
@@ -61,10 +61,10 @@ export class PalmaV3Client {
     if(!this.registrationPromise)this.registrationPromise=(async()=>{
       try {
         const challenge=await this.send('api/v3/devices/challenge.php',{body:{device_id:this.state.deviceId},signed:false});
-        // Only a platform-specific proof issued by a supported integration may
-        // be supplied here. There is intentionally no Android-proof emulation.
+        // Application identity and hardware attestation are separate fields in
+        // the source protocol. Software keys do not send a hardware chain.
         const proof=await this.provideRegistrationProof?.({origin:this.base.origin,deviceId:this.state.deviceId,publicKey:this.publicKey.export({type:'spki',format:'pem'}),challenge:challenge.challenge});
-        const body={device_id:this.state.deviceId,public_key:this.publicKey.export({type:'spki',format:'pem'}),platform:'windows',app_version:this.version};
+        const body={device_id:this.state.deviceId,public_key:this.publicKey.export({type:'spki',format:'pem'}),platform:'windows',app_version:this.sourceVersion};
         if(proof) {
           if(typeof proof.attest==='string')body.attest=proof.attest;
           if(Array.isArray(proof.attest_chain)&&proof.attest_chain.every(v=>typeof v==='string'))body.attest_chain=proof.attest_chain;

@@ -2,12 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash,createHmac,createCipheriv,createPublicKey,verify,randomBytes} from 'node:crypto';
 import {PalmaV3Client} from '../server/palma/v3.mjs';
+import {SOURCE_PROFILE,sourceApplicationProof} from '../server/palma/registration-profile.mjs';
 
 const base='https://source.example/';
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const memory=()=>{let value=null;return {load:async()=>structuredClone(value),save:async next=>{value=structuredClone(next);}};};
 
-function source({deny=false,badTime=false,corrupt=false}={}) {
+function source({deny=false,badTime=false,corrupt=false,applicationProof=false}={}) {
   const requests=[];let publicKey,keyId,seenTime=false;const secret=randomBytes(32);
   const encrypted=(payload,headers)=>{
     const key=createHmac('sha256',secret).update(['oscar-resp-v1',keyId,headers['X-V3-Nonce'],headers['X-V3-Ts']].join('|')).digest();
@@ -22,7 +23,12 @@ function source({deny=false,badTime=false,corrupt=false}={}) {
     const body=options.body?JSON.parse(options.body):null;
     if(url.pathname.endsWith('/challenge.php'))return Response.json({status:'success',challenge:'c291cmNlLWNoYWxsZW5nZQ=='});
     if(url.pathname.endsWith('/register.php')) {
-      assert.equal(body.platform,'windows');assert.equal(body.attest,undefined);assert.equal(body.attest_chain,undefined);
+      assert.equal(body.platform,'windows');assert.equal(body.attest_chain,undefined);assert.equal(body.challenge,undefined);
+      if(applicationProof){
+        const cert='6e2fcda8631eb49ebcba4ca8ef4c597abe84654c7d3e8096db32bdd21ecf763f';
+        assert.deepEqual(JSON.parse(body.attest),{file:cert,raw:cert,pm:cert,hook:0,acf:'ok'});
+        assert.equal(body.app_version,'1.1.6');
+      }else assert.equal(body.attest,undefined);
       publicKey=createPublicKey(body.public_key);keyId=digest(publicKey.export({type:'spki',format:'der'}));
       if(deny)return Response.json({status:'error',message:'attestation failed'},{status:403});
       return Response.json({status:'success',key_id:keyId,device_secret:secret.toString('hex')});
@@ -52,6 +58,13 @@ test('V3 registers one per-installation Windows key, signs requests, and decrypt
   await next.get('api/v3/movies/show.php',{id:12});
   assert.equal((await store.load()).deviceId,previous.deviceId);
   assert.equal(server.requests.filter(r=>r.url.pathname.endsWith('register.php')).length,1);
+});
+
+test('desktop registration includes recovered application identity with a distinct source version',async()=>{
+  const server=source({applicationProof:true});
+  const client=new PalmaV3Client({base,store:memory(),fetchImpl:server.fetchImpl,version:'2.2.7',sourceVersion:SOURCE_PROFILE.versionName,provideRegistrationProof:sourceApplicationProof});
+  await client.get('api/v3/movies/show.php',{id:12});
+  assert.equal(server.requests[1].options.headers['User-Agent'],'PALMA-VISION/2.2.7 (Windows)');
 });
 
 test('clock error retries once with a fresh nonce and server time',async()=>{

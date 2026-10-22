@@ -1,0 +1,71 @@
+name: Verify PALMA Windows V3 hotfix
+on:
+  push:
+    branches: [codex/palma-windows-v3-draft-20261022]
+    paths:
+      - 'palma-windows/**'
+      - 'palma-web/**'
+      - '.github/workflows/build-palma-windows-v3.yml'
+permissions:
+  contents: read
+concurrency:
+  group: palma-windows-v3-hotfix
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: palma-windows/package-lock.json
+      - name: Install and test
+        shell: pwsh
+        run: |
+          npm --prefix palma-windows ci
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
+          npm --prefix palma-web test
+          if ($LASTEXITCODE -ne 0) { throw 'Web tests failed' }
+          npm --prefix palma-windows test
+          if ($LASTEXITCODE -ne 0) { throw 'Desktop tests failed' }
+      - name: Build Windows 2.2.7
+        shell: pwsh
+        working-directory: palma-windows
+        run: |
+          npm run build:win
+          if ($LASTEXITCODE -ne 0) { throw 'Windows packaging failed' }
+          $archive = 'release/PALMA-VISION-Windows-2.2.7.zip'
+          (Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() | Set-Content ($archive + '.sha256')
+      - name: Verify actual Windows playback and download
+        shell: pwsh
+        working-directory: palma-windows
+        run: |
+          $env:PALMA_TEST_OUTPUT = Join-Path $pwd 'test-output'
+          $app = Join-Path $pwd 'release/win-unpacked/PALMA VISION.exe'
+          $process = Start-Process -FilePath $app -ArgumentList '--self-test-v3' -Wait -PassThru
+          Get-Content test-output/verification.json
+          if ($process.ExitCode -ne 0) { throw 'Real Windows playback verification failed' }
+      - name: Save verification evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: palma-v3-verification
+          path: |
+            palma-windows/test-output/verification.json
+            palma-windows/test-output/*.png
+          if-no-files-found: warn
+      - name: Save Windows package
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: PALMA-VISION-Windows-2.2.7
+          compression-level: 0
+          path: |
+            palma-windows/release/PALMA-VISION-Windows-2.2.7.zip
+            palma-windows/release/PALMA-VISION-Windows-2.2.7.zip.sha256
+          if-no-files-found: warn

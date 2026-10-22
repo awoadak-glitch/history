@@ -7,6 +7,7 @@ import {createResolver} from './web/api/resolve.js';
 import {PalmaV3Client} from './web/server/palma/v3.mjs';
 import {DEFAULT_BASE} from './web/server/palma/client.mjs';
 import {createV3Playback} from './web/server/palma/playback-v3.mjs';
+import {SOURCE_PROFILE,sourceApplicationProof} from './web/server/palma/registration-profile.mjs';
 import {createSourceStore} from './source-store.mjs';
 import media from './web/api/media.js';
 import {fetchPublic,unticket} from './web/server/http.js';
@@ -15,7 +16,8 @@ import {allowAppPermission} from './permissions.mjs';
 import {createFullscreenHandler} from './fullscreen.mjs';
 
 const root=fileURLToPath(new URL('./web/public/',import.meta.url));
-const selfTest=process.argv.includes('--self-test');
+const v3SelfTest=process.argv.includes('--self-test-v3');
+const selfTest=v3SelfTest||process.argv.includes('--self-test');
 protocol.registerSchemesAsPrivileged([{scheme:'palma',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true,stream:true}}]);
 app.setAppUserModelId('com.palma.vision.desktop');
 if(!selfTest&&!app.requestSingleInstanceLock()){app.quit();}else{
@@ -24,7 +26,7 @@ if(!selfTest&&!app.requestSingleInstanceLock()){app.quit();}else{
   app.whenReady().then(async()=>{
     const base=process.env.PALMA_API_BASE||DEFAULT_BASE;
     const store=createSourceStore({root:path.join(app.getPath('userData'),'source-v3'),origin:new URL(base).origin,safeStorage});
-    const sourceClient=new PalmaV3Client({base,store,version:app.getVersion()});
+    const sourceClient=new PalmaV3Client({base,store,version:app.getVersion(),sourceVersion:SOURCE_PROFILE.versionName,provideRegistrationProof:sourceApplicationProof});
     const resolve=createResolver({getPalmaPlayback:createV3Playback(sourceClient)});
     session.defaultSession.setPermissionRequestHandler((contents,permission,callback,details)=>callback(contents===window?.webContents&&allowAppPermission(permission,details.requestingUrl||contents.getURL(),details.isMainFrame)));
     session.defaultSession.setPermissionCheckHandler((contents,permission,origin,details)=>contents===window?.webContents&&allowAppPermission(permission,details.requestingUrl||origin,details.isMainFrame));
@@ -69,7 +71,7 @@ if(!selfTest&&!app.requestSingleInstanceLock()){app.quit();}else{
     ]));
     if(selfTest){
       window.webContents.setBackgroundThrottling(false);
-      try{const {runSelfTest}=await import('./self-test.mjs');await runSelfTest({window,handler,ffmpeg,fetchResource:fetchPublic,unticket,setTestHandler:value=>{testHandler=value;}});app.exit(0);}
+      try{const {runSelfTest}=await import(v3SelfTest?'./self-test-v3.mjs':'./self-test.mjs');await runSelfTest({window,handler,ffmpeg,fetchResource:fetchPublic,unticket,setTestHandler:value=>{testHandler=value;}});app.exit(0);}
       catch(error){console.error('Desktop self-test failed:',error.message);app.exit(1);}
       return;
     }

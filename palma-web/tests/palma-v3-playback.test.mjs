@@ -31,7 +31,7 @@ test('V3 match highlights use the parent match ID and selected video ID',async()
 });
 
 test('account restriction, update requirement, and player verification cannot become playback URLs',async()=>{
-  for(const item of [{premium:true},{update_required:true},{tdm_guard:{action:'block'}},{tamper_guard:{action:'block'}}]) {
+  for(const item of [{premium:true},{update_required:true},{tdm_guard:{action:'block'}},{tamper_guard:{action:'block'}},{adblock_guard:{action:'block'}}]) {
     const get=createV3Playback({get:async()=>({data:{watch_links:[{id:81,url:'https://cdn.example.com/test.mp4',...item}]}}),resolve:()=>assert.fail('restricted')});
     await assert.rejects(get({kind:'movie',id:'12'}));
   }
