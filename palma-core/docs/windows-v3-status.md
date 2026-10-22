@@ -18,6 +18,13 @@ playback release has been produced from this change.
   `https://api.ossccaarr111.online/` on 2026-10-22. The challenge request returned
   HTTP 200. Registering a freshly generated P-256 public key with platform
   `windows` returned HTTP 403 and `attestation failed`.
+- This refusal does not isolate the platform field as its cause: that request
+  had no accepted application-attestation proof. It establishes failure to
+  satisfy registration, not that changing the platform label would fix it or
+  that the server necessarily needs a Windows-specific endpoint.
+- The APK obtains `device_secret` from a successful registration response and
+  stores it for subsequent requests. It is not a fixed playback credential in
+  the APK that can be copied into a standalone Windows client.
 - Consequently no authorized V3 detail, resolve, or real video request could
   follow that registration. A changed hostname or fabricated Android proof was
   not used to work around the refusal.
