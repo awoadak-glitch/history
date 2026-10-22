@@ -44,12 +44,12 @@ export function decodePlaybackLink(value) {
       if(!encoded)throw invalid();
       const ua=safeHeader(query.get('user_agent')||query.get('ua')||query.get('agent'));
       if(ua)headers['User-Agent']=ua;
-      else if(parsed.protocol==='tdmvideo:'&&!headers['User-Agent'])headers['User-Agent']='TDMPlayer/2.0.6';
-      for(const [parameter,name] of [['referer','Referer'],['referrer','Referer'],['origin','Origin']]) {
+      else if(parsed.protocol==='tdmvideo:'&&!headers['User-Agent'])headers['User-Agent']='TDMPlayer/2.2.2';
+      for(const [parameter,name] of [['ref','Referer'],['referrer','Referer'],['referer','Referer'],['origin','Origin']]) {
         const header=safeHeader(query.get(parameter));if(header)headers[name]=header;
       }
-      // TDM's tdmvideo handler does not consume Cookie query parameters.
-      // Never import source cookies, Authorization, or browser session data.
+      // Source-issued playback cookies are bound separately by
+      // sourceSessionHeaders. Generic URI decoding never imports credentials.
       if(['urlplayer:','urlvplayer:'].includes(parsed.protocol)&&/(play|web)$/.test(parsed.hostname)) {
         raw=transportDecode(rawParameter(parsed,'url'));mode=parsed.hostname.endsWith('web')?'page':'direct';
       } else {

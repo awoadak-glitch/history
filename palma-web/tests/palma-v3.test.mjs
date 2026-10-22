@@ -64,7 +64,7 @@ test('desktop registration includes recovered application identity with a distin
   const server=source({applicationProof:true});
   const client=new PalmaV3Client({base,store:memory(),fetchImpl:server.fetchImpl,version:'2.2.7',sourceVersion:SOURCE_PROFILE.versionName,provideRegistrationProof:sourceApplicationProof});
   await client.get('api/v3/movies/show.php',{id:12});
-  assert.equal(server.requests[1].options.headers['User-Agent'],'PALMA-VISION/2.2.7 (Windows)');
+  assert.equal(server.requests[1].options.headers['User-Agent'],'okhttp/4.12.0');
 });
 
 test('clock error retries once with a fresh nonce and server time',async()=>{

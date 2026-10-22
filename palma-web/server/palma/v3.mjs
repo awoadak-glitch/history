@@ -1,4 +1,6 @@
 import {createHash,createHmac,createPrivateKey,createPublicKey,generateKeyPairSync,randomBytes,randomUUID,sign,createDecipheriv} from 'node:crypto';
+import {requestHeaders} from './iron.mjs';
+import {APP_PROFILE} from './client.mjs';
 
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const hex=value=>typeof value==='string'&&/^[a-f0-9]{32,256}$/i.test(value)&&value.length%2===0;
@@ -85,7 +87,9 @@ export class PalmaV3Client {
     const url=new URL(route,this.base);
     for(const [name,value] of Object.entries(query))if(value!=null)url.searchParams.set(name,String(value));
     const method=body===undefined?'GET':'POST',raw=body===undefined?'':JSON.stringify(body);
-    const headers={'User-Agent':`PALMA-VISION/${this.version} (Windows)`,Accept:'application/json','X-Device-Id':this.state.deviceId};
+    // The supplied release applies Iron signing after V3 signing on every API
+    // request. Preserve its API transport UA; registration still says Windows.
+    const headers={...requestHeaders(APP_PROFILE,url.pathname,Math.floor(Date.now()/1000)+this.clockOffset),'User-Agent':'okhttp/4.12.0',Accept:'application/json','X-Device-Id':this.state.deviceId};
     if(body!==undefined)headers['Content-Type']='application/json';
     let context;
     if(signed) {

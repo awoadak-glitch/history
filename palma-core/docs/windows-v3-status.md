@@ -1,8 +1,9 @@
 # Windows playback after OscarTV 1.1.6
 
-Status: V3 registration, encrypted detail/resolve responses, an HLS playlist,
-and real MPEG-TS media bytes succeeded against the source on 2026-10-22.
-Windows 2.2.7 packaging and Windows decoding/download verification are pending.
+Status: NOT READY FOR RELEASE. Windows 2.2.7 packaging succeeded, but native
+Windows playback on 2026-10-22 decoded a 60.8-second rejection notice instead
+of the requested movie. Successful V3 registration, encrypted detail/resolve,
+HLS HTTP 200, and MPEG-TS bytes did not establish content playback.
 
 ## Cause and corrected diagnosis
 
@@ -53,21 +54,57 @@ source identifiers. Premium, update, player, tamper, and adblock rejections
 remain enforced. Refused registration retains its key and has a retry cooldown.
 
 Live diagnostic for movie 4655: registration HTTP 200; encrypted detail and
-resolve HTTP 200; no update requirement or guard rejection; HLS HTTP 200/206;
-first media segment returned MPEG-TS bytes. Account login was not called.
+resolve HTTP 200; no explicit update requirement or guard rejection. The HLS
+and MPEG-TS response nevertheless contained the source's rejection video.
+Account login was not called. The remaining playback rejection is unresolved.
 
 ## Validation and release gate
 
-63 local web/desktop unit tests pass. They cover signatures, encrypted replies,
+65 local web/desktop unit tests pass. They cover signatures, encrypted replies,
 time correction, persistence, origin separation, application identity, link
 mapping, guards, and session propagation. They do not replace Windows testing.
 
 The branch workflow builds Windows 2.2.7 and runs `--self-test-v3` in the packaged
-Electron app. It verifies movie HLS, movie B2, episode decoding and seeking,
-a live channel, and a short HLS download remuxed and decoded with bundled FFmpeg.
+Electron app. Its intended coverage is movie HLS, movie B2, episode decoding
+and seeking, a live channel, and a short HLS download remuxed and decoded with
+bundled FFmpeg. Run 39792799623 failed at the first movie, so later cases were
+not reached. The failure screenshot confirms a source rejection notice.
 Reports contain status, dimensions, durations and frame counts, never signed
 URLs or credentials. Build artifacts are retained on failure; only a successful
 playback report establishes a verified package.
+
+## Follow-up transport investigation
+
+The supplied APK's `bz` interceptor applies the legacy Iron signature to V3
+requests as well. Its packaged OkHttp transport identifies as `okhttp/4.12.0`.
+Both are now preserved. This does not change registration's Windows platform.
+
+The decrypted public domain configuration still lists `api.ossccaarr111.online`
+as a backup. Another configured, reachable origin, `api.myychann.site`, returned
+the same 60.8-second rejection in the diagnostic. Adding Iron alone and a valid
+anonymous account session also returned that same rejection. Consequently no
+account-login UI has been added.
+
+The source's published player policy requires `com.tdm.manager` build 58.
+The official TDM 2.2.2 APK has SHA-256
+`a0f8ee9a8eebc2ecbabf304f95c475a94c82fb2b33653aa93c629b25896db994`.
+Its `VideoPlayerActivity.z0/F0` carries source-issued cookies and its `sd.a.K`
+adds per-resource metadata for `.css` playlists and `.js` segments. These headers
+are now computed at the media network boundary, only for an already scoped
+source session. Cross-origin requests still lose the cookie. Local diagnostic
+requests with this metadata still received the notice; packaged Windows tests
+are required to distinguish source refusal from this diagnostic host's network.
+
+The Windows verification driver now records each movie, episode, channel, and
+download result independently. A failed first HLS movie no longer prevents
+inspection of B2 or live channels. Download checks reject short replacement
+playlists before accepting a remuxed sample.
+
+An additional probe synthesizing X-TE player-state evidence was rejected by
+automatic approval review. That probe was removed and is not part of the
+application or the release workflow. No result from it is used as evidence.
+The source API and CDN-side rejection logic were not found in the inspected
+repository tree. The exact upstream rejection condition is still unverified.
 
 This hotfix does not include the separate unfinished remote administration
 work. Existing watch history, favorites, navigation, and AWR code are retained.
