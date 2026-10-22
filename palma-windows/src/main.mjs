@@ -1,9 +1,13 @@
-import {app,BrowserWindow,Menu,protocol,session,shell,dialog} from 'electron';
+import {app,BrowserWindow,Menu,protocol,session,shell,dialog,safeStorage} from 'electron';
 import {fileURLToPath} from 'node:url';
 import path from 'node:path';
 import {APP_ORIGIN,createAppHandler} from './bridge.mjs';
 import catalog from './web/api/catalog.js';
-import resolve from './web/api/resolve.js';
+import {createResolver} from './web/api/resolve.js';
+import {PalmaV3Client} from './web/server/palma/v3.mjs';
+import {DEFAULT_BASE} from './web/server/palma/client.mjs';
+import {createV3Playback} from './web/server/palma/playback-v3.mjs';
+import {createSourceStore} from './source-store.mjs';
 import media from './web/api/media.js';
 import {fetchPublic,unticket} from './web/server/http.js';
 import {createDownloadManager} from './download-manager.mjs';
@@ -18,6 +22,10 @@ if(!selfTest&&!app.requestSingleInstanceLock()){app.quit();}else{
   let window;
   app.on('second-instance',()=>{if(window){if(window.isMinimized())window.restore();window.focus();}});
   app.whenReady().then(async()=>{
+    const base=process.env.PALMA_API_BASE||DEFAULT_BASE;
+    const store=createSourceStore({root:path.join(app.getPath('userData'),'source-v3'),origin:new URL(base).origin,safeStorage});
+    const sourceClient=new PalmaV3Client({base,store,version:app.getVersion()});
+    const resolve=createResolver({getPalmaPlayback:createV3Playback(sourceClient)});
     session.defaultSession.setPermissionRequestHandler((contents,permission,callback,details)=>callback(contents===window?.webContents&&allowAppPermission(permission,details.requestingUrl||contents.getURL(),details.isMainFrame)));
     session.defaultSession.setPermissionCheckHandler((contents,permission,origin,details)=>contents===window?.webContents&&allowAppPermission(permission,details.requestingUrl||origin,details.isMainFrame));
     const handler=createAppHandler({root,handlers:{'/api/catalog':catalog,'/api/resolve':resolve,'/api/media':media}});
