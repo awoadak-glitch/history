@@ -3,14 +3,17 @@
 // owner explicitly requested TDM identity emulation for their Windows port.
 // --tdm-compatibility is that separate, opt-in experiment. Its player state
 // emulates the reference APK; it is NOT a Windows package-manager measurement.
-// Registration remains Windows, with a new local key and source-issued session.
+// Registration defaults to Windows. --android-protocol explicitly compares the
+// reference software-key contract; neither mode supplies hardware attestation.
 // Test-only: not included in the packaged app. Credentials remain in memory.
 import assert from 'node:assert/strict';
 import {createCipheriv,createHash,createHmac,randomBytes} from 'node:crypto';
 import {mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
+import {getServers} from 'node:dns';
+import {networkInterfaces} from 'node:os';
 import {PalmaV3Client} from '../../palma-web/server/palma/v3.mjs';
-import {DEFAULT_BASE} from '../../palma-web/server/palma/client.mjs';
+import {DEFAULT_BASE,APP_PROFILE,PalmaClient} from '../../palma-web/server/palma/client.mjs';
 import {SOURCE_PROFILE,sourceApplicationProof} from '../../palma-web/server/palma/registration-profile.mjs';
 import {assertPlaybackAllowed} from '../../palma-web/server/palma/playback-v3.mjs';
 import {playbackSource} from '../../palma-web/server/source.js';
@@ -20,8 +23,8 @@ import {assertPlaybackMedia} from '../../palma-web/server/media-rejection.mjs';
 
 const evidence=Object.freeze({p:'com.tdm.manager',i:0,pf:'windows',av:Number(SOURCE_PROFILE.versionCode),h:'',e:0,v:0});
 const compatibilityEvidence=Object.freeze({p:'com.tdm.manager',i:1,pf:'phone',av:Number(SOURCE_PROFILE.versionCode),h:'d0576253f7a9f0e5b4c1d1c40a75eb7d3794aafc2dfe0bb49f0ae9917b38a94e',e:0,v:58});
-function encodeEvidence(secret,keyId,nonce,timestamp,iv=randomBytes(12),payload=evidence) {
-  const key=createHmac('sha256',Buffer.from(secret,'hex')).update(`oscar-te-v1|${keyId}|${nonce}|${timestamp}`).digest();
+function encodeEvidence(secret,keyId,nonce,timestamp,iv=randomBytes(12),payload=evidence,label='te') {
+  const key=createHmac('sha256',Buffer.from(secret,'hex')).update(`oscar-${label}-v1|${keyId}|${nonce}|${timestamp}`).digest();
   const cipher=createCipheriv('aes-256-gcm',key,iv);
   cipher.setAAD(Buffer.from(keyId));
   const data=Buffer.concat([cipher.update(JSON.stringify(payload),'utf8'),cipher.final()]);
@@ -39,9 +42,10 @@ if(process.argv.includes('--self-test')) {
   const compatibility=process.argv.includes('--tdm-compatibility');
   if(compatibility)assert.equal(process.env.PALMA_OWNER_APPROVED_COMPATIBILITY_TEST,'1','Owner-approved compatibility experiment required.');
   const androidProtocol=compatibility&&process.argv.includes('--android-protocol');
+  const sourceNetworkChecks=compatibility&&process.argv.includes('--source-network-checks');
   const payload=compatibility?compatibilityEvidence:evidence;
-  let state=null;
-  const mode=androidProtocol?'owner-approved-android-protocol':compatibility?'owner-approved-tdm-compatibility':'measured-windows-tdm-absent';
+  let state=null,networkEvidence=null;
+  const mode=sourceNetworkChecks?'owner-approved-tdm-with-network-checks':androidProtocol?'owner-approved-android-protocol':compatibility?'owner-approved-tdm-compatibility':'measured-windows-tdm-absent';
   const report={time:new Date().toISOString(),platform:process.platform,registrationPlatform:androidProtocol?'android':'windows',mode,evidence:payload,calls:[],guards:[],media:[],candidatePlayable:false};
   const safe=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value)?value:null;
   const client=new PalmaV3Client({base:DEFAULT_BASE,version:'2.2.7',sourceVersion:SOURCE_PROFILE.versionName,
@@ -57,9 +61,10 @@ if(process.argv.includes('--self-test')) {
       if(headers['X-Sig-V3']){
         assert.ok(state.deviceSecret);
         headers['X-TE']=encodeEvidence(state.deviceSecret,headers['X-Key-Id'],headers['X-V3-Nonce'],headers['X-V3-Ts'],randomBytes(12),payload);
+        if(networkEvidence)headers['X-AB']=encodeEvidence(state.deviceSecret,headers['X-Key-Id'],headers['X-V3-Nonce'],headers['X-V3-Ts'],randomBytes(12),networkEvidence,'ab');
       }
       const response=await fetch(url,{...options,headers});
-      report.calls.push({route:url.pathname,status:response.status,evidenceSent:!!headers['X-TE'],reason:safe(response.headers.get('x-v3-reason')),edgeRequestId:safe(response.headers.get('cf-ray'))});
+      report.calls.push({route:url.pathname,status:response.status,evidenceSent:!!headers['X-TE'],networkEvidenceSent:!!headers['X-AB'],reason:safe(response.headers.get('x-v3-reason')),edgeRequestId:safe(response.headers.get('cf-ray'))});
       return response;
     }
   });
@@ -72,6 +77,27 @@ if(process.argv.includes('--self-test')) {
   };
   const unwrap=value=>value?.data&&!Array.isArray(value.data)?value.data:value;
   try{
+    if(sourceNetworkChecks){
+      const legacy=new PalmaClient({base:DEFAULT_BASE,profile:{...APP_PROFILE,version_code:SOURCE_PROFILE.versionCode}});
+      const bootstrap=unwrap((await legacy.get('api/app/bootstrap.php',{app_version:SOURCE_PROFILE.versionCode,platform:'phone',lang:'ar'})).body);
+      const policy=bootstrap.v3guard?.adblock;assert.equal(policy?.enabled,true);
+      // Only the observed empty test-domain policy is implemented here. A
+      // changed policy must be ported, never reported as a successful check.
+      assert.equal((policy.test_domains||[]).length,0,'Network test-domain policy changed');
+      await client.register();
+      const beacon=new URL(policy.beacon_url,DEFAULT_BASE);assert.equal(beacon.origin,new URL(DEFAULT_BASE).origin);
+      const nonce=randomBytes(8).toString('hex');beacon.searchParams.set('kid',state.keyId);beacon.searchParams.set('n',nonce);
+      const response=await fetch(beacon,{headers:{'Cache-Control':'no-cache'},redirect:'error',signal:AbortSignal.timeout(3500)});
+      const data=JSON.parse(await readLimited(response,65536));assert.equal(response.status,200);assert.match(data.t,/^[0-9a-f]{64}$/);
+      const deniedDns=new Set((policy.dns_ips||[]).flatMap(value=>String(value).split(',')).map(value=>value.trim().toLowerCase()));
+      const dnsBlocked=getServers().some(value=>deniedDns.has(value.toLowerCase()));
+      const vpn=Object.entries(networkInterfaces()).some(([name,addresses])=>/\b(vpn|wireguard|tun|tap)\b/i.test(name)&&addresses?.some(address=>!address.internal));
+      networkEvidence={inet:1,cb:dnsBlocked?1:0,bt:data.t,bn:nonce,vpn:vpn?1:0,reason:dnsBlocked?'dns_ip':'',pf:'phone',av:Number(SOURCE_PROFILE.versionCode)};
+      report.networkMeasurement={beaconStatus:response.status,beaconTokenReceived:true,dnsBlocked,vpnInterfaceDetected:vpn,testDomainCount:0,limitations:['Windows DNS/interface measurement; Android private-DNS setting unavailable']};
+      const checked=unwrap(await client.get('api/v3/guard/adblock_check.php'));
+      report.networkGuard={action:safe(checked.action),state:safe(checked.state)};
+      assertPlaybackAllowed({adblock_guard:checked});
+    }
     const id=4655;
     const detailResponse=await client.get('api/v3/movies/show.php',{id});
     inspectGuards('detail-envelope',detailResponse);
@@ -102,6 +128,6 @@ if(process.argv.includes('--self-test')) {
     }
   }catch(error){report.error={code:safe(error.code)||'DIAGNOSTIC_FAILED',status:error.status||null,message:error.code?error.message:'Diagnostic did not establish requested-content playback.'};}
   const directory=path.resolve('probe-output');await mkdir(directory,{recursive:true});
-  await writeFile(path.join(directory,androidProtocol?'windows-android-protocol.json':compatibility?'windows-tdm-compatibility.json':'windows-player-evidence.json'),JSON.stringify(report,null,2));
+  await writeFile(path.join(directory,sourceNetworkChecks?'windows-source-network-checks.json':androidProtocol?'windows-android-protocol.json':compatibility?'windows-tdm-compatibility.json':'windows-player-evidence.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify(report,null,2));
 }
