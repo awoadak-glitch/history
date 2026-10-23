@@ -6,6 +6,21 @@ const schemes=new Set(['tdmvideo:','tdm:','tdmbrowser:','tdmstory:','tmdownloade
 const transportKey=Buffer.from('jMkn9kbN4Xr8V3NKXdsRA7QwY4Ars9mv4Xr8V3NKXYFhbYgw');
 const invalid=()=>new SourceError('لم يُرجع رابط المشغّل عنوان فيديو صالحًا.',422,'NATIVE_PLAYER_REQUIRED');
 const safeHeader=value=>typeof value==='string'&&value.length>0&&value.length<1500&&!/[\x00-\x1f\x7f]/.test(value)?value:null;
+
+// OscarTV 1.1.6 h32.L handles guard URIs before invoking a player. They are
+// control responses, including a=no_response, never a failed media candidate.
+export class SourcePlaybackGuardError extends SourceError {
+  constructor(raw) {
+    let host;try{host=new URL(raw).hostname.toLowerCase();}catch{}
+    const errors={
+      tamper:['رفض المصدر التشغيل بسبب فحص سلامة التطبيق.','PALMA_APP_VERIFICATION_REQUIRED'],
+      adblock:['رفض المصدر التشغيل بسبب فحص حجب الإعلانات.','PALMA_ADBLOCK_VERIFICATION_REQUIRED'],
+    };
+    const [message,code]=Object.hasOwn(errors,host)?errors[host]:['يتطلب المصدر التحقق من مشغّل الفيديو قبل المشاهدة.','PALMA_PLAYER_VERIFICATION_REQUIRED'];
+    super(message,403,code);
+    this.name='SourcePlaybackGuardError';
+  }
+}
 function base64(value) {
   // Android accepts both Base64 alphabets; a literal + in an old deep-link
 // query may have been decoded as a space by URLSearchParams.
@@ -27,8 +42,9 @@ function rawParameter(url,name) {
 export function decodePlaybackLink(value) {
   let raw=String(value||'').trim().replaceAll('&amp;','&');
   const headers={};let protocol='http',mode='direct';
-  if(raw.length>32768)throw invalid();
   for(let depth=0;depth<6;depth++) {
+    if(/^oscartv-guard:/i.test(raw))throw new SourcePlaybackGuardError(raw);
+    if(raw.length>32768)throw invalid();
     if(/^https?:\/\//i.test(raw)) {
       let url;try{url=new URL(raw);}catch{throw invalid();}
       if(url.username||url.password||/[\x00-\x1f\x7f]/.test(raw))throw invalid();
@@ -37,6 +53,7 @@ export function decodePlaybackLink(value) {
     }
     let parsed;try{parsed=new URL(raw);}catch{}
     if(parsed) {
+      if(parsed.protocol==='oscartv-guard:')throw new SourcePlaybackGuardError(raw);
       if(!schemes.has(parsed.protocol))throw invalid();
       protocol=parsed.protocol.slice(0,-1);
       const query=parsed.searchParams;
