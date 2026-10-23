@@ -1,9 +1,10 @@
 # Windows playback after OscarTV 1.1.6
 
-Status: NOT READY FOR RELEASE. Windows 2.2.7 packaging succeeded, but native
-Windows playback on 2026-10-22 decoded a 60.8-second rejection notice instead
-of the requested movie. Successful V3 registration, encrypted detail/resolve,
-HLS HTTP 200, and MPEG-TS bytes did not establish content playback.
+Status: NOT READY FOR RELEASE. Windows 2.2.7 packaging succeeded, but all five
+native Windows playback/download checks failed on 2026-10-22. The source
+returned a short rejection notice instead of the requested content. Successful
+V3 registration, encrypted detail/resolve, HLS HTTP 200, and MPEG-TS bytes did
+not establish content playback. Any shared package is experimental only.
 
 ## Cause and corrected diagnosis
 
@@ -68,7 +69,21 @@ The branch workflow builds Windows 2.2.7 and runs `--self-test-v3` in the packag
 Electron app. Its intended coverage is movie HLS, movie B2, episode decoding
 and seeking, a live channel, and a short HLS download remuxed and decoded with
 bundled FFmpeg. Run 39792799623 failed at the first movie, so later cases were
-not reached. The failure screenshot confirms a source rejection notice.
+not reached. The follow-up run 39874740424 tested all five cases independently
+on Windows using commit `e2bc495bfb7453271a93652282facbe786c531fb`:
+
+| Check | Result |
+| --- | --- |
+| Movie HLS | Failed: short replacement video |
+| Movie B2 | Failed: short replacement video |
+| Series episode | Failed: short replacement video |
+| Live channel | Failed: recorded replacement video |
+| V3 download | Failed: short replacement playlist |
+
+The report was recorded at `2026-10-22T23:56:17.749Z` under Electron 44.7.2,
+Node 24.21.0, win32. Movie HLS and channel screenshots show the same source
+rejection notice. The B2 screenshot was not saved because the screenshot-name
+validator does not accept digits; its failure is still recorded in the report.
 Reports contain status, dimensions, durations and frame counts, never signed
 URLs or credentials. Build artifacts are retained on failure; only a successful
 playback report establishes a verified package.
@@ -92,8 +107,9 @@ Its `VideoPlayerActivity.z0/F0` carries source-issued cookies and its `sd.a.K`
 adds per-resource metadata for `.css` playlists and `.js` segments. These headers
 are now computed at the media network boundary, only for an already scoped
 source session. Cross-origin requests still lose the cookie. Local diagnostic
-requests with this metadata still received the notice; packaged Windows tests
-are required to distinguish source refusal from this diagnostic host's network.
+requests with this metadata still received the notice. The follow-up packaged
+Windows run also received the notice, so it is not confined to the diagnostic
+host's transport. These changes do not yet fix playback.
 
 The Windows verification driver now records each movie, episode, channel, and
 download result independently. A failed first HLS movie no longer prevents
@@ -105,6 +121,9 @@ automatic approval review. That probe was removed and is not part of the
 application or the release workflow. No result from it is used as evidence.
 The source API and CDN-side rejection logic were not found in the inspected
 repository tree. The exact upstream rejection condition is still unverified.
+Further diagnosis needs the API/CDN verification implementation or the matching
+server-side rejection log. Client HTTP success alone cannot reveal which
+server-side condition selected the replacement video.
 
 This hotfix does not include the separate unfinished remote administration
 work. Existing watch history, favorites, navigation, and AWR code are retained.
