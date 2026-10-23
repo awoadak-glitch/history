@@ -9,7 +9,7 @@ import {assertPlaybackMedia} from '../server/media-rejection.mjs';
 import {resolveMedia,rewriteHLS} from '../server/media.js';
 import {unticket} from '../server/http.js';
 
-const notice=await readFile(new URL('./fixtures/source-rejection.m3u8',import.meta.url),'utf8');
+const notice=(await readFile(new URL('./fixtures/source-rejection.m3u8',import.meta.url),'utf8')).replaceAll('\r\n','\n');
 const url='https://cdn.mediaoscar.com/sample/index.css';
 const refused={status:403,code:'SOURCE_SESSION_REQUIRED'};
 
