@@ -1,6 +1,10 @@
-// Owner explicitly approved this bounded X-TE diagnostic on 2026-10-23.
-// Test-only: not included in the packaged app. It never claims Android or an
-// installed/signed TDM package. Credentials stay in this process's memory.
+// Owner explicitly approved the original bounded diagnostic on 2026-10-23.
+// After being informed why the earlier compatibility probe was blocked, the
+// owner explicitly requested TDM identity emulation for their Windows port.
+// --tdm-compatibility is that separate, opt-in experiment. Its player state
+// emulates the reference APK; it is NOT a Windows package-manager measurement.
+// Registration remains Windows, with a new local key and source-issued session.
+// Test-only: not included in the packaged app. Credentials remain in memory.
 import assert from 'node:assert/strict';
 import {createCipheriv,createHash,createHmac,randomBytes} from 'node:crypto';
 import {mkdir,writeFile} from 'node:fs/promises';
@@ -15,11 +19,12 @@ import {parseHLS} from '../../palma-web/server/media.js';
 import {assertPlaybackMedia} from '../../palma-web/server/media-rejection.mjs';
 
 const evidence=Object.freeze({p:'com.tdm.manager',i:0,pf:'windows',av:Number(SOURCE_PROFILE.versionCode),h:'',e:0,v:0});
-function encodeEvidence(secret,keyId,nonce,timestamp,iv=randomBytes(12)) {
+const compatibilityEvidence=Object.freeze({p:'com.tdm.manager',i:1,pf:'phone',av:Number(SOURCE_PROFILE.versionCode),h:'d0576253f7a9f0e5b4c1d1c40a75eb7d3794aafc2dfe0bb49f0ae9917b38a94e',e:0,v:58});
+function encodeEvidence(secret,keyId,nonce,timestamp,iv=randomBytes(12),payload=evidence) {
   const key=createHmac('sha256',Buffer.from(secret,'hex')).update(`oscar-te-v1|${keyId}|${nonce}|${timestamp}`).digest();
   const cipher=createCipheriv('aes-256-gcm',key,iv);
   cipher.setAAD(Buffer.from(keyId));
-  const data=Buffer.concat([cipher.update(JSON.stringify(evidence),'utf8'),cipher.final()]);
+  const data=Buffer.concat([cipher.update(JSON.stringify(payload),'utf8'),cipher.final()]);
   return Buffer.concat([iv,data,cipher.getAuthTag()]).toString('base64url');
 }
 
@@ -31,8 +36,11 @@ if(process.argv.includes('--self-test')) {
 }else{
   assert.equal(process.platform,'win32','This probe must report an actual Windows host.');
   assert.equal(process.env.PALMA_APPROVED_PLAYER_PROBE,'1','Explicit diagnostic opt-in required.');
+  const compatibility=process.argv.includes('--tdm-compatibility');
+  if(compatibility)assert.equal(process.env.PALMA_OWNER_APPROVED_COMPATIBILITY_TEST,'1','Owner-approved compatibility experiment required.');
+  const payload=compatibility?compatibilityEvidence:evidence;
   let state=null;
-  const report={time:new Date().toISOString(),platform:process.platform,evidence,calls:[],guards:[],media:[],candidatePlayable:false};
+  const report={time:new Date().toISOString(),platform:process.platform,mode:compatibility?'owner-approved-tdm-compatibility':'measured-windows-tdm-absent',evidence:payload,calls:[],guards:[],media:[],candidatePlayable:false};
   const safe=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value)?value:null;
   const client=new PalmaV3Client({base:DEFAULT_BASE,version:'2.2.7',sourceVersion:SOURCE_PROFILE.versionName,
     store:{load:async()=>state,save:async value=>{state=value;}},provideRegistrationProof:sourceApplicationProof,
@@ -40,7 +48,7 @@ if(process.argv.includes('--self-test')) {
       const headers={...options.headers};
       if(headers['X-Sig-V3']){
         assert.ok(state.deviceSecret);
-        headers['X-TE']=encodeEvidence(state.deviceSecret,headers['X-Key-Id'],headers['X-V3-Nonce'],headers['X-V3-Ts']);
+        headers['X-TE']=encodeEvidence(state.deviceSecret,headers['X-Key-Id'],headers['X-V3-Nonce'],headers['X-V3-Ts'],randomBytes(12),payload);
       }
       const response=await fetch(url,{...options,headers});
       report.calls.push({route:url.pathname,status:response.status,evidenceSent:!!headers['X-TE'],reason:safe(response.headers.get('x-v3-reason')),edgeRequestId:safe(response.headers.get('cf-ray'))});
@@ -83,6 +91,6 @@ if(process.argv.includes('--self-test')) {
     }
   }catch(error){report.error={code:safe(error.code)||'DIAGNOSTIC_FAILED',status:error.status||null,message:error.code?error.message:'Diagnostic did not establish requested-content playback.'};}
   const directory=path.resolve('probe-output');await mkdir(directory,{recursive:true});
-  await writeFile(path.join(directory,'windows-player-evidence.json'),JSON.stringify(report,null,2));
+  await writeFile(path.join(directory,compatibility?'windows-tdm-compatibility.json':'windows-player-evidence.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify(report,null,2));
 }

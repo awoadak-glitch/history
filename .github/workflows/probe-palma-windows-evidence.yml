@@ -20,14 +20,15 @@ jobs:
           node-version: '24'
       - name: Verify the wire format offline
         run: node palma-core/tools/probe-windows-player-evidence.mjs --self-test
-      - name: Probe one movie with Windows and TDM absent
+      - name: Probe owner-approved TDM compatibility on Windows
         env:
           PALMA_APPROVED_PLAYER_PROBE: '1'
-        run: node palma-core/tools/probe-windows-player-evidence.mjs
+          PALMA_OWNER_APPROVED_COMPATIBILITY_TEST: '1'
+        run: node palma-core/tools/probe-windows-player-evidence.mjs --tdm-compatibility
       - name: Save sanitized diagnostic
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: windows-player-evidence
-          path: probe-output/windows-player-evidence.json
+          name: windows-tdm-compatibility
+          path: probe-output/windows-tdm-compatibility.json
           if-no-files-found: error
