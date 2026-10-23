@@ -147,5 +147,13 @@ This corrects the misleading playback of the known rejection clip. It does
 not restore the requested film or episode, identify the server rule that
 selected the notice, or establish a successful Windows playback release.
 
+Native Windows run `39906015665` verified runtime commit
+`bb3341b3c9060b94325691c1b7cf5cc73a62fe53`. All 69 unit tests passed and packaging
+succeeded. All five playback/download cases now stop during preparation with
+the client's `403 SOURCE_SESSION_REQUIRED` instead of playing or saving the
+known notice. This is a local classification of the CDN's HTTP 200 replacement,
+not an upstream HTTP 403. Requested-content playback still fails the release
+gate. See `windows-v3-notice-detection-verification.json` for the native report.
+
 This hotfix does not include the separate unfinished remote administration
 work. Existing watch history, favorites, navigation, and AWR code are retained.
