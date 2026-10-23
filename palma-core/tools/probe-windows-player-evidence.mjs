@@ -38,14 +38,22 @@ if(process.argv.includes('--self-test')) {
   assert.equal(process.env.PALMA_APPROVED_PLAYER_PROBE,'1','Explicit diagnostic opt-in required.');
   const compatibility=process.argv.includes('--tdm-compatibility');
   if(compatibility)assert.equal(process.env.PALMA_OWNER_APPROVED_COMPATIBILITY_TEST,'1','Owner-approved compatibility experiment required.');
+  const androidProtocol=compatibility&&process.argv.includes('--android-protocol');
   const payload=compatibility?compatibilityEvidence:evidence;
   let state=null;
-  const report={time:new Date().toISOString(),platform:process.platform,mode:compatibility?'owner-approved-tdm-compatibility':'measured-windows-tdm-absent',evidence:payload,calls:[],guards:[],media:[],candidatePlayable:false};
+  const mode=androidProtocol?'owner-approved-android-protocol':compatibility?'owner-approved-tdm-compatibility':'measured-windows-tdm-absent';
+  const report={time:new Date().toISOString(),platform:process.platform,registrationPlatform:androidProtocol?'android':'windows',mode,evidence:payload,calls:[],guards:[],media:[],candidatePlayable:false};
   const safe=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value)?value:null;
   const client=new PalmaV3Client({base:DEFAULT_BASE,version:'2.2.7',sourceVersion:SOURCE_PROFILE.versionName,
     store:{load:async()=>state,save:async value=>{state=value;}},provideRegistrationProof:sourceApplicationProof,
     fetchImpl:async(url,options)=>{
       const headers={...options.headers};
+      // Test the reference client's software-key registration contract. This
+      // remains a Windows process, not an Android hardware-attestation claim.
+      if(androidProtocol&&url.pathname.endsWith('/devices/register.php')){
+        const body=JSON.parse(options.body);body.platform='android';
+        options={...options,body:JSON.stringify(body)};
+      }
       if(headers['X-Sig-V3']){
         assert.ok(state.deviceSecret);
         headers['X-TE']=encodeEvidence(state.deviceSecret,headers['X-Key-Id'],headers['X-V3-Nonce'],headers['X-V3-Ts'],randomBytes(12),payload);
@@ -74,6 +82,9 @@ if(process.argv.includes('--self-test')) {
     inspectGuards('resolve-envelope',resolvedResponse);
     const source={...selected,...unwrap(resolvedResponse)};inspectGuards('resolve',source);
     const media=playbackSource(source,{provider:'palma'});
+    const deep=new URL(source.deep_link),rawCookies=deep.searchParams.get('cookies')||'';
+    const ot=rawCookies.split(';').map(part=>part.trim()).find(part=>part.startsWith('ot='));
+    report.transport={deepLinkParameters:[...deep.searchParams.keys()],cookieNames:rawCookies.split(';').filter(Boolean).map(part=>part.trim().split('=')[0]),cookieBound:!!media.headers.Cookie,cookiePreserved:!!ot&&media.headers.Cookie===ot,mediaHeaderNames:Object.keys(media.headers),userAgent:media.headers['User-Agent'],mediaOrigin:new URL(media.url).origin};
     let target=media.url;
     for(let depth=0;depth<3;depth++){
       const {response,url}=await fetchPublic(target,{headers:media.headers});
@@ -91,6 +102,6 @@ if(process.argv.includes('--self-test')) {
     }
   }catch(error){report.error={code:safe(error.code)||'DIAGNOSTIC_FAILED',status:error.status||null,message:error.code?error.message:'Diagnostic did not establish requested-content playback.'};}
   const directory=path.resolve('probe-output');await mkdir(directory,{recursive:true});
-  await writeFile(path.join(directory,compatibility?'windows-tdm-compatibility.json':'windows-player-evidence.json'),JSON.stringify(report,null,2));
+  await writeFile(path.join(directory,androidProtocol?'windows-android-protocol.json':compatibility?'windows-tdm-compatibility.json':'windows-player-evidence.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify(report,null,2));
 }
