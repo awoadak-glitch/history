@@ -61,7 +61,7 @@ Account login was not called. The remaining playback rejection is unresolved.
 
 ## Validation and release gate
 
-65 local web/desktop unit tests pass. They cover signatures, encrypted replies,
+69 local web/desktop unit tests pass. They cover signatures, encrypted replies,
 time correction, persistence, origin separation, application identity, link
 mapping, guards, and session propagation. They do not replace Windows testing.
 
@@ -124,6 +124,28 @@ repository tree. The exact upstream rejection condition is still unverified.
 Further diagnosis needs the API/CDN verification implementation or the matching
 server-side rejection log. Client HTTP success alone cannot reveal which
 server-side condition selected the replacement video.
+
+## Wrong-clip follow-up
+
+The user reproduced the replacement video in the experimental Windows build.
+A fresh ordinary V3 session at `2026-10-23T02:27:33.181Z` again registered and
+resolved successfully. Movie 4655 selected link ID 44898, and the decoded media
+URL matched the source's URL while retaining its scoped cookie and user agent.
+The CDN returned HTTP 200 with `text/css`, but its normalized HLS SHA-256 was
+`ac540b598ddfee6bdf1a73d7f13c471a17de3abf95b3075db0c2726532f7ab07`, identical
+to the 60.8-second rejection notice observed in Windows. The sanitized report
+is `windows-v3-rejection.json`; its CDN edge request ID can correlate server logs.
+
+The resolver previously rejected only the old notice hostname, so this valid
+HLS response under the regular CDN origin reached the player. The resolver and
+media proxy now reject this exact known notice playlist with
+`SOURCE_SESSION_REQUIRED`. Four regression tests cover the captured HTTP 200
+response, nested playlist rewriting, newline variants, and legitimate short
+clips. Short duration alone is deliberately not used to reject media.
+
+This corrects the misleading playback of the known rejection clip. It does
+not restore the requested film or episode, identify the server rule that
+selected the notice, or establish a successful Windows playback release.
 
 This hotfix does not include the separate unfinished remote administration
 work. Existing watch history, favorites, navigation, and AWR code are retained.
