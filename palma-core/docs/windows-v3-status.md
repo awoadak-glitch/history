@@ -1,7 +1,7 @@
 # Windows playback after OscarTV 1.1.6
 
 Status: NOT READY FOR RELEASE. Windows 2.2.7 packaging succeeded, but all five
-native Windows playback/download checks failed on 2026-10-22. The source
+native Windows playback/download checks failed on 2026-10-22 and 2026-10-23. The source
 returned a short rejection notice instead of the requested content. Successful
 V3 registration, encrypted detail/resolve, HLS HTTP 200, and MPEG-TS bytes did
 not establish content playback. Any shared package is experimental only.
@@ -116,14 +116,11 @@ download result independently. A failed first HLS movie no longer prevents
 inspection of B2 or live channels. Download checks reject short replacement
 playlists before accepting a remuxed sample.
 
-An additional probe synthesizing X-TE player-state evidence was rejected by
-automatic approval review. That probe was removed and is not part of the
-application or the release workflow. No result from it is used as evidence.
-The source API and CDN-side rejection logic were not found in the inspected
-repository tree. The exact upstream rejection condition is still unverified.
-Further diagnosis needs the API/CDN verification implementation or the matching
-server-side rejection log. Client HTTP success alone cannot reveal which
-server-side condition selected the replacement video.
+An earlier probe synthesizing X-TE player-state evidence was rejected by
+automatic approval review. That probe was removed, was not rerun, and is not
+part of the application or the release workflow. No result from that blocked
+probe is used as evidence. The later, separately authorized diagnostic below
+reports a real Windows host and truthfully reports that TDM is absent.
 
 ## Wrong-clip follow-up
 
@@ -154,6 +151,49 @@ the client's `403 SOURCE_SESSION_REQUIRED` instead of playing or saving the
 known notice. This is a local classification of the CDN's HTTP 200 replacement,
 not an upstream HTTP 403. Requested-content playback still fails the release
 gate. See `windows-v3-notice-detection-verification.json` for the native report.
+
+## Explicitly authorized Windows player-evidence diagnostic
+
+After the owner explicitly authorized the bounded test on 2026-10-23, workflow
+`39959748294` ran diagnostic commit
+`ccee213244bad6f1476a58e01ad4e9a31d21eb84` on a native Windows runner. The test
+creates its own in-memory installation key and source-issued session. It adds
+request-bound X-TE evidence only to signed V3 calls. Its payload says
+`pf: windows`, `i: 0`, `h: ""`, and `v: 0`: it does not claim an installed TDM
+package, Android platform, package signature, or hardware attestation chain.
+The AES-GCM format passes an independent Python cryptography reference vector.
+
+At `2026-10-23T13:16:12.451Z`, challenge, registration, movie detail, and resolve
+all returned HTTP 200. Movie 4655/link 44898 resolved with
+`tdm_guard: {action: "install"}`. The test respected that explicit rejection,
+stopped before any media request, and recorded
+`403 PALMA_PLAYER_VERIFICATION_REQUIRED` locally. The source's resolve edge
+request ID is `a4f103dabd52dfd8-LAX`. The sanitized record is
+`windows-player-evidence.json`.
+
+This establishes a concrete server-side requirement to install TDM for the
+truthful Windows/TDM-absent request. It does not prove that this is the only
+condition behind the older CDN replacement clip. The diagnostic workflow
+finishing successfully means it captured the result; `candidatePlayable` is
+false, and no successful film playback is claimed. The evidence injector is
+test-only and is not packaged into Windows 2.2.7.
+
+The next correction requires the source's device/player policy and CDN/session
+implementation: authorize the Windows player with its own installation key,
+issue its normal content-scoped playback session, and keep device revocation,
+premium access, and content selection checks. Treating an Android package as
+installed on Windows is not a valid Windows support policy. After the upstream
+change, rerun this diagnostic and all five packaged Windows playback/download
+checks before releasing. There is no evidence that a new account-login UI will
+resolve this specific player-install requirement.
+
+Search did not locate `tdm_guard` or `oscar-te-v1` in the connected code index;
+most connected repositories are not indexed, so this alone is not conclusive.
+Direct tree inspection of the available media-related repositories found no
+source V3 PHP backend or player-policy implementation. The five connected
+Vercel projects expose Vercel app domains, not the source API/CDN domains.
+The source backend repository or hosting connection is still needed to make
+and verify the server-side correction.
 
 This hotfix does not include the separate unfinished remote administration
 work. Existing watch history, favorites, navigation, and AWR code are retained.
