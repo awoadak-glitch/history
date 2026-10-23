@@ -195,5 +195,35 @@ Vercel projects expose Vercel app domains, not the source API/CDN domains.
 The source backend repository or hosting connection is still needed to make
 and verify the server-side correction.
 
+## Detailed APK trace and control-URI correction
+
+The owner requested a detailed reverse-engineering pass of the supplied APK.
+An offline Androguard 4.1.4 inventory now covers 157 methods, with selected
+instruction-level evidence and a full Arabic report in
+`oscar-1.1.6-playback-analysis-ar.md` and `oscar-1.1.6-playback-evidence.json`.
+The extractor is `palma-core/tools/trace-oscar-playback.py`. Java decompiler
+output was checked against Dalvik where it dropped control-flow branches.
+
+The native `h32.L`, `j44.K`, and `g32.K` handle `oscartv-guard://` as a control
+response before opening a player. The Windows `playbackSource` previously
+swallowed its decoder error and could select an HTTP fallback in the same
+response. `SourcePlaybackGuardError` now survives that fallback loop, including
+encoded/nested guard links and silent/unknown guard actions. Three regression
+tests failed before the correction and pass afterward. This is a separate
+compatibility fix; it does not establish the cause of every CDN notice.
+
+Native Windows run `40026937982` tested commit
+`a218513f636bfdf962ed3e061fc6ad5a350702cf`: all 72 unit tests passed, and the
+Windows 2.2.7 package built successfully. All five real playback/download cases
+still failed with the local `SOURCE_SESSION_REQUIRED` classification of the
+known HTTP 200 notice. The new report is `windows-guard-link-verification.json`.
+No working playback release is claimed or published.
+
+The trace also confirms that `aa2.a` excludes V3 from hot-token signing and
+that `ga5.e` reads the actual Android player package, version, and certificate
+for X-TE. Companion TDM entitlement is a separate signed subscription path;
+it is not a locally generated media URL. No installed-player evidence or
+subscription entitlement has been fabricated.
+
 This hotfix does not include the separate unfinished remote administration
 work. Existing watch history, favorites, navigation, and AWR code are retained.
