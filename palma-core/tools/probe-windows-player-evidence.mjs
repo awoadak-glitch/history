@@ -20,6 +20,7 @@ import {playbackSource} from '../../palma-web/server/source.js';
 import {fetchPublic,readLimited} from '../../palma-web/server/http.js';
 import {parseHLS} from '../../palma-web/server/media.js';
 import {assertPlaybackMedia} from '../../palma-web/server/media-rejection.mjs';
+import {tdmMediaHeaders} from '../../palma-web/server/tdm-media-headers.mjs';
 
 const evidence=Object.freeze({p:'com.tdm.manager',i:0,pf:'windows',av:Number(SOURCE_PROFILE.versionCode),h:'',e:0,v:0});
 const compatibilityEvidence=Object.freeze({p:'com.tdm.manager',i:1,pf:'phone',av:Number(SOURCE_PROFILE.versionCode),h:'d0576253f7a9f0e5b4c1d1c40a75eb7d3794aafc2dfe0bb49f0ae9917b38a94e',e:0,v:58});
@@ -146,13 +147,33 @@ if(process.argv.includes('--self-test')) {
     report.stage='media';
     for(let depth=0;depth<3;depth++){
       const {response,url}=await fetchPublic(target,{headers:media.headers});
-      const names=['content-type','content-length','cache-control','age','cf-cache-status','date','server','x-cache','x-reason','x-error','x-token-status','x-auth-status'];
+      const names=['content-type','content-length','cache-control','age','cf-cache-status','date','server','x-cache','x-reason','x-error','x-token-status','x-auth-status','x-bz-file-name'];
       const item={status:response.status,edgeRequestId:safe(response.headers.get('cf-ray')),redirected:url!==target,responseHeaders:Object.fromEntries(names.map(name=>[name,response.headers.get(name)]).filter(([,value])=>value!==null)),additionalHeaderNames:[...response.headers.keys()].filter(name=>!names.includes(name))};report.media.push(item);
       if(!response.ok){await response.body?.cancel();throw Error('Media request was not accepted');}
       const text=await readLimited(response,2*1024*1024);
       item.hls=text.startsWith('#EXTM3U');
       item.playlistSha256=createHash('sha256').update(text.replaceAll('\r\n','\n').trim()).digest('hex');
-      assertPlaybackMedia(url,text);
+      try{assertPlaybackMedia(url,text);}catch(error){
+        if(error.code==='SOURCE_SESSION_REQUIRED'&&process.argv.includes('--compare-media-transport')){
+          report.transportComparisons=[];
+          const origin=new URL(target).origin;
+          assert.equal(origin,new URL(media.url).origin);
+          const variants=[
+            {name:'revalidate',headers:{'Cache-Control':'no-cache',Pragma:'no-cache'}},
+            // TDM nd.f.I sets DataSpec FLAG_ALLOW_GZIP for CSS/JS transport.
+            {name:'android-datasource-gzip',headers:{'Accept-Encoding':'gzip'}},
+          ];
+          for(const variant of variants){
+            const headers={...tdmMediaHeaders(target,media.headers),...variant.headers};
+            const reply=await fetch(target,{headers:Object.fromEntries(Object.entries(headers)),mode:'no-cors',redirect:'manual',signal:AbortSignal.timeout(25000)});
+            const body=await readLimited(reply,2*1024*1024);
+            const record={name:variant.name,status:reply.status,requestHeaderNames:Object.keys(headers),responseHeaders:Object.fromEntries(names.map(name=>[name,reply.headers.get(name)]).filter(([,value])=>value!==null)),hls:body.startsWith('#EXTM3U'),playlistSha256:createHash('sha256').update(body.replaceAll('\r\n','\n').trim()).digest('hex')};
+            try{assertPlaybackMedia(target,body);record.knownNotice=false;}catch{record.knownNotice=true;}
+            report.transportComparisons.push(record);
+          }
+        }
+        throw error;
+      }
       assert.ok(item.hls,'Unexpected media format');
       const variants=parseHLS(text,url);item.variantCount=variants.length;
       if(variants.length){target=variants[0].url;continue;}

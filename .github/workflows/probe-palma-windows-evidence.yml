@@ -24,7 +24,7 @@ jobs:
         env:
           PALMA_APPROVED_PLAYER_PROBE: '1'
           PALMA_OWNER_APPROVED_COMPATIBILITY_TEST: '1'
-        run: node palma-core/tools/probe-windows-player-evidence.mjs --tdm-compatibility --source-network-checks --reference-app-evidence
+        run: node palma-core/tools/probe-windows-player-evidence.mjs --tdm-compatibility --source-network-checks --reference-app-evidence --compare-media-transport
       - name: Save sanitized diagnostic
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
