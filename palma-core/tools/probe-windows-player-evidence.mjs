@@ -43,8 +43,9 @@ if(process.argv.includes('--self-test')) {
   if(compatibility)assert.equal(process.env.PALMA_OWNER_APPROVED_COMPATIBILITY_TEST,'1','Owner-approved compatibility experiment required.');
   const androidProtocol=compatibility&&process.argv.includes('--android-protocol');
   const sourceNetworkChecks=compatibility&&process.argv.includes('--source-network-checks');
+  const referenceAppEvidence=compatibility&&process.argv.includes('--reference-app-evidence');
   const payload=compatibility?compatibilityEvidence:evidence;
-  let state=null,networkEvidence=null;
+  let state=null,networkEvidence=null,applicationEvidence=null;
   const mode=sourceNetworkChecks?'owner-approved-tdm-with-network-checks':androidProtocol?'owner-approved-android-protocol':compatibility?'owner-approved-tdm-compatibility':'measured-windows-tdm-absent';
   const report={time:new Date().toISOString(),platform:process.platform,registrationPlatform:androidProtocol?'android':'windows',mode,evidence:payload,stage:'setup',calls:[],guards:[],media:[],candidatePlayable:false};
   const safe=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value)?value:null;
@@ -62,9 +63,10 @@ if(process.argv.includes('--self-test')) {
         assert.ok(state.deviceSecret);
         headers['X-TE']=encodeEvidence(state.deviceSecret,headers['X-Key-Id'],headers['X-V3-Nonce'],headers['X-V3-Ts'],randomBytes(12),payload);
         if(networkEvidence)headers['X-AB']=encodeEvidence(state.deviceSecret,headers['X-Key-Id'],headers['X-V3-Nonce'],headers['X-V3-Ts'],randomBytes(12),networkEvidence,'ab');
+        if(applicationEvidence)headers['X-TG']=encodeEvidence(state.deviceSecret,headers['X-Key-Id'],headers['X-V3-Nonce'],headers['X-V3-Ts'],randomBytes(12),applicationEvidence,'tg');
       }
       const response=await fetch(url,{...options,headers});
-      report.calls.push({route:url.pathname,status:response.status,evidenceSent:!!headers['X-TE'],networkEvidenceSent:!!headers['X-AB'],reason:safe(response.headers.get('x-v3-reason')),edgeRequestId:safe(response.headers.get('cf-ray'))});
+      report.calls.push({route:url.pathname,status:response.status,evidenceSent:!!headers['X-TE'],networkEvidenceSent:!!headers['X-AB'],applicationEvidenceSent:!!headers['X-TG'],reason:safe(response.headers.get('x-v3-reason')),edgeRequestId:safe(response.headers.get('cf-ray'))});
       return response;
     }
   });
@@ -88,6 +90,13 @@ if(process.argv.includes('--self-test')) {
       // optional v3. app_version/lang are not this endpoint's contract.
       const bootstrap=unwrap((await legacy.get('api/app/bootstrap.php',{version_code:SOURCE_PROFILE.versionCode,platform:'phone'})).body);
       const policy=bootstrap.v3guard?.adblock;assert.equal(policy?.enabled,true);
+      if(referenceAppEvidence){
+        assert.equal(bootstrap.v3guard?.tamper?.enabled,true);
+        // Explicit compatibility simulation, not Android runtime attestation.
+        // Tests the supplied reference app's empty modification-detection lists.
+        applicationEvidence={pk:[],cl:[],hk:0,as:[],pf:'phone',av:Number(SOURCE_PROFILE.versionCode)};
+        report.applicationEvidence={mode:'reference-app-compatibility-simulation',androidRuntimeMeasured:false};
+      }
       // Only the observed empty test-domain policy is implemented here. A
       // changed policy must be ported, never reported as a successful check.
       assert.equal((policy.test_domains||[]).length,0,'Network test-domain policy changed');
@@ -107,6 +116,12 @@ if(process.argv.includes('--self-test')) {
       const checked=unwrap(await client.get('api/v3/guard/adblock_check.php'));
       report.networkGuard={action:safe(checked.action),state:safe(checked.state)};
       assertPlaybackAllowed({adblock_guard:checked});
+      if(referenceAppEvidence){
+        report.stage='application-guard';
+        const checked=unwrap(await client.get('api/v3/guard/tamper_check.php'));
+        report.applicationGuard={action:safe(checked.action),state:safe(checked.state)};
+        assertPlaybackAllowed({tamper_guard:checked});
+      }
     }
     const id=4655;
     report.stage='detail';
@@ -115,10 +130,14 @@ if(process.argv.includes('--self-test')) {
     const detail=unwrap(detailResponse);inspectGuards('detail',detail);
     const selected=detail.watch_links?.[0];assert.ok(selected);inspectGuards('link',selected);
     report.selection={kind:'movie',id,index:0,linkId:selected.id};
-    report.stage='resolve';
-    const resolvedResponse=await client.resolve({t:'movie',cid:id,k:'watch',lid:selected.id});
-    inspectGuards('resolve-envelope',resolvedResponse);
-    const source={...selected,...unwrap(resolvedResponse)};inspectGuards('resolve',source);
+    let source=selected;
+    if(selected.deep_link||selected.url){report.linkPath='ready-link';}
+    else{
+      report.stage='resolve';report.linkPath='resolve';
+      const resolvedResponse=await client.resolve({t:'movie',cid:id,k:'watch',lid:selected.id});
+      inspectGuards('resolve-envelope',resolvedResponse);
+      source={...selected,...unwrap(resolvedResponse)};inspectGuards('resolve',source);
+    }
     const media=playbackSource(source,{provider:'palma'});
     const deep=new URL(source.deep_link),rawCookies=deep.searchParams.get('cookies')||'';
     const ot=rawCookies.split(';').map(part=>part.trim()).find(part=>part.startsWith('ot='));
@@ -127,7 +146,8 @@ if(process.argv.includes('--self-test')) {
     report.stage='media';
     for(let depth=0;depth<3;depth++){
       const {response,url}=await fetchPublic(target,{headers:media.headers});
-      const item={status:response.status,edgeRequestId:safe(response.headers.get('cf-ray'))};report.media.push(item);
+      const names=['content-type','content-length','cache-control','age','cf-cache-status','date','server','x-cache','x-reason','x-error','x-token-status','x-auth-status'];
+      const item={status:response.status,edgeRequestId:safe(response.headers.get('cf-ray')),redirected:url!==target,responseHeaders:Object.fromEntries(names.map(name=>[name,response.headers.get(name)]).filter(([,value])=>value!==null)),additionalHeaderNames:[...response.headers.keys()].filter(name=>!names.includes(name))};report.media.push(item);
       if(!response.ok){await response.body?.cancel();throw Error('Media request was not accepted');}
       const text=await readLimited(response,2*1024*1024);
       item.hls=text.startsWith('#EXTM3U');

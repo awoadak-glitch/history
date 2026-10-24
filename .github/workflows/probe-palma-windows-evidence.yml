@@ -20,11 +20,11 @@ jobs:
           node-version: '24'
       - name: Verify the wire format offline
         run: node palma-core/tools/probe-windows-player-evidence.mjs --self-test
-      - name: Verify TDM compatibility with measured network and source-issued beacon
+      - name: Compare complete reference protocol with measured network and source-issued beacon
         env:
           PALMA_APPROVED_PLAYER_PROBE: '1'
           PALMA_OWNER_APPROVED_COMPATIBILITY_TEST: '1'
-        run: node palma-core/tools/probe-windows-player-evidence.mjs --tdm-compatibility --source-network-checks
+        run: node palma-core/tools/probe-windows-player-evidence.mjs --tdm-compatibility --source-network-checks --reference-app-evidence
       - name: Save sanitized diagnostic
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
