@@ -46,7 +46,7 @@ if(process.argv.includes('--self-test')) {
   const payload=compatibility?compatibilityEvidence:evidence;
   let state=null,networkEvidence=null;
   const mode=sourceNetworkChecks?'owner-approved-tdm-with-network-checks':androidProtocol?'owner-approved-android-protocol':compatibility?'owner-approved-tdm-compatibility':'measured-windows-tdm-absent';
-  const report={time:new Date().toISOString(),platform:process.platform,registrationPlatform:androidProtocol?'android':'windows',mode,evidence:payload,calls:[],guards:[],media:[],candidatePlayable:false};
+  const report={time:new Date().toISOString(),platform:process.platform,registrationPlatform:androidProtocol?'android':'windows',mode,evidence:payload,stage:'setup',calls:[],guards:[],media:[],candidatePlayable:false};
   const safe=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value)?value:null;
   const client=new PalmaV3Client({base:DEFAULT_BASE,version:'2.2.7',sourceVersion:SOURCE_PROFILE.versionName,
     store:{load:async()=>state,save:async value=>{state=value;}},provideRegistrationProof:sourceApplicationProof,
@@ -78,13 +78,21 @@ if(process.argv.includes('--self-test')) {
   const unwrap=value=>value?.data&&!Array.isArray(value.data)?value.data:value;
   try{
     if(sourceNetworkChecks){
-      const legacy=new PalmaClient({base:DEFAULT_BASE,profile:{...APP_PROFILE,version_code:SOURCE_PROFILE.versionCode}});
-      const bootstrap=unwrap((await legacy.get('api/app/bootstrap.php',{app_version:SOURCE_PROFILE.versionCode,platform:'phone',lang:'ar'})).body);
+      report.stage='bootstrap';
+      const legacy=new PalmaClient({base:DEFAULT_BASE,profile:{...APP_PROFILE,version_code:SOURCE_PROFILE.versionCode},fetchImpl:async(url,options)=>{
+        const response=await fetch(url,options);
+        report.calls.push({route:url.pathname,status:response.status,evidenceSent:false,networkEvidenceSent:false});
+        return response;
+      }});
+      // ApiService.getBootstrap's Retrofit annotations: version_code, platform,
+      // optional v3. app_version/lang are not this endpoint's contract.
+      const bootstrap=unwrap((await legacy.get('api/app/bootstrap.php',{version_code:SOURCE_PROFILE.versionCode,platform:'phone'})).body);
       const policy=bootstrap.v3guard?.adblock;assert.equal(policy?.enabled,true);
       // Only the observed empty test-domain policy is implemented here. A
       // changed policy must be ported, never reported as a successful check.
       assert.equal((policy.test_domains||[]).length,0,'Network test-domain policy changed');
-      await client.register();
+      report.stage='registration';await client.register();
+      report.stage='network-beacon';
       const beacon=new URL(policy.beacon_url,DEFAULT_BASE);assert.equal(beacon.origin,new URL(DEFAULT_BASE).origin);
       const nonce=randomBytes(8).toString('hex');beacon.searchParams.set('kid',state.keyId);beacon.searchParams.set('n',nonce);
       const response=await fetch(beacon,{headers:{'Cache-Control':'no-cache'},redirect:'error',signal:AbortSignal.timeout(3500)});
@@ -92,18 +100,22 @@ if(process.argv.includes('--self-test')) {
       const deniedDns=new Set((policy.dns_ips||[]).flatMap(value=>String(value).split(',')).map(value=>value.trim().toLowerCase()));
       const dnsBlocked=getServers().some(value=>deniedDns.has(value.toLowerCase()));
       const vpn=Object.entries(networkInterfaces()).some(([name,addresses])=>/\b(vpn|wireguard|tun|tap)\b/i.test(name)&&addresses?.some(address=>!address.internal));
-      networkEvidence={inet:1,cb:dnsBlocked?1:0,bt:data.t,bn:nonce,vpn:vpn?1:0,reason:dnsBlocked?'dns_ip':'',pf:'phone',av:Number(SOURCE_PROFILE.versionCode)};
+      // j8.a uses JSONObject.put(String, boolean) for inet, cb, and vpn.
+      networkEvidence={inet:true,cb:dnsBlocked,bt:data.t,bn:nonce,vpn,reason:dnsBlocked?'dns_ip':'',pf:'phone',av:Number(SOURCE_PROFILE.versionCode)};
       report.networkMeasurement={beaconStatus:response.status,beaconTokenReceived:true,dnsBlocked,vpnInterfaceDetected:vpn,testDomainCount:0,limitations:['Windows DNS/interface measurement; Android private-DNS setting unavailable']};
+      report.stage='network-guard';
       const checked=unwrap(await client.get('api/v3/guard/adblock_check.php'));
       report.networkGuard={action:safe(checked.action),state:safe(checked.state)};
       assertPlaybackAllowed({adblock_guard:checked});
     }
     const id=4655;
+    report.stage='detail';
     const detailResponse=await client.get('api/v3/movies/show.php',{id});
     inspectGuards('detail-envelope',detailResponse);
     const detail=unwrap(detailResponse);inspectGuards('detail',detail);
     const selected=detail.watch_links?.[0];assert.ok(selected);inspectGuards('link',selected);
     report.selection={kind:'movie',id,index:0,linkId:selected.id};
+    report.stage='resolve';
     const resolvedResponse=await client.resolve({t:'movie',cid:id,k:'watch',lid:selected.id});
     inspectGuards('resolve-envelope',resolvedResponse);
     const source={...selected,...unwrap(resolvedResponse)};inspectGuards('resolve',source);
@@ -112,6 +124,7 @@ if(process.argv.includes('--self-test')) {
     const ot=rawCookies.split(';').map(part=>part.trim()).find(part=>part.startsWith('ot='));
     report.transport={deepLinkParameters:[...deep.searchParams.keys()],cookieNames:rawCookies.split(';').filter(Boolean).map(part=>part.trim().split('=')[0]),cookieBound:!!media.headers.Cookie,cookiePreserved:!!ot&&media.headers.Cookie===ot,mediaHeaderNames:Object.keys(media.headers),userAgent:media.headers['User-Agent'],mediaOrigin:new URL(media.url).origin};
     let target=media.url;
+    report.stage='media';
     for(let depth=0;depth<3;depth++){
       const {response,url}=await fetchPublic(target,{headers:media.headers});
       const item={status:response.status,edgeRequestId:safe(response.headers.get('cf-ray'))};report.media.push(item);
