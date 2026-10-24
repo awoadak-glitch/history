@@ -1,0 +1,39 @@
+name: Test authorized Windows player evidence
+on:
+  push:
+    branches: [codex/palma-windows-v3-draft-20261022]
+    paths:
+      - 'palma-core/tools/probe-windows-player-evidence.mjs'
+      - '.github/workflows/probe-palma-windows-evidence.yml'
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Verify the wire format offline
+        run: node palma-core/tools/probe-windows-player-evidence.mjs --self-test
+      - name: Compare complete protocol with source-issued anonymous session
+        env:
+          PALMA_APPROVED_PLAYER_PROBE: '1'
+          PALMA_OWNER_APPROVED_COMPATIBILITY_TEST: '1'
+        run: node palma-core/tools/probe-windows-player-evidence.mjs --tdm-compatibility --source-network-checks --reference-app-evidence --anonymous-session
+      - name: Compare the second previously selected movie
+        env:
+          PALMA_APPROVED_PLAYER_PROBE: '1'
+          PALMA_OWNER_APPROVED_COMPATIBILITY_TEST: '1'
+        run: node palma-core/tools/probe-windows-player-evidence.mjs --tdm-compatibility --source-network-checks --reference-app-evidence --movie-id=4528
+      - name: Save sanitized diagnostic
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: windows-tdm-compatibility
+          path: probe-output/*.json
+          if-no-files-found: error

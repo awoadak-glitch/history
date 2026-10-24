@@ -14,7 +14,7 @@ test('TDM plain and both Base64 alphabets preserve the complete signed URL',()=>
   const actual=decodePlaybackLink(deep(value,{user_agent:'Native-UA',ua:'unused'}));
   assert.equal(actual.url,signed);assert.equal(actual.headers['User-Agent'],'Native-UA');
  }
- assert.equal(decodePlaybackLink(deep(signed)).headers['User-Agent'],'TDMPlayer/2.0.6');
+ assert.equal(decodePlaybackLink(deep(signed)).headers['User-Agent'],'TDMPlayer/2.2.2');
  assert.equal(decodePlaybackLink(signed).url,signed);
 });
 

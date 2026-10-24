@@ -2,11 +2,12 @@ import { catalogue } from './catalog.js';
 import { params, json, fail, SourceError } from '../server/http.js';
 import { resolveMedia, witcherSource } from '../server/media.js';
 import {playbackSource} from '../server/source.js';
+import {assertPlaybackAllowed} from '../server/palma/playback-v3.mjs';
 
 const array = o => Array.isArray(o) ? o : arrayFind(o);
 function arrayFind(o) { if(!o) return []; for(const k of ['items','data','sources','streams','links']) if(Array.isArray(o[k])) return o[k]; return []; }
 const body = o => o?.data && !Array.isArray(o.data) ? o.data : o;
-export function createResolver({getCatalogue=catalogue,getMedia=resolveMedia}={}) {
+export function createResolver({getCatalogue=catalogue,getMedia=resolveMedia,getPalmaPlayback}={}) {
 return async function handler(req,res) {
   if(req.method !== 'GET') return json(res,405,{error:'طريقة طلب غير مدعومة.'});
   try {
@@ -26,7 +27,10 @@ return async function handler(req,res) {
       source=array(kind==='channel'?body(value)?.sources:value)[index];
     } else if(provider==='palma') {
       if(!/^\d+$/.test(id) || (episode&&!/^\d+$/.test(episode))) throw new SourceError('العمل غير صالح.',400);
-      if(kind==='match-video') {
+      if(getPalmaPlayback) {
+        const resolved=await getPalmaPlayback({kind,id,episode,index,download,matchId:p.get('match_id')});
+        source=resolved.source;servers=resolved.servers;
+      } else if(kind==='match-video') {
         const matchId=p.get('match_id');
         if(!/^\d+$/.test(matchId||''))throw new SourceError('المباراة غير صالحة.',400);
         const videos=array(await getCatalogue('palma','api/matches/event_videos.php',{match_id:matchId,page:1,limit:100}));
@@ -35,12 +39,14 @@ return async function handler(req,res) {
         // Episode detail issues fresh CDN URLs. The legacy watch_links endpoint
         // returns storage-origin URLs that the original player no longer uses.
         const value=body(await getCatalogue('palma','api/episodes/show.php',{id:episode}));
+        assertPlaybackAllowed(value);
         servers=array(download?value.download_links:value.watch_links);source=servers[index];
       }
       else {
         const route={movie:'api/movies/show.php',channel:'api/channels/show.php',anime:episode?'api/anime/episodes/show.php':'api/anime/show.php',wrestling:'api/wrestling/show.php',video:'api/matches/event_videos.php'}[kind];
         if(!route) throw new SourceError('مسار مشاهدة غير صالح.',400);
         const value=body(await getCatalogue('palma',route,{id:episode||id}));
+        assertPlaybackAllowed(value);
         const list=download?(value.download_links||value.downloadLinks):(value.watch_links||value.watchLinks||value.streams||value.sources);
         servers=array(list);source=servers[index];
       }
