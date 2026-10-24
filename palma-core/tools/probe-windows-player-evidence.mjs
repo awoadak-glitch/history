@@ -12,9 +12,10 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {getServers} from 'node:dns';
 import {networkInterfaces} from 'node:os';
-import {PalmaV3Client} from '../../palma-web/server/palma/v3.mjs';
+import {PalmaV3Client,canonicalRequest} from '../../palma-web/server/palma/v3.mjs';
 import {DEFAULT_BASE,APP_PROFILE,PalmaClient} from '../../palma-web/server/palma/client.mjs';
 import {SOURCE_PROFILE,sourceApplicationProof} from '../../palma-web/server/palma/registration-profile.mjs';
+import {requestHeaders} from '../../palma-web/server/palma/iron.mjs';
 import {assertPlaybackAllowed} from '../../palma-web/server/palma/playback-v3.mjs';
 import {playbackSource} from '../../palma-web/server/source.js';
 import {fetchPublic,readLimited} from '../../palma-web/server/http.js';
@@ -45,8 +46,9 @@ if(process.argv.includes('--self-test')) {
   const androidProtocol=compatibility&&process.argv.includes('--android-protocol');
   const sourceNetworkChecks=compatibility&&process.argv.includes('--source-network-checks');
   const referenceAppEvidence=compatibility&&process.argv.includes('--reference-app-evidence');
+  const anonymousSession=compatibility&&process.argv.includes('--anonymous-session');
   const payload=compatibility?compatibilityEvidence:evidence;
-  let state=null,networkEvidence=null,applicationEvidence=null;
+  let state=null,networkEvidence=null,applicationEvidence=null,bearer=null;
   const mode=sourceNetworkChecks?'owner-approved-tdm-with-network-checks':androidProtocol?'owner-approved-android-protocol':compatibility?'owner-approved-tdm-compatibility':'measured-windows-tdm-absent';
   const report={time:new Date().toISOString(),platform:process.platform,registrationPlatform:androidProtocol?'android':'windows',mode,evidence:payload,stage:'setup',calls:[],guards:[],media:[],candidatePlayable:false};
   const safe=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value)?value:null;
@@ -54,6 +56,7 @@ if(process.argv.includes('--self-test')) {
     store:{load:async()=>state,save:async value=>{state=value;}},provideRegistrationProof:sourceApplicationProof,
     fetchImpl:async(url,options)=>{
       const headers={...options.headers};
+      if(bearer)headers.Authorization='Bearer '+bearer;
       // Test the reference client's software-key registration contract. This
       // remains a Windows process, not an Android hardware-attestation claim.
       if(androidProtocol&&url.pathname.endsWith('/devices/register.php')){
@@ -102,6 +105,18 @@ if(process.argv.includes('--self-test')) {
       // changed policy must be ported, never reported as a successful check.
       assert.equal((policy.test_domains||[]).length,0,'Network test-domain policy changed');
       report.stage='registration';await client.register();
+      if(anonymousSession){
+        report.stage='anonymous-session';
+        const url=new URL('api/auth/anonymous.php',DEFAULT_BASE);
+        const body=JSON.stringify({device_id:state.deviceId,platform:androidProtocol?'android':'windows',app_version:SOURCE_PROFILE.versionName});
+        const ts=String(Math.floor(Date.now()/1000)+client.clockOffset),nonce=randomBytes(16).toString('base64url');
+        assert.ok(state.hotToken);
+        const headers={...requestHeaders(APP_PROFILE,url.pathname,ts),'Content-Type':'application/json',Accept:'application/json','User-Agent':'okhttp/4.12.0','X-Device-Id':state.deviceId,'X-Key-Id':state.keyId,'X-D-Ts':ts,'X-D-Nonce':nonce,'X-HT-Exp':String(state.hotExpiry),'X-App-Ver':SOURCE_PROFILE.versionCode,'X-D-Sig':createHmac('sha256',Buffer.from(state.hotToken,'hex')).update(canonicalRequest('POST',url,ts,nonce,body)).digest('hex')};
+        const response=await fetch(url,{method:'POST',body,headers,redirect:'error',signal:AbortSignal.timeout(25000)});
+        const data=unwrap(JSON.parse(await readLimited(response,65536)));bearer=data.access_token||data.token;
+        report.anonymousSession={status:response.status,tokenReceived:typeof bearer==='string'&&bearer.length>0};
+        assert.equal(response.status,200);assert.ok(report.anonymousSession.tokenReceived);
+      }
       report.stage='network-beacon';
       const beacon=new URL(policy.beacon_url,DEFAULT_BASE);assert.equal(beacon.origin,new URL(DEFAULT_BASE).origin);
       const nonce=randomBytes(8).toString('hex');beacon.searchParams.set('kid',state.keyId);beacon.searchParams.set('n',nonce);
@@ -124,7 +139,8 @@ if(process.argv.includes('--self-test')) {
         assertPlaybackAllowed({tamper_guard:checked});
       }
     }
-    const id=4655;
+    const id=Number(process.argv.find(arg=>arg.startsWith('--movie-id='))?.split('=')[1]||4655);
+    assert.ok([4655,4528].includes(id),'Use only the two already selected diagnostic movie IDs');
     report.stage='detail';
     const detailResponse=await client.get('api/v3/movies/show.php',{id});
     inspectGuards('detail-envelope',detailResponse);
@@ -142,7 +158,8 @@ if(process.argv.includes('--self-test')) {
     const media=playbackSource(source,{provider:'palma'});
     const deep=new URL(source.deep_link),rawCookies=deep.searchParams.get('cookies')||'';
     const ot=rawCookies.split(';').map(part=>part.trim()).find(part=>part.startsWith('ot='));
-    report.transport={deepLinkParameters:[...deep.searchParams.keys()],cookieNames:rawCookies.split(';').filter(Boolean).map(part=>part.trim().split('=')[0]),cookieBound:!!media.headers.Cookie,cookiePreserved:!!ot&&media.headers.Cookie===ot,mediaHeaderNames:Object.keys(media.headers),userAgent:media.headers['User-Agent'],mediaOrigin:new URL(media.url).origin};
+    const mediaAddress=new URL(media.url),storageIndex=mediaAddress.pathname.indexOf('/b2/');
+    report.transport={deepLinkParameters:[...deep.searchParams.keys()],cookieNames:rawCookies.split(';').filter(Boolean).map(part=>part.trim().split('=')[0]),cookieBound:!!media.headers.Cookie,cookiePreserved:!!ot&&media.headers.Cookie===ot,mediaHeaderNames:Object.keys(media.headers),userAgent:media.headers['User-Agent'],mediaOrigin:mediaAddress.origin,sourceIssuedObject:storageIndex<0?null:mediaAddress.pathname.slice(storageIndex+4)};
     let target=media.url;
     report.stage='media';
     for(let depth=0;depth<3;depth++){
@@ -182,6 +199,7 @@ if(process.argv.includes('--self-test')) {
     }
   }catch(error){report.error={code:safe(error.code)||'DIAGNOSTIC_FAILED',status:error.status||null,message:error.code?error.message:'Diagnostic did not establish requested-content playback.'};}
   const directory=path.resolve('probe-output');await mkdir(directory,{recursive:true});
-  await writeFile(path.join(directory,sourceNetworkChecks?'windows-source-network-checks.json':androidProtocol?'windows-android-protocol.json':compatibility?'windows-tdm-compatibility.json':'windows-player-evidence.json'),JSON.stringify(report,null,2));
+  const suffix=anonymousSession?'-anonymous':process.argv.includes('--movie-id=4528')?'-movie-4528':'';
+  await writeFile(path.join(directory,sourceNetworkChecks?`windows-source-network-checks${suffix}.json`:androidProtocol?'windows-android-protocol.json':compatibility?'windows-tdm-compatibility.json':'windows-player-evidence.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify(report,null,2));
 }
