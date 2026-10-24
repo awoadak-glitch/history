@@ -100,8 +100,8 @@ if(process.argv.includes('--self-test')) {
       const deniedDns=new Set((policy.dns_ips||[]).flatMap(value=>String(value).split(',')).map(value=>value.trim().toLowerCase()));
       const dnsBlocked=getServers().some(value=>deniedDns.has(value.toLowerCase()));
       const vpn=Object.entries(networkInterfaces()).some(([name,addresses])=>/\b(vpn|wireguard|tun|tap)\b/i.test(name)&&addresses?.some(address=>!address.internal));
-      // j8.a uses JSONObject.put(String, boolean) for inet, cb, and vpn.
-      networkEvidence={inet:true,cb:dnsBlocked,bt:data.t,bn:nonce,vpn,reason:dnsBlocked?'dns_ip':'',pf:'phone',av:Number(SOURCE_PROFILE.versionCode)};
+      // Dalvik j8.a reads boolean fields but calls JSONObject.put(String, int).
+      networkEvidence={inet:1,cb:dnsBlocked?1:0,bt:data.t,bn:nonce,vpn:vpn?1:0,reason:dnsBlocked?'dns_ip':'',pf:'phone',av:Number(SOURCE_PROFILE.versionCode)};
       report.networkMeasurement={beaconStatus:response.status,beaconTokenReceived:true,dnsBlocked,vpnInterfaceDetected:vpn,testDomainCount:0,limitations:['Windows DNS/interface measurement; Android private-DNS setting unavailable']};
       report.stage='network-guard';
       const checked=unwrap(await client.get('api/v3/guard/adblock_check.php'));
