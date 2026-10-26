@@ -6,6 +6,7 @@ import https from 'node:https';
 import { Readable } from 'node:stream';
 import {readFileSync} from 'node:fs';
 import {SESSION_ORIGIN,bindSourceSession,mediaHeadersForURL} from './source-session.js';
+import {tdmMediaHeaders} from './tdm-media-headers.mjs';
 
 export class SourceError extends Error {
   constructor(message, status = 502, code = 'SOURCE_ERROR') { super(message); this.status = status; this.code = code; }
@@ -92,7 +93,7 @@ export async function fetchPublic(raw, options = {}) {
   let url = await publicURL(raw);
   for (let i = 0; i < 5; i++) {
     const scoped=mediaHeadersForURL(url.href,options.headers);
-    const response = await pinnedFetch(url, { ...options, headers:Object.fromEntries(Object.entries(scoped)), signal: options.signal || AbortSignal.timeout(55000) });
+    const response = await pinnedFetch(url, { ...options, headers:Object.fromEntries(Object.entries(tdmMediaHeaders(url.href,scoped))), signal: options.signal || AbortSignal.timeout(55000) });
     if ([301,302,303,307,308].includes(response.status)) {
       const location = response.headers.get('location'); await response.body?.cancel();
       if (!location) throw new SourceError('لم يرسل السيرفر رابطًا صالحًا.');

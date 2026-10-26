@@ -4,6 +4,7 @@ import { params, fail, unticket, fetchPublic, readLimited, SourceError } from '.
 import { rewriteHLS } from '../server/media.js';
 import {inspectMedia} from '../server/media-format.js';
 import {rewriteDASH,expandDashTicket} from '../server/dash.js';
+import {assertPlaybackMedia} from '../server/media-rejection.mjs';
 
 export default async function handler(req,res) {
   const controller=new AbortController();
@@ -15,6 +16,7 @@ export default async function handler(req,res) {
     if(req.headers.range && /^bytes=\d*-\d*$/.test(req.headers.range)) headers.Range=req.headers.range;
     const fetched=await fetchPublic(expandDashTicket(payload,params(req)),{headers,method:req.method,signal:controller.signal});
     let response=fetched.response;const url=fetched.url;
+    try{assertPlaybackMedia(url);}catch(error){await response.body?.cancel();throw error;}
     if(!response.ok) { await response.body?.cancel(); throw new SourceError('تعذر تشغيل هذا السيرفر. اختر سيرفرًا آخر.',response.status===403?403:502); }
     const type=response.headers.get('content-type')||'';
     let format;

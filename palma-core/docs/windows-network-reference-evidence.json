@@ -1,0 +1,928 @@
+{
+  "date": "2026-10-24",
+  "playbackFixed": false,
+  "experiments": [
+    {
+      "run": 40096449127,
+      "commit": "43d4785e539a7eb545f594baec6882c770bdf2f5",
+      "report": {
+        "time": "2026-10-24T13:02:53.757Z",
+        "platform": "win32",
+        "registrationPlatform": "windows",
+        "mode": "owner-approved-tdm-with-network-checks",
+        "evidence": {
+          "p": "com.tdm.manager",
+          "i": 1,
+          "pf": "phone",
+          "av": 18,
+          "h": "d0576253f7a9f0e5b4c1d1c40a75eb7d3794aafc2dfe0bb49f0ae9917b38a94e",
+          "e": 0,
+          "v": 58
+        },
+        "stage": "media",
+        "calls": [
+          {
+            "route": "/api/ping.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false
+          },
+          {
+            "route": "/api/app/bootstrap.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false
+          },
+          {
+            "route": "/api/v3/devices/challenge.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false,
+            "reason": null,
+            "edgeRequestId": "a4f92db6996e61d9-ORD"
+          },
+          {
+            "route": "/api/v3/devices/register.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false,
+            "reason": null,
+            "edgeRequestId": "a4f92db7ab0261d9-ORD"
+          },
+          {
+            "route": "/api/v3/guard/adblock_check.php",
+            "status": 200,
+            "evidenceSent": true,
+            "networkEvidenceSent": true,
+            "reason": null,
+            "edgeRequestId": "a4f92db94d5161d9-ORD"
+          },
+          {
+            "route": "/api/v3/movies/show.php",
+            "status": 200,
+            "evidenceSent": true,
+            "networkEvidenceSent": true,
+            "reason": null,
+            "edgeRequestId": "a4f92dba6edc61d9-ORD"
+          },
+          {
+            "route": "/api/v3/resolve.php",
+            "status": 200,
+            "evidenceSent": true,
+            "networkEvidenceSent": true,
+            "reason": null,
+            "edgeRequestId": "a4f92dbb380261d9-ORD"
+          }
+        ],
+        "guards": [],
+        "media": [
+          {
+            "status": 200,
+            "edgeRequestId": "a4f92dbc99d19a31-ORD",
+            "hls": true,
+            "playlistSha256": "ac540b598ddfee6bdf1a73d7f13c471a17de3abf95b3075db0c2726532f7ab07"
+          }
+        ],
+        "candidatePlayable": false,
+        "networkMeasurement": {
+          "beaconStatus": 200,
+          "beaconTokenReceived": true,
+          "dnsBlocked": false,
+          "vpnInterfaceDetected": false,
+          "testDomainCount": 0,
+          "limitations": [
+            "Windows DNS/interface measurement; Android private-DNS setting unavailable"
+          ]
+        },
+        "networkGuard": {
+          "action": "allow",
+          "state": "clean"
+        },
+        "selection": {
+          "kind": "movie",
+          "id": 4655,
+          "index": 0,
+          "linkId": 44898
+        },
+        "transport": {
+          "deepLinkParameters": [
+            "url",
+            "title",
+            "ad",
+            "banner",
+            "download",
+            "lang",
+            "color",
+            "resume",
+            "id",
+            "ua",
+            "cookies"
+          ],
+          "cookieNames": [
+            "ot"
+          ],
+          "cookieBound": true,
+          "cookiePreserved": true,
+          "mediaHeaderNames": [
+            "User-Agent",
+            "Cookie"
+          ],
+          "userAgent": "TDMuaHLS990",
+          "mediaOrigin": "https://cdn.mediaoscar.com"
+        },
+        "error": {
+          "code": "SOURCE_SESSION_REQUIRED",
+          "status": 403,
+          "message": "المصدر أعاد مقطع رفض بدل الفيديو المطلوب. تعذر تشغيل المحتوى المطلوب."
+        }
+      }
+    },
+    {
+      "run": 40096738909,
+      "commit": "3fa3c20fb7035aa0286a5373ad13260e63682e94",
+      "report": {
+        "time": "2026-10-24T13:07:06.864Z",
+        "platform": "win32",
+        "registrationPlatform": "windows",
+        "mode": "owner-approved-tdm-with-network-checks",
+        "evidence": {
+          "p": "com.tdm.manager",
+          "i": 1,
+          "pf": "phone",
+          "av": 18,
+          "h": "d0576253f7a9f0e5b4c1d1c40a75eb7d3794aafc2dfe0bb49f0ae9917b38a94e",
+          "e": 0,
+          "v": 58
+        },
+        "stage": "media",
+        "calls": [
+          {
+            "route": "/api/ping.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false
+          },
+          {
+            "route": "/api/app/bootstrap.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false
+          },
+          {
+            "route": "/api/v3/devices/challenge.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false,
+            "applicationEvidenceSent": false,
+            "reason": null,
+            "edgeRequestId": "a4f933e8190ac982-LAX"
+          },
+          {
+            "route": "/api/v3/devices/register.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false,
+            "applicationEvidenceSent": false,
+            "reason": null,
+            "edgeRequestId": "a4f933e93d0fc982-LAX"
+          },
+          {
+            "route": "/api/v3/guard/adblock_check.php",
+            "status": 200,
+            "evidenceSent": true,
+            "networkEvidenceSent": true,
+            "applicationEvidenceSent": true,
+            "reason": null,
+            "edgeRequestId": "a4f933eb7e7dc982-LAX"
+          },
+          {
+            "route": "/api/v3/guard/tamper_check.php",
+            "status": 200,
+            "evidenceSent": true,
+            "networkEvidenceSent": true,
+            "applicationEvidenceSent": true,
+            "reason": null,
+            "edgeRequestId": "a4f933ec8a55c982-LAX"
+          },
+          {
+            "route": "/api/v3/movies/show.php",
+            "status": 200,
+            "evidenceSent": true,
+            "networkEvidenceSent": true,
+            "applicationEvidenceSent": true,
+            "reason": null,
+            "edgeRequestId": "a4f933ed9de2c982-LAX"
+          },
+          {
+            "route": "/api/v3/resolve.php",
+            "status": 200,
+            "evidenceSent": true,
+            "networkEvidenceSent": true,
+            "applicationEvidenceSent": true,
+            "reason": null,
+            "edgeRequestId": "a4f933eeb9c9c982-LAX"
+          }
+        ],
+        "guards": [],
+        "media": [
+          {
+            "status": 200,
+            "edgeRequestId": "a4f933f06ba41289-LAX",
+            "redirected": false,
+            "responseHeaders": {
+              "content-type": "text/css",
+              "content-length": "668",
+              "cache-control": "max-age=14400",
+              "cf-cache-status": "HIT",
+              "date": "Sat, 24 Oct 2026 13:07:09 GMT",
+              "server": "cloudflare"
+            },
+            "additionalHeaderNames": [
+              "accept-ranges",
+              "cf-ray",
+              "connection",
+              "last-modified",
+              "nel",
+              "report-to",
+              "strict-transport-security",
+              "x-bz-content-sha1",
+              "x-bz-file-id",
+              "x-bz-file-name",
+              "x-bz-server-side-encryption",
+              "x-bz-upload-timestamp"
+            ],
+            "hls": true,
+            "playlistSha256": "ac540b598ddfee6bdf1a73d7f13c471a17de3abf95b3075db0c2726532f7ab07"
+          }
+        ],
+        "candidatePlayable": false,
+        "applicationEvidence": {
+          "mode": "reference-app-compatibility-simulation",
+          "androidRuntimeMeasured": false
+        },
+        "networkMeasurement": {
+          "beaconStatus": 200,
+          "beaconTokenReceived": true,
+          "dnsBlocked": false,
+          "vpnInterfaceDetected": false,
+          "testDomainCount": 0,
+          "limitations": [
+            "Windows DNS/interface measurement; Android private-DNS setting unavailable"
+          ]
+        },
+        "networkGuard": {
+          "action": "allow",
+          "state": "clean"
+        },
+        "applicationGuard": {
+          "action": "allow",
+          "state": "clean"
+        },
+        "selection": {
+          "kind": "movie",
+          "id": 4655,
+          "index": 0,
+          "linkId": 44898
+        },
+        "linkPath": "resolve",
+        "transport": {
+          "deepLinkParameters": [
+            "url",
+            "title",
+            "ad",
+            "banner",
+            "download",
+            "lang",
+            "color",
+            "resume",
+            "id",
+            "ua",
+            "cookies"
+          ],
+          "cookieNames": [
+            "ot"
+          ],
+          "cookieBound": true,
+          "cookiePreserved": true,
+          "mediaHeaderNames": [
+            "User-Agent",
+            "Cookie"
+          ],
+          "userAgent": "TDMuaHLS990",
+          "mediaOrigin": "https://cdn.mediaoscar.com"
+        },
+        "error": {
+          "code": "SOURCE_SESSION_REQUIRED",
+          "status": 403,
+          "message": "المصدر أعاد مقطع رفض بدل الفيديو المطلوب. تعذر تشغيل المحتوى المطلوب."
+        }
+      }
+    },
+    {
+      "run": 40096919665,
+      "commit": "faa60d9e91bf857e13b84df1118b1e1f421f75fd",
+      "report": {
+        "time": "2026-10-24T13:09:39.392Z",
+        "platform": "win32",
+        "registrationPlatform": "windows",
+        "mode": "owner-approved-tdm-with-network-checks",
+        "evidence": {
+          "p": "com.tdm.manager",
+          "i": 1,
+          "pf": "phone",
+          "av": 18,
+          "h": "d0576253f7a9f0e5b4c1d1c40a75eb7d3794aafc2dfe0bb49f0ae9917b38a94e",
+          "e": 0,
+          "v": 58
+        },
+        "stage": "media",
+        "calls": [
+          {
+            "route": "/api/ping.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false
+          },
+          {
+            "route": "/api/app/bootstrap.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false
+          },
+          {
+            "route": "/api/v3/devices/challenge.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false,
+            "applicationEvidenceSent": false,
+            "reason": null,
+            "edgeRequestId": "a4f9379fedcbbda8-ORD"
+          },
+          {
+            "route": "/api/v3/devices/register.php",
+            "status": 200,
+            "evidenceSent": false,
+            "networkEvidenceSent": false,
+            "applicationEvidenceSent": false,
+            "reason": null,
+            "edgeRequestId": "a4f937a0d843bda8-ORD"
+          },
+          {
+            "route": "/api/v3/guard/adblock_check.php",
+            "status": 200,
+            "evidenceSent": true,
+            "networkEvidenceSent": true,
+            "applicationEvidenceSent": true,
+            "reason": null,
+            "edgeRequestId": "a4f937a2deb8bda8-ORD"
+          },
+          {
+            "route": "/api/v3/guard/tamper_check.php",
+            "status": 200,
+            "evidenceSent": true,
+            "networkEvidenceSent": true,
+            "applicationEvidenceSent": true,
+            "reason": null,
+            "edgeRequestId": "a4f937a3da1dbda8-ORD"
+          },
+          {
+            "route": "/api/v3/movies/show.php",
+            "status": 200,
+            "evidenceSent": true,
+            "networkEvidenceSent": true,
+            "applicationEvidenceSent": true,
+            "reason": null,
+            "edgeRequestId": "a4f937a4dd04bda8-ORD"
+          },
+          {
+            "route": "/api/v3/resolve.php",
+            "status": 200,
+            "evidenceSent": true,
+            "networkEvidenceSent": true,
+            "applicationEvidenceSent": true,
+            "reason": null,
+            "edgeRequestId": "a4f937a5bfc5bda8-ORD"
+          }
+        ],
+        "guards": [],
+        "media": [
+          {
+            "status": 200,
+            "edgeRequestId": "a4f937a74f4513fe-ORD",
+            "redirected": false,
+            "responseHeaders": {
+              "content-type": "text/css",
+              "content-length": "668",
+              "cache-control": "max-age=14400",
+              "age": "223295",
+              "cf-cache-status": "HIT",
+              "date": "Sat, 24 Oct 2026 13:09:41 GMT",
+              "server": "cloudflare",
+              "x-bz-file-name": "files/EG/Al-Hekaya/Al-Hekaya-S01-EP001/720p/index.css"
+            },
+            "additionalHeaderNames": [
+              "accept-ranges",
+              "cf-ray",
+              "connection",
+              "last-modified",
+              "nel",
+              "report-to",
+              "strict-transport-security",
+              "x-bz-content-sha1",
+              "x-bz-file-id",
+              "x-bz-server-side-encryption",
+              "x-bz-upload-timestamp"
+            ],
+            "hls": true,
+            "playlistSha256": "ac540b598ddfee6bdf1a73d7f13c471a17de3abf95b3075db0c2726532f7ab07"
+          }
+        ],
+        "candidatePlayable": false,
+        "applicationEvidence": {
+          "mode": "reference-app-compatibility-simulation",
+          "androidRuntimeMeasured": false
+        },
+        "networkMeasurement": {
+          "beaconStatus": 200,
+          "beaconTokenReceived": true,
+          "dnsBlocked": false,
+          "vpnInterfaceDetected": false,
+          "testDomainCount": 0,
+          "limitations": [
+            "Windows DNS/interface measurement; Android private-DNS setting unavailable"
+          ]
+        },
+        "networkGuard": {
+          "action": "allow",
+          "state": "clean"
+        },
+        "applicationGuard": {
+          "action": "allow",
+          "state": "clean"
+        },
+        "selection": {
+          "kind": "movie",
+          "id": 4655,
+          "index": 0,
+          "linkId": 44898
+        },
+        "linkPath": "resolve",
+        "transport": {
+          "deepLinkParameters": [
+            "url",
+            "title",
+            "ad",
+            "banner",
+            "download",
+            "lang",
+            "color",
+            "resume",
+            "id",
+            "ua",
+            "cookies"
+          ],
+          "cookieNames": [
+            "ot"
+          ],
+          "cookieBound": true,
+          "cookiePreserved": true,
+          "mediaHeaderNames": [
+            "User-Agent",
+            "Cookie"
+          ],
+          "userAgent": "TDMuaHLS990",
+          "mediaOrigin": "https://cdn.mediaoscar.com"
+        },
+        "transportComparisons": [
+          {
+            "name": "revalidate",
+            "status": 200,
+            "requestHeaderNames": [
+              "User-Agent",
+              "Cookie",
+              "Accept",
+              "Accept-Language",
+              "Sec-Fetch-Dest",
+              "Sec-Fetch-Mode",
+              "Sec-Fetch-Site",
+              "Referer",
+              "Cache-Control",
+              "Pragma"
+            ],
+            "responseHeaders": {
+              "content-type": "text/css",
+              "cache-control": "max-age=14400",
+              "age": "223295",
+              "cf-cache-status": "HIT",
+              "date": "Sat, 24 Oct 2026 13:09:41 GMT",
+              "server": "cloudflare",
+              "x-bz-file-name": "files/EG/Al-Hekaya/Al-Hekaya-S01-EP001/720p/index.css"
+            },
+            "hls": true,
+            "playlistSha256": "ac540b598ddfee6bdf1a73d7f13c471a17de3abf95b3075db0c2726532f7ab07",
+            "knownNotice": true
+          },
+          {
+            "name": "android-datasource-gzip",
+            "status": 200,
+            "requestHeaderNames": [
+              "User-Agent",
+              "Cookie",
+              "Accept",
+              "Accept-Language",
+              "Sec-Fetch-Dest",
+              "Sec-Fetch-Mode",
+              "Sec-Fetch-Site",
+              "Referer",
+              "Accept-Encoding"
+            ],
+            "responseHeaders": {
+              "content-type": "text/css",
+              "cache-control": "max-age=14400",
+              "age": "223295",
+              "cf-cache-status": "HIT",
+              "date": "Sat, 24 Oct 2026 13:09:41 GMT",
+              "server": "cloudflare",
+              "x-bz-file-name": "files/EG/Al-Hekaya/Al-Hekaya-S01-EP001/720p/index.css"
+            },
+            "hls": true,
+            "playlistSha256": "ac540b598ddfee6bdf1a73d7f13c471a17de3abf95b3075db0c2726532f7ab07",
+            "knownNotice": true
+          }
+        ],
+        "error": {
+          "code": "SOURCE_SESSION_REQUIRED",
+          "status": 403,
+          "message": "المصدر أعاد مقطع رفض بدل الفيديو المطلوب. تعذر تشغيل المحتوى المطلوب."
+        }
+      }
+    },
+    {
+      "run": 40097284362,
+      "commit": "38071fc88932db71407cde5dc0ed7b791a3a19e6",
+      "reports": [
+        {
+          "time": "2026-10-24T13:14:44.733Z",
+          "platform": "win32",
+          "registrationPlatform": "windows",
+          "mode": "owner-approved-tdm-with-network-checks",
+          "evidence": {
+            "p": "com.tdm.manager",
+            "i": 1,
+            "pf": "phone",
+            "av": 18,
+            "h": "d0576253f7a9f0e5b4c1d1c40a75eb7d3794aafc2dfe0bb49f0ae9917b38a94e",
+            "e": 0,
+            "v": 58
+          },
+          "stage": "media",
+          "calls": [
+            {
+              "route": "/api/ping.php",
+              "status": 200,
+              "evidenceSent": false,
+              "networkEvidenceSent": false
+            },
+            {
+              "route": "/api/app/bootstrap.php",
+              "status": 200,
+              "evidenceSent": false,
+              "networkEvidenceSent": false
+            },
+            {
+              "route": "/api/v3/devices/challenge.php",
+              "status": 200,
+              "evidenceSent": false,
+              "networkEvidenceSent": false,
+              "applicationEvidenceSent": false,
+              "reason": null,
+              "edgeRequestId": "a4f93f127a12bda8-ORD"
+            },
+            {
+              "route": "/api/v3/devices/register.php",
+              "status": 200,
+              "evidenceSent": false,
+              "networkEvidenceSent": false,
+              "applicationEvidenceSent": false,
+              "reason": null,
+              "edgeRequestId": "a4f93f137d53bda8-ORD"
+            },
+            {
+              "route": "/api/v3/guard/adblock_check.php",
+              "status": 200,
+              "evidenceSent": true,
+              "networkEvidenceSent": true,
+              "applicationEvidenceSent": true,
+              "reason": null,
+              "edgeRequestId": "a4f93f163874bda8-ORD"
+            },
+            {
+              "route": "/api/v3/guard/tamper_check.php",
+              "status": 200,
+              "evidenceSent": true,
+              "networkEvidenceSent": true,
+              "applicationEvidenceSent": true,
+              "reason": null,
+              "edgeRequestId": "a4f93f172ba7bda8-ORD"
+            },
+            {
+              "route": "/api/v3/movies/show.php",
+              "status": 200,
+              "evidenceSent": true,
+              "networkEvidenceSent": true,
+              "applicationEvidenceSent": true,
+              "reason": null,
+              "edgeRequestId": "a4f93f182f58bda8-ORD"
+            },
+            {
+              "route": "/api/v3/resolve.php",
+              "status": 200,
+              "evidenceSent": true,
+              "networkEvidenceSent": true,
+              "applicationEvidenceSent": true,
+              "reason": null,
+              "edgeRequestId": "a4f93f191ab8bda8-ORD"
+            }
+          ],
+          "guards": [],
+          "media": [
+            {
+              "status": 200,
+              "edgeRequestId": "a4f93f1a9f74f6da-MSP",
+              "redirected": false,
+              "responseHeaders": {
+                "content-type": "text/css",
+                "content-length": "668",
+                "cache-control": "max-age=14400",
+                "cf-cache-status": "HIT",
+                "date": "Sat, 24 Oct 2026 13:14:47 GMT",
+                "server": "cloudflare",
+                "x-bz-file-name": "files/EG/Al-Hekaya/Al-Hekaya-S01-EP001/720p/index.css"
+              },
+              "additionalHeaderNames": [
+                "accept-ranges",
+                "cf-ray",
+                "connection",
+                "last-modified",
+                "nel",
+                "report-to",
+                "strict-transport-security",
+                "x-bz-content-sha1",
+                "x-bz-file-id",
+                "x-bz-server-side-encryption",
+                "x-bz-upload-timestamp"
+              ],
+              "hls": true,
+              "playlistSha256": "ac540b598ddfee6bdf1a73d7f13c471a17de3abf95b3075db0c2726532f7ab07"
+            }
+          ],
+          "candidatePlayable": false,
+          "applicationEvidence": {
+            "mode": "reference-app-compatibility-simulation",
+            "androidRuntimeMeasured": false
+          },
+          "anonymousSession": {
+            "status": 200,
+            "tokenReceived": true
+          },
+          "networkMeasurement": {
+            "beaconStatus": 200,
+            "beaconTokenReceived": true,
+            "dnsBlocked": false,
+            "vpnInterfaceDetected": false,
+            "testDomainCount": 0,
+            "limitations": [
+              "Windows DNS/interface measurement; Android private-DNS setting unavailable"
+            ]
+          },
+          "networkGuard": {
+            "action": "allow",
+            "state": "clean"
+          },
+          "applicationGuard": {
+            "action": "allow",
+            "state": "clean"
+          },
+          "selection": {
+            "kind": "movie",
+            "id": 4655,
+            "index": 0,
+            "linkId": 44898
+          },
+          "linkPath": "resolve",
+          "transport": {
+            "deepLinkParameters": [
+              "url",
+              "title",
+              "ad",
+              "banner",
+              "download",
+              "lang",
+              "color",
+              "resume",
+              "id",
+              "ua",
+              "cookies"
+            ],
+            "cookieNames": [
+              "ot"
+            ],
+            "cookieBound": true,
+            "cookiePreserved": true,
+            "mediaHeaderNames": [
+              "User-Agent",
+              "Cookie"
+            ],
+            "userAgent": "TDMuaHLS990",
+            "mediaOrigin": "https://cdn.mediaoscar.com",
+            "sourceIssuedObject": "files/EG/Al-Hekaya/Al-Hekaya-S01-EP001/720p/index.css"
+          },
+          "error": {
+            "code": "SOURCE_SESSION_REQUIRED",
+            "status": 403,
+            "message": "المصدر أعاد مقطع رفض بدل الفيديو المطلوب. تعذر تشغيل المحتوى المطلوب."
+          }
+        },
+        {
+          "time": "2026-10-24T13:14:47.391Z",
+          "platform": "win32",
+          "registrationPlatform": "windows",
+          "mode": "owner-approved-tdm-with-network-checks",
+          "evidence": {
+            "p": "com.tdm.manager",
+            "i": 1,
+            "pf": "phone",
+            "av": 18,
+            "h": "d0576253f7a9f0e5b4c1d1c40a75eb7d3794aafc2dfe0bb49f0ae9917b38a94e",
+            "e": 0,
+            "v": 58
+          },
+          "stage": "media",
+          "calls": [
+            {
+              "route": "/api/ping.php",
+              "status": 200,
+              "evidenceSent": false,
+              "networkEvidenceSent": false
+            },
+            {
+              "route": "/api/app/bootstrap.php",
+              "status": 200,
+              "evidenceSent": false,
+              "networkEvidenceSent": false
+            },
+            {
+              "route": "/api/v3/devices/challenge.php",
+              "status": 200,
+              "evidenceSent": false,
+              "networkEvidenceSent": false,
+              "applicationEvidenceSent": false,
+              "reason": null,
+              "edgeRequestId": "a4f93f23be2421b1-ORD"
+            },
+            {
+              "route": "/api/v3/devices/register.php",
+              "status": 200,
+              "evidenceSent": false,
+              "networkEvidenceSent": false,
+              "applicationEvidenceSent": false,
+              "reason": null,
+              "edgeRequestId": "a4f93f24b8da21b1-ORD"
+            },
+            {
+              "route": "/api/v3/guard/adblock_check.php",
+              "status": 200,
+              "evidenceSent": true,
+              "networkEvidenceSent": true,
+              "applicationEvidenceSent": true,
+              "reason": null,
+              "edgeRequestId": "a4f93f26cdf221b1-ORD"
+            },
+            {
+              "route": "/api/v3/guard/tamper_check.php",
+              "status": 200,
+              "evidenceSent": true,
+              "networkEvidenceSent": true,
+              "applicationEvidenceSent": true,
+              "reason": null,
+              "edgeRequestId": "a4f93f27d86021b1-ORD"
+            },
+            {
+              "route": "/api/v3/movies/show.php",
+              "status": 200,
+              "evidenceSent": true,
+              "networkEvidenceSent": true,
+              "applicationEvidenceSent": true,
+              "reason": null,
+              "edgeRequestId": "a4f93f28dad021b1-ORD"
+            },
+            {
+              "route": "/api/v3/resolve.php",
+              "status": 200,
+              "evidenceSent": true,
+              "networkEvidenceSent": true,
+              "applicationEvidenceSent": true,
+              "reason": null,
+              "edgeRequestId": "a4f93f2aafd321b1-ORD"
+            }
+          ],
+          "guards": [],
+          "media": [
+            {
+              "status": 200,
+              "edgeRequestId": "a4f93f2babc29181-MSP",
+              "redirected": false,
+              "responseHeaders": {
+                "content-type": "text/css",
+                "content-length": "668",
+                "cache-control": "max-age=14400",
+                "age": "223603",
+                "cf-cache-status": "HIT",
+                "date": "Sat, 24 Oct 2026 13:14:49 GMT",
+                "server": "cloudflare",
+                "x-bz-file-name": "files/EG/Al-Hekaya/Al-Hekaya-S01-EP001/720p/index.css"
+              },
+              "additionalHeaderNames": [
+                "accept-ranges",
+                "cf-ray",
+                "connection",
+                "last-modified",
+                "nel",
+                "report-to",
+                "strict-transport-security",
+                "x-bz-content-sha1",
+                "x-bz-file-id",
+                "x-bz-server-side-encryption",
+                "x-bz-upload-timestamp"
+              ],
+              "hls": true,
+              "playlistSha256": "ac540b598ddfee6bdf1a73d7f13c471a17de3abf95b3075db0c2726532f7ab07"
+            }
+          ],
+          "candidatePlayable": false,
+          "applicationEvidence": {
+            "mode": "reference-app-compatibility-simulation",
+            "androidRuntimeMeasured": false
+          },
+          "networkMeasurement": {
+            "beaconStatus": 200,
+            "beaconTokenReceived": true,
+            "dnsBlocked": false,
+            "vpnInterfaceDetected": false,
+            "testDomainCount": 0,
+            "limitations": [
+              "Windows DNS/interface measurement; Android private-DNS setting unavailable"
+            ]
+          },
+          "networkGuard": {
+            "action": "allow",
+            "state": "clean"
+          },
+          "applicationGuard": {
+            "action": "allow",
+            "state": "clean"
+          },
+          "selection": {
+            "kind": "movie",
+            "id": 4528,
+            "index": 0,
+            "linkId": 39540
+          },
+          "linkPath": "resolve",
+          "transport": {
+            "deepLinkParameters": [
+              "url",
+              "title",
+              "ad",
+              "banner",
+              "download",
+              "lang",
+              "color",
+              "resume",
+              "id",
+              "ua",
+              "cookies"
+            ],
+            "cookieNames": [
+              "ot"
+            ],
+            "cookieBound": true,
+            "cookiePreserved": true,
+            "mediaHeaderNames": [
+              "User-Agent",
+              "Cookie"
+            ],
+            "userAgent": "TDMuaHLS990",
+            "mediaOrigin": "https://cdn.mediaoscar.com",
+            "sourceIssuedObject": "files/EG/Al-Hekaya/Al-Hekaya-S01-EP001/720p/index.css"
+          },
+          "error": {
+            "code": "SOURCE_SESSION_REQUIRED",
+            "status": 403,
+            "message": "المصدر أعاد مقطع رفض بدل الفيديو المطلوب. تعذر تشغيل المحتوى المطلوب."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import net from 'node:net';
 import {inspectMedia} from './media-format.js';
 import {decodePlaybackLink} from './tdm-link.js';
 import {mediaHeadersForURL} from './source-session.js';
+import {assertPlaybackMedia} from './media-rejection.mjs';
 
 export function witcherSource(source) {
   let url;
@@ -53,10 +54,11 @@ export async function resolveMedia(raw, headers = {}, quality = '', external = f
   const fetched=await fetchPublic(url,{headers:{...headers,Accept:'*/*'}});
   if(!fetched.response.ok){await fetched.response.body?.cancel();throw new SourceError('تعذر الاتصال بهذا السيرفر. اختر سيرفرًا آخر.',fetched.response.status===403?403:502,'MEDIA_DENIED');}
   const finalURL=fetched.url;
-  if(new URL(finalURL).hostname==='notice.shahidtv.net'){await fetched.response.body?.cancel();throw new SourceError('المصدر أعاد رسالة رفض بدل البث. اختر سيرفرًا آخر.',403,'SOURCE_SESSION_REQUIRED');}
+  try{assertPlaybackMedia(finalURL);}catch(error){await fetched.response.body?.cancel();throw error;}
   const {type,response}=await inspectMedia(fetched.response,finalURL);
   if(type==='hls'){
     const text=await readLimited(response,2*1024*1024),variants=parseHLS(text,finalURL);
+    assertPlaybackMedia(finalURL,text);
     return {type,url:finalURL,...delivery(finalURL),quality,live:!text.includes('#EXT-X-ENDLIST')&&!variants.length,qualities:variants.map(v=>({...v,...delivery(v.url)}))};
   }
   if(['video','mpegts','flv','dash'].includes(type)){
@@ -74,6 +76,7 @@ export async function resolveMedia(raw, headers = {}, quality = '', external = f
   throw new SourceError('لم يُرجع السيرفر ملف فيديو صالحًا. جرّب سيرفرًا آخر.',422,'UNRESOLVED_MEDIA');
 }
 export function rewriteHLS(text, base, headers = {}) {
+  assertPlaybackMedia(base,text);
   return text.split(/\r?\n/).map(line => {
     if (!line.trim()) return line;
     if (line.startsWith('#')) return line.replace(/URI="([^"]+)"/g, (_,url)=>`URI="${mediaURL(new URL(url,base).href,headers)}"`);

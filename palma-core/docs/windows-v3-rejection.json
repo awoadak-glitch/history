@@ -1,0 +1,55 @@
+{
+  "time": "2026-10-23T02:27:33.181Z",
+  "calls": [
+    {
+      "route": "/api/v3/devices/challenge.php",
+      "status": 200,
+      "reason": null,
+      "requestId": null,
+      "edgeRequestId": "a4ed4dcf7b226701-DFW"
+    },
+    {
+      "route": "/api/v3/devices/register.php",
+      "status": 200,
+      "reason": null,
+      "requestId": null,
+      "edgeRequestId": "a4ed4dd27c466701-DFW"
+    },
+    {
+      "route": "/api/v3/movies/show.php",
+      "status": 200,
+      "reason": null,
+      "requestId": null,
+      "edgeRequestId": "a4ed4dd409e06701-DFW"
+    },
+    {
+      "route": "/api/v3/resolve.php",
+      "status": 200,
+      "reason": null,
+      "requestId": null,
+      "edgeRequestId": "a4ed4dd54e6a6701-DFW"
+    }
+  ],
+  "selection": {
+    "kind": "movie",
+    "id": "4655",
+    "index": 0,
+    "linkId": 44898,
+    "quality": "متعدد"
+  },
+  "contract": {
+    "sameURL": true,
+    "origin": "https://cdn.mediaoscar.com",
+    "hasCookie": true,
+    "hasUserAgent": true
+  },
+  "media": {
+    "status": 200,
+    "requestId": null,
+    "edgeRequestId": "a4ed4e055ac46701-DFW",
+    "contentType": "text/css",
+    "hls": true,
+    "duration": 60.800000000000004,
+    "playlistSha256": "ac540b598ddfee6bdf1a73d7f13c471a17de3abf95b3075db0c2726532f7ab07"
+  }
+}

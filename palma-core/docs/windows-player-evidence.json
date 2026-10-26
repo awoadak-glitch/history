@@ -1,0 +1,65 @@
+{
+  "time": "2026-10-23T13:16:12.451Z",
+  "platform": "win32",
+  "evidence": {
+    "p": "com.tdm.manager",
+    "i": 0,
+    "pf": "windows",
+    "av": 18,
+    "h": "",
+    "e": 0,
+    "v": 0
+  },
+  "calls": [
+    {
+      "route": "/api/v3/devices/challenge.php",
+      "status": 200,
+      "evidenceSent": false,
+      "reason": null,
+      "edgeRequestId": "a4f103d49a15dfd8-LAX"
+    },
+    {
+      "route": "/api/v3/devices/register.php",
+      "status": 200,
+      "evidenceSent": false,
+      "reason": null,
+      "edgeRequestId": "a4f103d81bfddfd8-LAX"
+    },
+    {
+      "route": "/api/v3/movies/show.php",
+      "status": 200,
+      "evidenceSent": true,
+      "reason": null,
+      "edgeRequestId": "a4f103d96cb9dfd8-LAX"
+    },
+    {
+      "route": "/api/v3/resolve.php",
+      "status": 200,
+      "evidenceSent": true,
+      "reason": null,
+      "edgeRequestId": "a4f103dabd52dfd8-LAX"
+    }
+  ],
+  "guards": [
+    {
+      "stage": "resolve",
+      "name": "tdm_guard",
+      "action": "install",
+      "reason": null,
+      "code": null
+    }
+  ],
+  "media": [],
+  "candidatePlayable": false,
+  "selection": {
+    "kind": "movie",
+    "id": 4655,
+    "index": 0,
+    "linkId": 44898
+  },
+  "error": {
+    "code": "PALMA_PLAYER_VERIFICATION_REQUIRED",
+    "status": 403,
+    "message": "يتطلب المصدر تحققًا من الجهاز أو تطبيق التشغيل قبل المشاهدة."
+  }
+}

@@ -1,4 +1,4 @@
-import {decodePlaybackLink} from './tdm-link.js';
+import {decodePlaybackLink,SourcePlaybackGuardError} from './tdm-link.js';
 import {sourceSessionHeaders} from './source-session.js';
 
 // The native deep link is the actual playback contract. In particular, channel
@@ -7,7 +7,10 @@ import {sourceSessionHeaders} from './source-session.js';
 export function playbackSource(source,{provider}={}) {
   let decoded,selected;
   const candidates=[source.deep_link,source.url,source.stream_url,source.video_url,source.download_url,source.link].filter(Boolean);
-  for(const candidate of candidates){try{decoded=decodePlaybackLink(candidate);selected=candidate;break;}catch{}}
+  for(const candidate of candidates){
+    try{decoded=decodePlaybackLink(candidate);selected=candidate;break;}
+    catch(error){if(error instanceof SourcePlaybackGuardError)throw error;}
+  }
   if(!decoded)return decodePlaybackLink('');
   const headers={...decoded.headers};
   const add=(name,value)=>{if(typeof value==='string'&&value.length>0&&value.length<1500&&!/[\x00-\x1f\x7f]/.test(value))headers[name]=value;};

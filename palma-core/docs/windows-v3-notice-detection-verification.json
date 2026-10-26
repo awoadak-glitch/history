@@ -1,0 +1,37 @@
+{
+  "platform": "win32",
+  "versions": {
+    "electron": "44.7.2",
+    "node": "24.21.0"
+  },
+  "verified_at": "2026-10-23T05:31:25.485Z",
+  "checks": [
+    {
+      "step": "movie HLS",
+      "success": false,
+      "error": "movie HLS: 403 SOURCE_SESSION_REQUIRED"
+    },
+    {
+      "step": "movie B2",
+      "success": false,
+      "error": "movie B2: 403 SOURCE_SESSION_REQUIRED"
+    },
+    {
+      "step": "series episode",
+      "success": false,
+      "error": "series episode: 403 SOURCE_SESSION_REQUIRED"
+    },
+    {
+      "step": "live channel",
+      "success": false,
+      "error": "live channel: 403 SOURCE_SESSION_REQUIRED"
+    },
+    {
+      "step": "V3 download",
+      "success": false,
+      "error": "/api/resolve: 403 SOURCE_SESSION_REQUIRED"
+    }
+  ],
+  "success": false,
+  "error": "5 Windows playback/download checks failed"
+}

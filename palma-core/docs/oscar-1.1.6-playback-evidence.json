@@ -1,0 +1,244 @@
+{
+  "apk_sha256": "b6b23d4f667d4662281bb2a8363d3821d36aa37ecc13e06384227dd96a45326b",
+  "package": "com.drama.mp4",
+  "versionName": "1.1.6",
+  "versionCode": "18",
+  "analysis": "offline Dalvik trace with Androguard 4.1.4; offsets are method-relative bytes",
+  "inventory_method_count": 157,
+  "selected_method_count": 12,
+  "evidence": [
+    {
+      "method": "Laa2;->a(Lokhttp3/internal/http/RealInterceptorChain;)Lokhttp3/Response;",
+      "dalvik_file": "aa2__a__6ec7946e.dalvik.txt",
+      "dalvik_sha256": "9cf06ad2fe3419bcee3be0e1789785f2fbf6d2de0319f9adff2b6d403a75ab35",
+      "instruction_evidence": [
+        "0012  const-string v1, \"/api/\"",
+        "0024  const-string v1, \"/api/v3/\"",
+        "007e  invoke-static v1, Lbr5;->f(Landroid/content/Context;)Lar5;"
+      ],
+      "callers": []
+    },
+    {
+      "method": "Ln66;->R(Landroid/content/Context;)Lda5;",
+      "dalvik_file": "n66__R__774f70d8.dalvik.txt",
+      "dalvik_sha256": "aae21c621714a7a31f9fa880ad0a90cdbfff276e16143c3c01af27f7a6b79489",
+      "instruction_evidence": [
+        "0000  const-string v0, \"content://com.tdm.manager.entitlement/status\"",
+        "000c  invoke-virtual v10, Landroid/content/Context;->getContentResolver()Landroid/content/ContentResolver;",
+        "001c  invoke-virtual/range v1 ... v6, Landroid/content/ContentResolver;->query(Landroid/net/Uri; [Ljava/lang/String; Ljava/lang/String; [Ljava/lang/String; Ljava/lang/String;)Landroid/database/Cursor;",
+        "008c  invoke-static v1, Ln66;->j0(Ljava/lang/String;)Lda5;"
+      ],
+      "callers": [
+        "Ln66;->V(Landroid/content/Context;)Lda5;"
+      ]
+    },
+    {
+      "method": "Ln66;->j0(Ljava/lang/String;)Lda5;",
+      "dalvik_file": "n66__j0__74013643.dalvik.txt",
+      "dalvik_sha256": "8a10791e55b1efa046ca29542abfa9c555c0b7ad74c989f5861e4cb289c0a11a",
+      "instruction_evidence": [
+        "008e  invoke-static v6, Ljava/security/Signature;->getInstance(Ljava/lang/String;)Ljava/security/Signature;",
+        "0096  invoke-virtual v6, v5, Ljava/security/Signature;->initVerify(Ljava/security/PublicKey;)V",
+        "00a2  invoke-virtual v6, v0, Ljava/security/Signature;->verify([B)Z",
+        "00fe  const-string v3, \"prem\"",
+        "010a  const-string v5, \"adf\"",
+        "0116  const-string v8, \"adfc\""
+      ],
+      "callers": [
+        "Ln66;->R(Landroid/content/Context;)Lda5;"
+      ]
+    },
+    {
+      "method": "Lh32;->L(Landroid/content/Context; Ljava/lang/String; Ljava/lang/String;)Z",
+      "dalvik_file": "h32__L__06fefdeb.dalvik.txt",
+      "dalvik_sha256": "966e8544fea1207ec30ceb2891807478a32674ed3eabeb6fa93a4a344d3c1ae7",
+      "instruction_evidence": [
+        "0036  const-string v1, \"oscartv-guard://adblock\"",
+        "00b0  const-string v1, \"oscartv-guard://\"",
+        "00c8  invoke-static v4, Lh32;->Y(Landroid/content/Context;)Z",
+        "00e0  invoke-static v4, Lh32;->Z(Landroid/content/Context;)Z",
+        "0146  invoke-virtual v4, v5, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V",
+        "014e  invoke-virtual v4, v1, Landroid/content/Context;->startActivity(Landroid/content/Intent;)V"
+      ],
+      "callers": [
+        "Lcom/drama/mp4/ui/adfree/AdFreeActivity;->i(Ljava/lang/String;)V",
+        "Ld2;->invoke()Ljava/lang/Object;",
+        "Lfi1;->a()Ljava/lang/Object;",
+        "Lfi1;->invoke()Ljava/lang/Object;",
+        "Lh2;->invoke()Ljava/lang/Object;",
+        "Lh32;->M(Landroid/content/Context; Landroid/content/Intent; Ljava/lang/String;)Z"
+      ]
+    },
+    {
+      "method": "Lg32;->K(Landroid/content/Context; Ljava/lang/String;)V",
+      "dalvik_file": "g32__K__ca135e42.dalvik.txt",
+      "dalvik_sha256": "c6cda1e76455383b4d06741ebc81d998a122a37425e5612097bb4c32bd6ed926",
+      "instruction_evidence": [
+        "0010  const-string v0, \"a\"",
+        "0014  invoke-virtual v3, v0, Landroid/net/Uri;->getQueryParameter(Ljava/lang/String;)Ljava/lang/String;",
+        "0028  const-string v1, \"s\"",
+        "002c  invoke-virtual v3, v1, Landroid/net/Uri;->getQueryParameter(Ljava/lang/String;)Ljava/lang/String;",
+        "003c  const-string v1, \"no_response\""
+      ],
+      "callers": [
+        "Lh32;->L(Landroid/content/Context; Ljava/lang/String; Ljava/lang/String;)Z",
+        "Lh32;->M(Landroid/content/Context; Landroid/content/Intent; Ljava/lang/String;)Z"
+      ]
+    },
+    {
+      "method": "Lga5;->e(Landroid/content/Context;)Ljava/lang/String;",
+      "dalvik_file": "ga5__e__86f976f2.dalvik.txt",
+      "dalvik_sha256": "0e0c2e1f442fa72dbab34e8e1296b512e1d6e911e1a2ae0dd2f19f2aee7a78f8",
+      "instruction_evidence": [
+        "0052  invoke-virtual v4, v0, v3, Landroid/content/pm/PackageManager;->getPackageInfo(Ljava/lang/String; I)Landroid/content/pm/PackageInfo;",
+        "0070  const-string v5, \"uimode\"",
+        "00ba  const-string v7, \"p\"",
+        "00c4  const-string v7, \"i\"",
+        "00ce  const-string v7, \"pf\"",
+        "00d6  const-string v5, \"tv\"",
+        "00dc  const-string v5, \"phone\"",
+        "00e6  const-string v5, \"av\"",
+        "00fa  invoke-virtual v7, v8, v3, Landroid/content/pm/PackageManager;->getPackageInfo(Ljava/lang/String; I)Landroid/content/pm/PackageInfo;",
+        "0136  const-string v5, \"v\"",
+        "013a  const-string v7, \"e\"",
+        "013e  const-string v8, \"\"",
+        "0142  const-string v9, \"h\"",
+        "014a  invoke-static v11, v0, Lc21;->X(Landroid/content/Context; Ljava/lang/String;)Ljava/lang/String;",
+        "016e  invoke-static v11, v0, Lc21;->K(Landroid/content/Context; Ljava/lang/String;)J"
+      ],
+      "callers": [
+        "Lqq5;->b(Lqq5; Ljava/lang/String; Lokhttp3/Request; [B Ljava/lang/String; Ljava/lang/String; Ljava/lang/String; [B)Lpq5;",
+        "Lt94;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;"
+      ]
+    },
+    {
+      "method": "Lo4;->A(Landroid/content/Context; Lsv0;)Ljava/lang/Object;",
+      "dalvik_file": "o4__A__d8e9935a.dalvik.txt",
+      "dalvik_sha256": "5798e60a84e2721183a21f7385308e2fd3a024b7d5f23e41adcba8eecf065fe6",
+      "instruction_evidence": [
+        "017a  const-string v8, \"token\"",
+        "019a  invoke-interface v7, v8, v3, Lcom/drama/mp4/data/api/ApiService;->authTdmEntitlement(Ljava/util/Map; Lrv0;)Ljava/lang/Object;",
+        "0226  const-string v2, \"premium_until_ms\""
+      ],
+      "callers": [
+        "Le23;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+        "Lg9;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+        "Lk4;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;"
+      ]
+    },
+    {
+      "method": "Lqq5;->b(Lqq5; Ljava/lang/String; Lokhttp3/Request; [B Ljava/lang/String; Ljava/lang/String; Ljava/lang/String; [B)Lpq5;",
+      "dalvik_file": "qq5__b__5f36264c.dalvik.txt",
+      "dalvik_sha256": "080ea9a14046c4fe34a8ddbc347a7223b35efa39798baa5a4dd7bcf6e84efd72",
+      "instruction_evidence": [
+        "022e  const-wide/16 v5, 30000",
+        "025e  invoke-static v11, v10, v8, v2, v1, Lga5;->c(Ljava/lang/String; [B Ljava/lang/String; Ljava/lang/String; Ljava/lang/String;)Ljava/lang/String;",
+        "0278  const-string v12, \"X-TE\"",
+        "028a  sget-object v11, Lq95;->b Ljava/util/concurrent/atomic/AtomicReference;",
+        "02b8  const-wide/32 v3, 300000",
+        "02ea  invoke-static v7, v10, v8, v2, v1, Lq95;->b(Ljava/lang/String; [B Ljava/lang/String; Ljava/lang/String; Ljava/lang/String;)Ljava/lang/String;",
+        "0304  const-string v11, \"X-TG\"",
+        "0312  sget-object v7, Lj8;->c Ljava/util/concurrent/atomic/AtomicReference;",
+        "0342  const-wide/32 v13, 180000",
+        "0374  invoke-static v14, v10, v8, v2, v1, Lj8;->c(Ljava/lang/String; [B Ljava/lang/String; Ljava/lang/String; Ljava/lang/String;)Ljava/lang/String;",
+        "038e  const-string v10, \"X-AB\""
+      ],
+      "callers": [
+        "Lqq5;->a(Lokhttp3/internal/http/RealInterceptorChain;)Lokhttp3/Response;"
+      ]
+    },
+    {
+      "method": "Lc21;->X(Landroid/content/Context; Ljava/lang/String;)Ljava/lang/String;",
+      "dalvik_file": "c21__X__d5c713ff.dalvik.txt",
+      "dalvik_sha256": "a31298c11be66e2339a013722f22e89a6f88f0faa8df3ac2e635dbd62c40d919",
+      "instruction_evidence": [
+        "001e  invoke-virtual v4, v5, v2, Landroid/content/pm/PackageManager;->getPackageInfo(Ljava/lang/String; I)Landroid/content/pm/PackageInfo;",
+        "0026  invoke-static v4, Ll71;->d(Landroid/content/pm/PackageInfo;)Landroid/content/pm/SigningInfo;",
+        "0036  invoke-static v4, Ll71;->s(Landroid/content/pm/SigningInfo;)Z",
+        "0042  invoke-static v4, Ll71;->w(Landroid/content/pm/SigningInfo;)[Landroid/content/pm/Signature;",
+        "0050  invoke-static v4, Ll71;->B(Landroid/content/pm/SigningInfo;)[Landroid/content/pm/Signature;",
+        "0062  invoke-virtual v4, v5, v0, Landroid/content/pm/PackageManager;->getPackageInfo(Ljava/lang/String; I)Landroid/content/pm/PackageInfo;",
+        "007e  invoke-static v5, Ljava/security/MessageDigest;->getInstance(Ljava/lang/String;)Ljava/security/MessageDigest;",
+        "008c  invoke-virtual v4, Landroid/content/pm/Signature;->toByteArray()[B"
+      ],
+      "callers": [
+        "Lga5;->d(Landroid/content/Context;)Lfa5;",
+        "Lga5;->e(Landroid/content/Context;)Ljava/lang/String;",
+        "Lrh3;->j(Landroid/content/Context; Lia5; Lja5; Lsv0;)Ljava/lang/Object;"
+      ]
+    },
+    {
+      "method": "Lj44;->K(Ljava/lang/String;)Z",
+      "dalvik_file": "j44__K__3c884880.dalvik.txt",
+      "dalvik_sha256": "0377fbbebaa32caf1935003c09e6eb32f342c1ce38cbc9f21e4f1c386b604f1b",
+      "instruction_evidence": [
+        "0006  const-string v1, \"oscartv-guard://\"",
+        "0020  invoke-virtual v2, Landroid/net/Uri;->getHost()Ljava/lang/String;",
+        "0028  const-string v1, \"tamper\""
+      ],
+      "callers": [
+        "Lh32;->L(Landroid/content/Context; Ljava/lang/String; Ljava/lang/String;)Z",
+        "Lh32;->M(Landroid/content/Context; Landroid/content/Intent; Ljava/lang/String;)Z"
+      ]
+    },
+    {
+      "method": "Lea6;->j(Lcom/drama/mp4/data/api/ApiService; Ljava/lang/String; I Ljava/lang/String; I Ljava/lang/String; Ljava/lang/String; Lsv0;)Ljava/lang/Object;",
+      "dalvik_file": "ea6__j__1d08bb0c.dalvik.txt",
+      "dalvik_sha256": "27ab57a1ced21b8bd78d8071f68f7105d06ec6f42e8a05e5a49cabe5af8e4d79",
+      "instruction_evidence": [
+        "00b6  invoke-virtual/range v2 ... v8, Lea6;->m(I I Lsv0; Lcom/drama/mp4/data/api/ApiService; Ljava/lang/String; Ljava/lang/String;)Ljava/lang/Object;",
+        "00ce  invoke-virtual v0, Lcom/drama/mp4/security/V3ResolveData;->getDeep_link()Ljava/lang/String;",
+        "00da  invoke-virtual v0, Lcom/drama/mp4/security/V3ResolveData;->getUrl()Ljava/lang/String;"
+      ],
+      "callers": [
+        "Li46;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+        "Lmg1;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+        "Lso;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+        "Ltf3;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+        "Lwl;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+        "Lwq5;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;"
+      ]
+    },
+    {
+      "method": "Lea6;->m(I I Lsv0; Lcom/drama/mp4/data/api/ApiService; Ljava/lang/String; Ljava/lang/String;)Ljava/lang/Object;",
+      "dalvik_file": "ea6__m__ee049ed1.dalvik.txt",
+      "dalvik_sha256": "d5b04f7b63614c4b2a7e79be475c6dffc78f5a458e3eb71442f21a77bd4ab00f",
+      "instruction_evidence": [
+        "0078  invoke-direct v8, v10, v6, v11, v7, Lcom/drama/mp4/security/V3ResolveRequest;-><init>(Ljava/lang/String; I Ljava/lang/String; I)V",
+        "0082  invoke-interface v9, v8, v0, Lcom/drama/mp4/data/api/ApiService;->resolveV3(Lcom/drama/mp4/security/V3ResolveRequest; Lrv0;)Ljava/lang/Object;"
+      ],
+      "callers": [
+        "Lbf0;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+        "Lea6;->j(Lcom/drama/mp4/data/api/ApiService; Ljava/lang/String; I Ljava/lang/String; I Ljava/lang/String; Ljava/lang/String; Lsv0;)Ljava/lang/Object;",
+        "Lea6;->k(I I Lsv0; Lcom/drama/mp4/data/api/ApiService; Ljava/lang/String; Ljava/lang/String;)Ljava/lang/Object;",
+        "Li63;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;",
+        "Lyq5;->invokeSuspend(Ljava/lang/Object;)Ljava/lang/Object;"
+      ]
+    }
+  ],
+  "runtime_fix": {
+    "commit": "a218513f636bfdf962ed3e061fc6ad5a350702cf",
+    "regression_tests_before": {
+      "pass": 0,
+      "fail": 3
+    },
+    "regression_tests_after": {
+      "pass": 3,
+      "fail": 0
+    },
+    "local_suite": {
+      "web_pass": 64,
+      "desktop_pass": 8
+    },
+    "requested_content_playback_verified": false,
+    "native_windows": {
+      "run_id": 40026937982,
+      "job_id": 120665368773,
+      "unit_tests_pass": 72,
+      "build_success": true,
+      "playback_checks_pass": 0,
+      "playback_checks_fail": 5,
+      "report": "windows-guard-link-verification.json"
+    }
+  }
+}
