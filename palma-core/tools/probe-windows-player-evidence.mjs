@@ -13,7 +13,7 @@ import path from 'node:path';
 import {getServers} from 'node:dns';
 import {networkInterfaces} from 'node:os';
 import {PalmaV3Client,canonicalRequest} from '../../palma-web/server/palma/v3.mjs';
-import {DEFAULT_BASE,APP_PROFILE,PalmaClient} from '../../palma-web/server/palma/client.mjs';
+import {DEFAULT_BASE as ORIGINAL_BASE,APP_PROFILE,PalmaClient} from '../../palma-web/server/palma/client.mjs';
 import {SOURCE_PROFILE,sourceApplicationProof} from '../../palma-web/server/palma/registration-profile.mjs';
 import {requestHeaders} from '../../palma-web/server/palma/iron.mjs';
 import {assertPlaybackAllowed} from '../../palma-web/server/palma/playback-v3.mjs';
@@ -23,6 +23,8 @@ import {parseHLS} from '../../palma-web/server/media.js';
 import {assertPlaybackMedia} from '../../palma-web/server/media-rejection.mjs';
 import {tdmMediaHeaders} from '../../palma-web/server/tdm-media-headers.mjs';
 
+const DEFAULT_BASE=process.argv.find(arg=>arg.startsWith('--source-origin='))?.slice('--source-origin='.length)||ORIGINAL_BASE;
+assert.ok(['https://api.ossccaarr111.online/','https://api.myychann.site/'].includes(DEFAULT_BASE),'Use only source-published API origins');
 const evidence=Object.freeze({p:'com.tdm.manager',i:0,pf:'windows',av:Number(SOURCE_PROFILE.versionCode),h:'',e:0,v:0});
 const compatibilityEvidence=Object.freeze({p:'com.tdm.manager',i:1,pf:'phone',av:Number(SOURCE_PROFILE.versionCode),h:'d0576253f7a9f0e5b4c1d1c40a75eb7d3794aafc2dfe0bb49f0ae9917b38a94e',e:0,v:58});
 function encodeEvidence(secret,keyId,nonce,timestamp,iv=randomBytes(12),payload=evidence,label='te') {
@@ -50,7 +52,7 @@ if(process.argv.includes('--self-test')) {
   const payload=compatibility?compatibilityEvidence:evidence;
   let state=null,networkEvidence=null,applicationEvidence=null,bearer=null;
   const mode=sourceNetworkChecks?'owner-approved-tdm-with-network-checks':androidProtocol?'owner-approved-android-protocol':compatibility?'owner-approved-tdm-compatibility':'measured-windows-tdm-absent';
-  const report={time:new Date().toISOString(),platform:process.platform,registrationPlatform:androidProtocol?'android':'windows',mode,evidence:payload,stage:'setup',calls:[],guards:[],media:[],candidatePlayable:false};
+  const report={apiOrigin:new URL(DEFAULT_BASE).origin,time:new Date().toISOString(),platform:process.platform,registrationPlatform:androidProtocol?'android':'windows',mode,evidence:payload,stage:'setup',calls:[],guards:[],media:[],candidatePlayable:false};
   const safe=value=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,100}$/.test(value)?value:null;
   const client=new PalmaV3Client({base:DEFAULT_BASE,version:'2.2.7',sourceVersion:SOURCE_PROFILE.versionName,
     store:{load:async()=>state,save:async value=>{state=value;}},provideRegistrationProof:sourceApplicationProof,
@@ -118,16 +120,21 @@ if(process.argv.includes('--self-test')) {
         assert.equal(response.status,200);assert.ok(report.anonymousSession.tokenReceived);
       }
       report.stage='network-beacon';
-      const beacon=new URL(policy.beacon_url,DEFAULT_BASE);assert.equal(beacon.origin,new URL(DEFAULT_BASE).origin);
-      const nonce=randomBytes(8).toString('hex');beacon.searchParams.set('kid',state.keyId);beacon.searchParams.set('n',nonce);
-      const response=await fetch(beacon,{headers:{'Cache-Control':'no-cache'},redirect:'error',signal:AbortSignal.timeout(3500)});
-      const data=JSON.parse(await readLimited(response,65536));assert.equal(response.status,200);assert.match(data.t,/^[0-9a-f]{64}$/);
+      let data={t:''},nonce='',beaconStatus=null;
+      // j8.a explicitly sends empty bt/bn when the source policy has no beacon.
+      // Empty policy is not a successful beacon request or a fabricated token.
+      if(String(policy.beacon_url||'').trim()) {
+        const beacon=new URL(policy.beacon_url,DEFAULT_BASE);assert.equal(beacon.origin,new URL(DEFAULT_BASE).origin);
+        nonce=randomBytes(8).toString('hex');beacon.searchParams.set('kid',state.keyId);beacon.searchParams.set('n',nonce);
+        const response=await fetch(beacon,{headers:{'Cache-Control':'no-cache'},redirect:'error',signal:AbortSignal.timeout(3500)});
+        data=JSON.parse(await readLimited(response,65536));beaconStatus=response.status;assert.equal(response.status,200);assert.match(data.t,/^[0-9a-f]{64}$/);
+      }else report.beaconSkipped='source-policy-empty';
       const deniedDns=new Set((policy.dns_ips||[]).flatMap(value=>String(value).split(',')).map(value=>value.trim().toLowerCase()));
       const dnsBlocked=getServers().some(value=>deniedDns.has(value.toLowerCase()));
       const vpn=Object.entries(networkInterfaces()).some(([name,addresses])=>/\b(vpn|wireguard|tun|tap)\b/i.test(name)&&addresses?.some(address=>!address.internal));
       // Dalvik j8.a reads boolean fields but calls JSONObject.put(String, int).
       networkEvidence={inet:1,cb:dnsBlocked?1:0,bt:data.t,bn:nonce,vpn:vpn?1:0,reason:dnsBlocked?'dns_ip':'',pf:'phone',av:Number(SOURCE_PROFILE.versionCode)};
-      report.networkMeasurement={beaconStatus:response.status,beaconTokenReceived:true,dnsBlocked,vpnInterfaceDetected:vpn,testDomainCount:0,limitations:['Windows DNS/interface measurement; Android private-DNS setting unavailable']};
+      report.networkMeasurement={beaconStatus,beaconTokenReceived:!!data.t,dnsBlocked,vpnInterfaceDetected:vpn,testDomainCount:0,limitations:['Windows DNS/interface measurement; Android private-DNS setting unavailable']};
       report.stage='network-guard';
       const checked=unwrap(await client.get('api/v3/guard/adblock_check.php'));
       report.networkGuard={action:safe(checked.action),state:safe(checked.state)};
@@ -199,7 +206,8 @@ if(process.argv.includes('--self-test')) {
     }
   }catch(error){report.error={code:safe(error.code)||'DIAGNOSTIC_FAILED',status:error.status||null,message:error.code?error.message:'Diagnostic did not establish requested-content playback.'};}
   const directory=path.resolve('probe-output');await mkdir(directory,{recursive:true});
-  const suffix=anonymousSession?'-anonymous':process.argv.includes('--movie-id=4528')?'-movie-4528':'';
+  const suffix=(anonymousSession?'-anonymous':process.argv.includes('--movie-id=4528')?'-movie-4528':'')+(androidProtocol?'-android':'')+(DEFAULT_BASE===ORIGINAL_BASE?'':'-alternate');
   await writeFile(path.join(directory,sourceNetworkChecks?`windows-source-network-checks${suffix}.json`:androidProtocol?'windows-android-protocol.json':compatibility?'windows-tdm-compatibility.json':'windows-player-evidence.json'),JSON.stringify(report,null,2));
   console.log(JSON.stringify(report,null,2));
 }
+

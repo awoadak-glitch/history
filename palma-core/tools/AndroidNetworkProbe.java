@@ -36,7 +36,8 @@ public final class AndroidNetworkProbe {
             } catch (Exception e) {
                 result = "error=" + e.getClass().getSimpleName();
                 Throwable cause = e.getCause();
-                if (cause != null) result += " cause=" + cause.getClass().getSimpleName();
+                if (cause != null) result += " cause=" + cause.getClass().getSimpleName()
+                    + " causeMessage=" + String.valueOf(cause.getMessage()).replace('\n',' ');
             } finally {
                 if (c != null) c.disconnect();
             }

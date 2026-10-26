@@ -31,21 +31,15 @@ def clean(text):
 
 
 def snapshot(name):
-    dump_result = adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/palma-ui.xml', check=False)
-    xml = adb('shell', 'cat', '/sdcard/palma-ui.xml', check=False)
+    observed = adb('shell', 'CLASSPATH=/data/local/tmp/palma-network.dex:/system/framework/uiautomator.jar', 'app_process', '/system/bin', 'AndroidUiProbe', check=False)
     nodes = []
     try:
-        for element in ET.fromstring(xml).iter('node'):
-            a = element.attrib
-            if a.get('text') or a.get('content-desc') or a.get('clickable') == 'true':
-                nodes.append({k: clean(a.get(k, '')) for k in
-                              ['text', 'content-desc', 'resource-id', 'class',
-                               'package', 'clickable', 'enabled', 'bounds']})
-    except ET.ParseError:
+        nodes = [{k: clean(str(v)) for k,v in node.items()} for node in json.loads(observed)]
+    except (ValueError, TypeError):
         pass
     (OUT / (name + '.png')).write_bytes(adb('exec-out', 'screencap', '-p', binary=True))
     (OUT / (name + '.json')).write_text(json.dumps(nodes, ensure_ascii=False, indent=2))
-    REPORT['snapshots'].append({'name': name, 'nodes': nodes, 'dumpResult': clean(dump_result)})
+    REPORT['snapshots'].append({'name': name, 'nodes': nodes})
     print(json.dumps({'snapshot': name, 'nodes': nodes}, ensure_ascii=False), flush=True)
     return nodes
 
@@ -77,6 +71,10 @@ try:
     adb('shell', 'wm', 'size', '1080x1920')
     adb('shell', 'wm', 'density', '420')
     adb('shell', 'settings', 'put', 'secure', 'immersive_mode_confirmations', 'confirmed')
+    adb('shell', 'svc', 'wifi', 'enable')
+    time.sleep(8)
+    REPORT['wifiStatus'] = clean(adb('shell', 'cmd', 'wifi', 'status', check=False))
+    REPORT['shellGroups'] = adb('shell', 'id')
     adb('push', str(ROOT / 'probe-input' / 'dex' / 'classes.dex'), '/data/local/tmp/palma-network.dex')
     network = adb('shell', 'CLASSPATH=/data/local/tmp/palma-network.dex', 'app_process', '/system/bin', 'AndroidNetworkProbe', timeout=90)
     REPORT['androidNetwork'] = network.strip().splitlines()
@@ -91,13 +89,14 @@ try:
     for delay, name in [(10, 'startup-10s'), (20, 'startup-30s'), (30, 'startup-60s')]:
         time.sleep(delay)
         snapshot(name)
-    # The preceding run's screenshot shows Retry at this position in a
-    # 1080x1920 display. This only retries ordinary application connectivity.
-    resolver_log = adb('logcat', '-d', '-v', 'brief', 'DomainResolver:V', '*:S')
-    if not REPORT['snapshots'][-1]['nodes'] and 'no working domain found' in resolver_log:
-        adb('shell', 'input', 'tap', '540', '1680')
-        time.sleep(30)
-        snapshot('after-retry')
+    for node in REPORT['snapshots'][-1]['nodes']:
+        if node.get('text') == 'إعادة المحاولة' and node.get('enabled') == 'true':
+            coords = list(map(int, re.findall(r'-?\d+', node['bounds'])))
+            if len(coords) == 4:
+                adb('shell', 'input', 'tap', str((coords[0]+coords[2])//2), str((coords[1]+coords[3])//2))
+                time.sleep(30)
+                snapshot('after-retry')
+            break
     collect_media()
     REPORT['sourceProcessRunning'] = bool(adb('shell', 'pidof', 'com.drama.mp4', check=False).strip())
     runtime = adb('logcat', '-d', '-v', 'brief', 'AndroidRuntime:E', '*:S')

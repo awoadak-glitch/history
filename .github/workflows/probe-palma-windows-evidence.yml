@@ -20,16 +20,16 @@ jobs:
           node-version: '24'
       - name: Verify the wire format offline
         run: node palma-core/tools/probe-windows-player-evidence.mjs --self-test
-      - name: Compare complete protocol with source-issued anonymous session
+      - name: Compare reference Android contract on published alternate origin
         env:
           PALMA_APPROVED_PLAYER_PROBE: '1'
           PALMA_OWNER_APPROVED_COMPATIBILITY_TEST: '1'
-        run: node palma-core/tools/probe-windows-player-evidence.mjs --tdm-compatibility --source-network-checks --reference-app-evidence --anonymous-session
-      - name: Compare the second previously selected movie
+        run: node palma-core/tools/probe-windows-player-evidence.mjs --tdm-compatibility --source-network-checks --reference-app-evidence --anonymous-session --android-protocol --source-origin=https://api.myychann.site/
+      - name: Compare Windows registration on the same alternate origin
         env:
           PALMA_APPROVED_PLAYER_PROBE: '1'
           PALMA_OWNER_APPROVED_COMPATIBILITY_TEST: '1'
-        run: node palma-core/tools/probe-windows-player-evidence.mjs --tdm-compatibility --source-network-checks --reference-app-evidence --movie-id=4528
+        run: node palma-core/tools/probe-windows-player-evidence.mjs --tdm-compatibility --source-network-checks --reference-app-evidence --anonymous-session --source-origin=https://api.myychann.site/
       - name: Save sanitized diagnostic
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -37,3 +37,4 @@ jobs:
           name: windows-tdm-compatibility
           path: probe-output/*.json
           if-no-files-found: error
+
