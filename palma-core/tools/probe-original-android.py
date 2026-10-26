@@ -31,7 +31,7 @@ def clean(text):
 
 
 def snapshot(name):
-    adb('shell', 'uiautomator', 'dump', '/sdcard/palma-ui.xml', check=False)
+    dump_result = adb('shell', 'uiautomator', 'dump', '--compressed', '/sdcard/palma-ui.xml', check=False)
     xml = adb('shell', 'cat', '/sdcard/palma-ui.xml', check=False)
     nodes = []
     try:
@@ -45,7 +45,7 @@ def snapshot(name):
         pass
     (OUT / (name + '.png')).write_bytes(adb('exec-out', 'screencap', '-p', binary=True))
     (OUT / (name + '.json')).write_text(json.dumps(nodes, ensure_ascii=False, indent=2))
-    REPORT['snapshots'].append({'name': name, 'nodes': nodes})
+    REPORT['snapshots'].append({'name': name, 'nodes': nodes, 'dumpResult': clean(dump_result)})
     print(json.dumps({'snapshot': name, 'nodes': nodes}, ensure_ascii=False), flush=True)
     return nodes
 
@@ -77,6 +77,10 @@ try:
     adb('shell', 'wm', 'size', '1080x1920')
     adb('shell', 'wm', 'density', '420')
     adb('shell', 'settings', 'put', 'secure', 'immersive_mode_confirmations', 'confirmed')
+    adb('push', str(ROOT / 'probe-input' / 'dex' / 'classes.dex'), '/data/local/tmp/palma-network.dex')
+    network = adb('shell', 'CLASSPATH=/data/local/tmp/palma-network.dex', 'app_process', '/system/bin', 'AndroidNetworkProbe', timeout=90)
+    REPORT['androidNetwork'] = network.strip().splitlines()
+    print(json.dumps({'androidNetwork': REPORT['androidNetwork']}), flush=True)
     for name, sha in [('OscarTV.apk', 'b6b23d4f667d4662281bb2a8363d3821d36aa37ecc13e06384227dd96a45326b'),
                       ('TDM.apk', 'a0f8ee9a8eebc2ecbabf304f95c475a94c82fb2b33653aa93c629b25896db994')]:
         file = ROOT / 'probe-input' / name
@@ -87,10 +91,18 @@ try:
     for delay, name in [(10, 'startup-10s'), (20, 'startup-30s'), (30, 'startup-60s')]:
         time.sleep(delay)
         snapshot(name)
+    # The preceding run's screenshot shows Retry at this position in a
+    # 1080x1920 display. This only retries ordinary application connectivity.
+    resolver_log = adb('logcat', '-d', '-v', 'brief', 'DomainResolver:V', '*:S')
+    if not REPORT['snapshots'][-1]['nodes'] and 'no working domain found' in resolver_log:
+        adb('shell', 'input', 'tap', '540', '1680')
+        time.sleep(30)
+        snapshot('after-retry')
     collect_media()
     REPORT['sourceProcessRunning'] = bool(adb('shell', 'pidof', 'com.drama.mp4', check=False).strip())
     runtime = adb('logcat', '-d', '-v', 'brief', 'AndroidRuntime:E', '*:S')
     REPORT['crashLines'] = [clean(x) for x in runtime.splitlines() if re.search(r'FATAL EXCEPTION|Process:|Exception:|Caused by:', x)]
+    REPORT['domainResolverLog'] = clean(adb('logcat', '-d', '-v', 'brief', 'DomainResolver:V', '*:S')).strip().splitlines()
 except Exception as error:
     REPORT['errorType'] = type(error).__name__
     print('Diagnostic stopped: ' + type(error).__name__, flush=True)
